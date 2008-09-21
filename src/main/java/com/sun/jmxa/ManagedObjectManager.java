@@ -58,6 +58,11 @@ public interface ManagedObjectManager {
      */
     void register( Object obj, Properties props )  ;
 
+    /** Same as register( Object, String...) except that key/value
+     * pairs are given as properties.
+     */
+    void register( Object obj, Map<String,String> props ) ;
+
     /** Unregister the Open MBean corresponding to obj from the
      * mbean server.
      */

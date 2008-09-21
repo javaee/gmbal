@@ -152,7 +152,7 @@ public class ClassAnalyzer {
     }
 
     // Tested by testFindMethod
-    // Tested by testGetAnnotatedMethods XXX rename the test
+    // Tested by testGetAnnotatedMethods
     public List<Method> findMethods( Predicate pred ) {
 	final List<Method> result = new ArrayList<Method>() ;
 	for (Class<?> c : classInheritance) {

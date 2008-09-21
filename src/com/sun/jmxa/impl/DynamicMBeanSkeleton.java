@@ -74,6 +74,7 @@ import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.ManagedOperation ;
 import com.sun.jmxa.InheritedAttribute ;
+
 class DynamicMBeanSkeleton {
     // Object evaluate( Object, List<Object> ) (or Result evaluate( Target, ArgList ))
     public interface Operation extends BinaryFunction<Object,List<Object>,Object> {} ;
@@ -83,6 +84,7 @@ class DynamicMBeanSkeleton {
     private final ManagedObjectManagerInternal mom ;
     private final Map<String,AttributeDescriptor> setters ;
     private final Map<String,AttributeDescriptor> getters ;
+    private final Map<String,AttributeDescriptor> objectNameKeys ;
     private final Map<String,Map<List<String>,Operation>> operations ;
     private final List<OpenMBeanAttributeInfo> mbeanAttributeInfoList ; 
     private final List<OpenMBeanOperationInfo> mbeanOperationInfoList ; 
@@ -94,11 +96,13 @@ class DynamicMBeanSkeleton {
         if ((setter == null) && (getter == null))
             throw new IllegalArgumentException(
                 "At least one of getter and setter must not be null" ) ;
+        }
 
-	if ((setter != null) && (getter != null))
-	    if (!setter.type().equals( getter.type() ))
+	if ((setter != null) && (getter != null) 
+            && !setter.type().equals( getter.type() )) {
 		throw new IllegalArgumentException( 
 		    "Getter and setter types do not match" ) ;
+        }
 
         AttributeDescriptor nonNullDescriptor = (getter != null) ? getter : setter ;
 
@@ -133,7 +137,8 @@ class DynamicMBeanSkeleton {
     }
 
     private void analyzeAnnotatedAttributes( ClassAnalyzer ca ) {
-	final List<Method> attributes = ca.findMethods( ca.forAnnotation( ManagedAttribute.class ) ) ;
+	final List<Method> attributes = ca.findMethods( 
+            ca.forAnnotation( ManagedAttribute.class ) ) ;
 
 	for (Method m : attributes) {
 	    AttributeDescriptor minfo = new AttributeDescriptor( mom, m ) ;
@@ -157,6 +162,18 @@ class DynamicMBeanSkeleton {
 	}
     }
 
+    private void analyzeObjectNameKeys( ClassAnalyzer ca) {
+        final List<Method> onkMethods = ca.findMethods(
+            ca.forAnnotation( ObjectNameKey.class )) ;
+        
+        for (Method m : onkMethods ){
+            ObjectNameKey onk = m.getAnnotation( ObjectNameKey.class ) ;
+            String id = onk.value() ;
+            AttributeDescriptor ad = new AttributeDescriptor( mom, m,
+                id, "" ) ;
+            objectNameKeys.put( ad.id(), ad ) ;
+        }
+    }
     private Pair<Operation,OpenMBeanOperationInfo> makeOperation( final Method m ) {
 	final ManagedOperation mo = m.getAnnotation( ManagedOperation.class ) ;
 	final String desc = mo.description() ;
@@ -164,8 +181,8 @@ class DynamicMBeanSkeleton {
 	final TypeConverter rtc = rtype == null ? null : mom.getTypeConverter( rtype ) ;
 	final Type[] atypes = m.getGenericParameterTypes() ;
 	final List<TypeConverter> atcs = new ArrayList<TypeConverter>() ;
-	for (Type type : atypes) {
-	    atcs.add( mom.getTypeConverter( type ) ) ;
+	for (Type ltype : atypes) {
+	    atcs.add( mom.getTypeConverter( ltype ) ) ;
 	}
 
 	final Operation oper = new Operation() {
@@ -183,10 +200,11 @@ class DynamicMBeanSkeleton {
 
 		    Object result = m.invoke( target, margs ) ;
 
-		    if (rtc == null)
+		    if (rtc == null) {
 			return null ;
-		    else
+                    } else {
 			return rtc.toManagedEntity( result ) ;
+                    }
 		} catch (Exception exc) {
 		    throw new RuntimeException( exc ) ;
 		}
@@ -244,11 +262,13 @@ class DynamicMBeanSkeleton {
         final ManagedObject mo = annotatedClass.getAnnotation( ManagedObject.class ) ;
         
 	type = mo.type() ;
-	if (type.equals( "" ))
+	if (type.equals( "" )) {
 	    type = annotatedClass.getName() ;
+        }
 
 	setters = new HashMap<String,AttributeDescriptor>() ;
 	getters = new HashMap<String,AttributeDescriptor>() ; 
+        objectNameKeys = new HashMap<String,AttributeDescriptor>() ;
 	operations = new HashMap<String,Map<List<String>,Operation>>() ;
 	mbeanAttributeInfoList = new ArrayList<OpenMBeanAttributeInfo>() ;
 	mbeanOperationInfoList = new ArrayList<OpenMBeanOperationInfo>() ;
@@ -275,8 +295,9 @@ class DynamicMBeanSkeleton {
 	MBeanException, ReflectionException {
 
 	AttributeDescriptor getter = getters.get( name ) ;
-	if (getter == null)
+	if (getter == null) {
 	    throw new AttributeNotFoundException( "Could not find attribute " + name ) ;
+        }
 
         return getter.get( obj ) ;
     }
@@ -287,9 +308,11 @@ class DynamicMBeanSkeleton {
 	String name = attribute.getName() ;
 	Object value = attribute.getValue() ;
 	AttributeDescriptor setter = setters.get( name ) ;
-	if (setter == null)
+	if (setter == null) {
 	    throw new AttributeNotFoundException( "Could not find writable attribute " + name ) ;
 
+        }
+        
         setter.set( obj, value ) ;
     }
         
@@ -324,15 +347,19 @@ class DynamicMBeanSkeleton {
 	throws MBeanException, ReflectionException  {
 
 	Map<List<String>,Operation> opMap = operations.get( actionName ) ;
-	if (opMap == null)
+	if (opMap == null) {
 	    throw new IllegalArgumentException( "Could not find operation named " + actionName ) ;
 
+        }
+        
 	List<String> sig = Arrays.asList( signature ) ;
 	Operation op = opMap.get( sig ) ;
-	if (op == null)
+	if (op == null) {
 	    throw new IllegalArgumentException( "Could not find operation named " + actionName 
 		+ " with signature " + sig ) ;
 
+        }
+        
 	try {
 	    return op.evaluate( obj, Arrays.asList( params ) ) ;
 	} catch (Exception exc) {
@@ -340,6 +367,18 @@ class DynamicMBeanSkeleton {
 	}
     }
     
+    public Properties getObjectNameProperties( Object obj ) 
+        throws ReflectionException {
+        
+        Properties result = new Properties() ;
+        for (Map.Entry<String,AttributeDescriptor> entry : objectNameKeys.entrySet()) {
+            String key = entry.getKey() ;
+            AttributeDescriptor ad = entry.getValue() ;
+            String value = (String)ad.get( obj ) ;
+            result.put( key, value ) ;
+        }
+        return result ;
+    }
     public MBeanInfo getMBeanInfo() {
 	return mbInfo ;
     }

@@ -285,7 +285,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 		return handleEnum( cls, mom ) ;
 	    } else {
 		// map to string
-		return handleAsString( cls, mom ) ;
+		return handleAsString( cls ) ;
 	    }
 	} 
 	
@@ -349,7 +349,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	final Type ctype = type.getGenericComponentType() ;
 	final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
 	final OpenType cotype = ctypeTc.getManagedType() ;
-	OpenType ot = null ;
+	OpenType ot ;
 	
 	try {
 	    ot = new ArrayType( 1, cotype ) ;
@@ -422,10 +422,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} ;
     }
 
-    private static TypeConverter handleAsString( final Class cls, 
-	final ManagedObjectManagerInternal mom ) {
+    private static TypeConverter handleAsString( final Class cls ) {
 
-	Constructor cs = null ;
+	Constructor cs ;
 	try {
 	    cs = cls.getDeclaredConstructor( String.class ) ;
 	} catch (Exception exc) {
@@ -434,6 +433,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	    // throw new IllegalArgumentException( 
 		// "Error in obtaining (String) constructor for " 
 		// + cls, exc ) ;
+            throw new RuntimeException( exc ) ;
 	}
 	final Constructor cons = cs ;
 
@@ -565,7 +565,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 		Map<String,Object> data = new HashMap<String,Object>() ;
 		for (AttributeDescriptor minfo : minfos ) {
                     if (minfo.isApplicable( obj )) {
-                        Object value = null ;
+                        Object value ;
                         try {
                             value = minfo.get( obj ) ;
                         } catch (Exception exc) {
@@ -712,9 +712,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
             this.valueTypeConverter = valueTypeConverter ;
         }
 
-        private static TabularType makeMapTabularType( TypeConverter firstTc, 
-            TypeConverter secondTc ) {
-            String mapType = firstTc + "->" + secondTc ;
+        private static TabularType makeMapTabularType( final TypeConverter firstTc, 
+            final TypeConverter secondTc ) {
+            final String mapType = firstTc + "->" + secondTc ;
 
             final String[] itemNames = new String[] { "key", "value" } ;
 
@@ -733,13 +733,13 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             try {
                 // XXX need to use message formatter
-                CompositeType rowType = new CompositeType( mapType,
-                    "Row type for map " + mapType, itemNames, itemDescriptions, itemTypes ) ;
+                final CompositeType rowType = new CompositeType( mapType,
+                    description, itemNames, itemDescriptions, itemTypes ) ;
 
-                String[] keys = new String[] { "key" } ;
+                final String[] keys = new String[] { "key" } ;
 
                 // XXX need to use message formatter
-                TabularType result = new TabularType( "Table:" + mapType, 
+                final TabularType result = new TabularType( "Table:" + mapType, 
                     "Table for map " + mapType, rowType, keys ) ;
 
                 return result ;
@@ -783,7 +783,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static TypeConverter handleParameterizedType( final ParameterizedType type, 
 	final ManagedObjectManagerInternal mom ) {
 
-        TypeConverter result = null ;
+        TypeConverter result ;
 
         final Class cls = (Class)(type.getRawType()) ;
         

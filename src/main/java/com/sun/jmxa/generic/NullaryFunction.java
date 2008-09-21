@@ -37,9 +37,9 @@
 package com.sun.jmxa.generic ;
 
 public interface NullaryFunction<T> {
-    public T evaluate() ;
+    T evaluate() ;
 
-    public class Factory {
+    class Factory {
 	private Factory() {}
 
 	public static <T> NullaryFunction<T> makeConstant( final T value ) {
@@ -56,14 +56,15 @@ public interface NullaryFunction<T> {
 		private boolean evaluated = false ;
 		private T value ;
 
-		public synchronized T evaluate()
-		{
-		    if (!evaluated) {
-			evaluated = true ;
-			value = closure.evaluate() ;
-		    }
+		public T evaluate() {
+                    synchronized (NullaryFunction.class) {
+                        if (!evaluated) {
+                            evaluated = true ;
+                            value = closure.evaluate() ;
+                        }
 
-		    return value ;
+                        return value ;
+                    }
 		}
 	    } ;
 	}

@@ -75,9 +75,8 @@ import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.ManagedOperation ;
 import com.sun.jmxa.InheritedAttribute ;
-import com.sun.jmxa.ObjectNameKey ;
 
-public class DynamicMBeanSkeleton {
+class DynamicMBeanSkeleton {
     // Object evaluate( Object, List<Object> ) (or Result evaluate( Target, ArgList ))
     public interface Operation extends BinaryFunction<Object,List<Object>,Object> {} ;
 
@@ -95,7 +94,7 @@ public class DynamicMBeanSkeleton {
     private void processAttribute( AttributeDescriptor getter, 
         AttributeDescriptor setter ) {
 
-        if ((setter == null) && (getter == null)) {
+        if ((setter == null) && (getter == null))
             throw new IllegalArgumentException(
                 "At least one of getter and setter must not be null" ) ;
         }
@@ -152,7 +151,7 @@ public class DynamicMBeanSkeleton {
 	    }
 	}
 
-	final Set<String> setterNames = new HashSet<String>( setters.keySet()) ;
+	final Set<String> setterNames = new HashSet<String>( setters.keySet() ) ;
 	for (String str : getters.keySet()) {
 	    processAttribute( getters.get( str ), setters.get( str ) ) ;
 	    setterNames.remove( str ) ;
@@ -177,7 +176,7 @@ public class DynamicMBeanSkeleton {
         }
     }
     private Pair<Operation,OpenMBeanOperationInfo> makeOperation( final Method m ) {
-	ManagedOperation mo = m.getAnnotation( ManagedOperation.class ) ;
+	final ManagedOperation mo = m.getAnnotation( ManagedOperation.class ) ;
 	final String desc = mo.description() ;
 	final Type rtype = m.getGenericReturnType() ;
 	final TypeConverter rtc = rtype == null ? null : mom.getTypeConverter( rtype ) ;
@@ -320,7 +319,7 @@ public class DynamicMBeanSkeleton {
     public AttributeList getAttributes( Object obj, String[] attributes) {
 	AttributeList result = new AttributeList() ;
 	for (String str : attributes) {
-	    Object value = null ;
+	    Object value ;
 	    try {
 		value = getAttribute( obj, str ) ;
 	    } catch (Exception exc) {

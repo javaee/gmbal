@@ -60,13 +60,13 @@ import com.sun.jmxa.ManagedObject ;
 // XXX What about cleanup?  Probably want a close() method that unregisters
 // all registered objects and flushes caches.
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
-    private String domain ;
+    private final String domain ;
     private ResourceBundle rb ;
     private MBeanServer server ; 
-    private Map<Object,ObjectName> objectMap ;
-    private Map<ObjectName,Object> objectNameMap ;
-    private Map<Class<?>,DynamicMBeanSkeleton> skeletonMap ;
-    private Map<Type,TypeConverter> typeConverterMap ;
+    private final Map<Object,ObjectName> objectMap ;
+    private final Map<ObjectName,Object> objectNameMap ;
+    private final Map<Class<?>,DynamicMBeanSkeleton> skeletonMap ;
+    private final Map<Type,TypeConverter> typeConverterMap ;
 
     private static final TypeConverter recursiveTypeMarker = 
         new TypeConverterImpl.TypeConverterPlaceHolderImpl() ;
@@ -190,13 +190,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	} ;
     }
 
-    private static Properties makeProps( String... props ) {
-	Properties result = new Properties() ;
-	addToProperties( result, props ) ;
-	return result ;
+    private static void addToMap( Map<String,String> base, Properties props ) {
+        for (String str : props.propertyNames()) {
+            String value = props.getProperty( str ) ;
+            base.put( str, value ) ;
+        }
     }
 
-    private static void addToProperties( Properties base, String... props ) {
+    private static void addToMap( Map<String,String> base, String... props ) {
 	for (String str : props) {
 	    int eqIndex = str.indexOf( "=" ) ;
 	    if (eqIndex < 1) {
@@ -205,7 +206,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
 	    String name = str.substring( 0, eqIndex ) ;
 	    String value = str.substring( eqIndex+1 ) ;
-	    base.setProperty( name, value ) ;
+	    base.put( name, value ) ;
 	}
     }
 
@@ -240,7 +241,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         Hashtable propsTable = new Hashtable() ;
         addToHashTable( propsTable, oknProps ) ;
 
-	ObjectName oname = null ;
+	ObjectName oname ;
 	try {
 	    oname = new ObjectName( domain, onProps ) ;
 	    server.registerMBean( mbean, oname ) ;
@@ -267,23 +268,23 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	}
     }
 
-    public ObjectName getObjectName( Object obj ) {
+    public synchronized ObjectName getObjectName( Object obj ) {
 	return objectMap.get( obj ) ;
     }
 
-    public Object getObject( ObjectName oname ) {
+    public synchronized Object getObject( ObjectName oname ) {
 	return objectNameMap.get( oname ) ;
     }
 
-    public String getDomain() {
+    public synchronized String getDomain() {
 	return domain ;
     }
 
-    public void setMBeanServer( MBeanServer server ) {
+    public synchronized void setMBeanServer( MBeanServer server ) {
 	this.server = server ;
     }
 
-    public MBeanServer getMBeanServer() {
+    public synchronized MBeanServer getMBeanServer() {
 	return server ;
     }
 

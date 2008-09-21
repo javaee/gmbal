@@ -119,6 +119,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     /** Create another ManagedObjectManager that delegates to this one, but adds some
      * fixed properties to each ObjectName on the register call.
      * Each element in props must be in the "name=value" form.
+     * @return The ManagedObjectManager delegate
+     * @param mom The ManagedObjectManager to which the result delegates
+     * @param props The properties to be added to each object registration
      */
     public static ManagedObjectManager makeDelegate( 
         final ManagedObjectManagerInternal mom, 
@@ -197,9 +200,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private static void addToMap( Map<String,String> base, String... props ) {
 	for (String str : props) {
 	    int eqIndex = str.indexOf( "=" ) ;
-	    if (eqIndex < 1)
+	    if (eqIndex < 1) {
 		throw new IllegalArgumentException( 
 		    "All properties must contain an = after the (non-empty) property name" ) ;
+            }
 	    String name = str.substring( 0, eqIndex ) ;
 	    String value = str.substring( eqIndex+1 ) ;
 	    base.put( name, value ) ;
@@ -214,13 +218,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
      * so we need to convert to a flat Hashtable, otherwise any property
      * defaults will be missed in the ObjectName constructor.
      */
-    private Hashtable convertToHashtable( Properties props ) {
-	Hashtable result = new Hashtable() ;
+    private void addToHashtable( Hashtable table, Properties props ) {
 	Enumeration<?> names = props.propertyNames() ;
 	while (names.hasMoreElements()) {
 	    String name = (String)names.nextElement() ;
 	    String value = props.getProperty( name ) ;
-	    result.put( name, value ) ;
+	    table.put( name, value ) ;
 	}
 	return result ;
     }
@@ -231,14 +234,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	final Class<?> cls = obj.getClass() ;
 	final DynamicMBeanSkeleton skel = getSkeleton( cls ) ;
 	final DynamicMBean mbean = new DynamicMBeanImpl( skel, obj ) ;
-        // XXX extract any extra props for the ObjectName from @ObjectNameKey
-        // annotations on methods of the MBean.  We can make DynamicMBeanImpl 
-        // handle this.
-	final Properties myProps = new Properties( props ) ;
+        final Properties oknProps = skel.getObjectNameProperties( obj ) ;
+	final Properties myProps = new Properties( oknProps ) ;
 	final String type = skel.getType() ;
 
 	myProps.setProperty( "type", type ) ;
-	Hashtable onProps = convertToHashtable( myProps ) ;
+        Hashtable propsTable = new Hashtable() ;
+        addToHashTable( propsTable, oknProps ) ;
 
 	ObjectName oname ;
 	try {

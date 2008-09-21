@@ -52,29 +52,30 @@ public class SPair<S extends Serializable,T extends Serializable>
     private static final long serialVersionUID = 
 	3409687392317720001L ;
 
-    public SPair( S first, T second ) {
+    public SPair( final S first, final T second ) {
 	super( first, second ) ;
     }
 
-    public SPair( S first ) {
+    public SPair( final S first ) {
 	this( first, null ) ;
     }
 
+    @Override
     public String toString() {
 	return "SPair[" + first() + "," + second() + "]" ;
     }
 
-    private void readObject(ObjectInputStream stream) 
+    private void readObject( final ObjectInputStream stream) 
 	throws IOException, ClassNotFoundException {
 	stream.defaultReadObject() ;
-	first = (S)stream.readObject() ;
-	second = (T)stream.readObject() ;
+	_first = (S)stream.readObject() ;
+	_second = (T)stream.readObject() ;
     }
 
-    private void writeObject(ObjectOutputStream stream) 
+    private void writeObject( final ObjectOutputStream stream) 
 	throws IOException {
 	stream.defaultWriteObject() ;
-	stream.writeObject( first ) ;
-	stream.writeObject( second ) ;
+	stream.writeObject( _first ) ;
+	stream.writeObject( _second ) ;
     }
 }

@@ -51,7 +51,7 @@ public class Graph<E> {
     private List<E> preorderTraversal = null ;
     private List<E> postorderTraversal = null ;
 
-    private void traverse( E node, Set<E> visited, Finder<E> finder ) {
+    private void traverse( final E node, final Set<E> visited, final Finder<E> finder ) {
 	if (!visited.contains( node )) {
 	    visited.add( node ) ;
 
@@ -65,12 +65,12 @@ public class Graph<E> {
 	}
     }
 
-    private void init( Collection<E> roots, Finder<E> finder ) {
+    private void init( final Collection<E> roots, final Finder<E> finder ) {
 	this.roots = new HashSet<E>( roots ) ;
 	this.roots = Collections.unmodifiableSet( this.roots ) ;
 	this.preorderTraversal = new ArrayList<E>() ;
 	this.postorderTraversal = new ArrayList<E>() ;
-	Set<E> visited = new HashSet<E>() ;
+	final Set<E> visited = new HashSet<E>() ;
 	for (E node : this.roots) {
 	    traverse( node, visited, finder ) ;
 	}
@@ -78,12 +78,12 @@ public class Graph<E> {
 	this.postorderTraversal = Collections.unmodifiableList( this.postorderTraversal ) ;
     }
 
-    public Graph( Collection<E> roots, Finder<E> finder ) {
+    public Graph( final Collection<E> roots, final Finder<E> finder ) {
 	init( roots, finder ) ;
     }
 
-    public Graph( E root, Finder<E> finder )   {
-	Set<E> roots = new HashSet<E>() ;
+    public Graph( final E root, final Finder<E> finder )   {
+	final Set<E> roots = new HashSet<E>() ;
 	roots.add( root ) ;
 	init( roots, finder ) ;
     }

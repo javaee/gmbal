@@ -39,10 +39,11 @@ import java.util.Comparator ;
 
 public class PairComparator<S,T> implements Comparator<Pair<S,T>>
 {
-    private Comparator<? super S> sc ;
-    private Comparator<? super T> tc ;
+    private final Comparator<? super S> sc ;
+    private final Comparator<? super T> tc ;
 
-    public PairComparator( Comparator<? super S> sc, Comparator<? super T> tc )
+    public PairComparator( final Comparator<? super S> sc, 
+        final Comparator<? super T> tc )
     {
 	if ((sc == null) || (tc == null))
 	    throw new IllegalArgumentException() ;

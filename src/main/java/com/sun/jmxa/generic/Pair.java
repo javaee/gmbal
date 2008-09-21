@@ -40,15 +40,15 @@ package com.sun.jmxa.generic ;
  * Pair<Object,Object> is similar to a cons cell.
  */
 public class Pair<S,T> {
-    protected S first ;
-    protected T second ;
+    protected S _first ;
+    protected T _second ;
 
-    public Pair( S first, T second ) {
-	this.first = first ;
-	this.second = second ;
+    public Pair( final S first, final T second ) {
+	_first = first ;
+	_second = second ;
     }
 
-    public Pair( S first ) {
+    public Pair( final S first ) {
 	this( first, null ) ;
     }
 
@@ -57,19 +57,22 @@ public class Pair<S,T> {
     }
 
     public S first() {
-	return first ;
+	return _first ;
     }
 
     public T second() {
-	return second ;
+	return _second ;
     }
 
+    @Override
     public boolean equals( Object obj ) {
-	if (obj == this)
+	if (obj == this) {
 	    return true ;
+        }
 
-	if (!(obj instanceof Pair))
+	if (!(obj instanceof Pair)) {
 	    return false ;
+        }
 
 	Pair pair = Pair.class.cast( obj ) ;
 
@@ -82,17 +85,19 @@ public class Pair<S,T> {
 	}
     }
 
+    @Override
     public int hashCode() {
 	int result = 0 ;
-	if (first != null) 
-	    result ^= first.hashCode() ;
-	if (second != null)
-	    result ^= second.hashCode() ;
+	if (_first != null) 
+	    result ^= _first.hashCode() ;
+	if (_second != null)
+	    result ^= _second.hashCode() ;
 
 	return result ;
     }
 
+    @Override
     public String toString() {
-	return "Pair[" + first + "," + second + "]" ;
+	return "Pair[" + _first + "," + _second + "]" ;
     }
 }

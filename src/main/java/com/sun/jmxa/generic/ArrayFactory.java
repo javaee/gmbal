@@ -50,26 +50,29 @@ import java.util.ArrayList ;
  *
  * @author Ken Cavanaugh
  */
-public abstract class ArrayFactory{
+public final class ArrayFactory{
     
     private ArrayFactory() {
     }
     
-    public static <T> T[] make (T... args) {
+    public static <T> T[] make (final T... args) {
         return args ;
     }
 
-    public static <T,S extends T> T[] make( Collection<S> collection, 
-	Class<T> cls ) 
+    public static <T,S extends T> T[] make( final Collection<S> collection, 
+	final Class<T> cls ) 
     {
-	if (collection == null)
-	    return null ;
+        final int size = (collection == null) ? 0 : collection.size() ;
 
-	T[] result = (T[])Array.newInstance( cls, collection.size() ) ;
-	int index = 0 ;
-	for (S elem : collection) {
-	    result[index++] = elem ;
-	}
+	final T[] result = (T[])Array.newInstance( cls, size ) ;
+        if (size > 0) {
+            int index = 0 ;
+            for (S elem : collection) {
+                result[index] = elem ;
+                index++ ;
+            }
+        }
+        
 	return result ;
     }
 }

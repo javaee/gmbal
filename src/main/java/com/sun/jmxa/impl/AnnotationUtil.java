@@ -49,15 +49,15 @@ import com.sun.jmxa.InheritedAttribute ;
 import com.sun.jmxa.InheritedAttributes ;
 import com.sun.jmxa.IncludeSubclass ;
     
-public abstract class AnnotationUtil {
+public class AnnotationUtil {
     private AnnotationUtil() {}
 
     /** Find the superclass or superinterface of cls (which may be cls itself) that has the
      * given annotationClass as an annotation.  If the annotated Class has an IncludeSubclass
      * annotation, add those classes into the ClassAnalyzer for the annotated class.
      */
-    public static Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( Class<?> cls, 
-        Class<? extends Annotation> annotationClass ) {
+    public static Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( final Class<?> cls, 
+        final Class<? extends Annotation> annotationClass ) {
 
         ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
         /* This is the versions that expects EXACTLY ONE annotation
@@ -67,22 +67,24 @@ public abstract class AnnotationUtil {
             "More than one " + annotationClass.getName() + " annotation found" ) ;
         */
         
-        Class<?> annotatedClass = Algorithms.getFirst( 
+        final Class<?> annotatedClass = Algorithms.getFirst( 
             ca.findClasses( ca.forAnnotation( annotationClass ) ),
             "No " + annotationClass.getName() + " annotation found" ) ;
         
-        List<Class<?>> classes = new ArrayList<Class<?>>() ;
+        final List<Class<?>> classes = new ArrayList<Class<?>>() ;
         classes.add( annotatedClass ) ;
-	final IncludeSubclass is = annotatedClass.getAnnotation( IncludeSubclass.class ) ;
-	if (is != null) {
-            for (Class<?> klass : is.cls()) {
+	final IncludeSubclass incsub = annotatedClass.getAnnotation( IncludeSubclass.class ) ;
+	if (incsub != null) {
+            for (Class<?> klass : incsub.cls()) {
                 classes.add( klass ) ;
             }
 	}
 
-        if (classes.size() > 1) 
+        if (classes.size() > 1) {
             ca = new ClassAnalyzer( classes ) ;
 
+        }
+        
         return new Pair( annotatedClass, ca ) ;
     }
 

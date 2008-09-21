@@ -42,9 +42,9 @@ package com.sun.jmxa.generic ;
  */
 public class Holder<T> 
 {
-    private T _content ;
+    private transient T _content ;
 
-    public Holder( T content ) 
+    public Holder( final T content ) 
     {
 	this._content = content ;
     }
@@ -59,11 +59,12 @@ public class Holder<T>
 	return _content ;
     }
 
-    public void content( T content ) 
+    public void content( final T content ) 
     {
 	this._content = content ;
     }
 
+    @Override
     public boolean equals( Object obj )
     {
 	if (!(obj instanceof Holder))
@@ -74,11 +75,13 @@ public class Holder<T>
 	return _content.equals( other.content() ) ;
     }
 
+    @Override
     public int hashCode()
     {
 	return _content.hashCode() ;
     }
 
+    @Override
     public String toString() 
     {
 	return "Holder[" + _content + "]" ;

@@ -51,24 +51,24 @@ import com.sun.jmxa.ManagedAttribute ;
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
 
-    private Method method ;
-    private String id ;
-    private String description ;
-    private AttributeType atype ;
-    private Type type ;
-    private TypeConverter tc ;
+    private Method _method ;
+    private String _id ;
+    private String _description ;
+    private AttributeType _atype ;
+    private Type _type ;
+    private TypeConverter _tc ;
 
-    public final Method method() { return method ; }
+    public final Method method() { return _method ; }
 
-    public final String id() { return id ; }
+    public final String id() { return _id ; }
 
-    public final String description() { return description ; }
+    public final String description() { return _description ; }
 
-    public final AttributeType atype() { return atype ; }
+    public final AttributeType atype() { return _atype ; }
 
-    public final Type type() { return type ; }
+    public final Type type() { return _type ; }
 
-    public final TypeConverter tc() { return tc ; }
+    public final TypeConverter tc() { return _tc ; }
 
     // Attribute method syntax:
     // id = id as present in annotation, or as derived from method
@@ -85,21 +85,28 @@ public class AttributeDescriptor {
     //	    Boolean isId() ;
 
     // Tested by testIsSetterIsGetter
-    public static boolean isSetter( final Method m, final String id ) {
-	Class<?> rt = m.getReturnType() ;
-	if (rt != void.class) 
+    public static boolean isSetter( final Method method, final String ident ) {
+	final Class<?> returnType = method.getReturnType() ;
+	if (returnType != void.class) {
 	    return false ;
-	if (m.getParameterTypes().length != 1)
+        }
+        
+	if (method.getParameterTypes().length != 1) {
 	    return false ;
+        }
 
-	final String mname = m.getName() ;
-	final String initCapId = id.substring(0,1).toUpperCase() + id.substring(1) ;
+        }
 
-	if (mname.equals( id ))
+	final String mname = method.getName() ;
+	final String initCapId = ident.substring(0,1).toUpperCase() + ident.substring(1) ;
+
+	if (mname.equals( ident )) {
 	    return true ;
+        }
 
-	if (mname.equals( "set" + initCapId ))
+	if (mname.equals( "set" + initCapId )) {
 	    return true ;
+        }
 
 	return false ;
     }
@@ -132,11 +139,11 @@ public class AttributeDescriptor {
 
     // Check whether or not this AttributeDescriptor is applicable to obj.
     public boolean isApplicable( Object obj ) {
-        return method.getDeclaringClass().isInstance( obj ) ;
+        return _method.getDeclaringClass().isInstance( obj ) ;
     }
 
     private void checkType( AttributeType at ) {
-        if (at != atype)
+        if (at != _atype)
             throw new RuntimeException( "Required AttributeType is " + at ) ;
     }
 
@@ -144,7 +151,7 @@ public class AttributeDescriptor {
         checkType( AttributeType.GETTER ) ;
 
         try {
-            return tc.toManagedEntity( method.invoke( obj ) ) ;
+            return _tc.toManagedEntity( _method.invoke( obj ) ) ;
         } catch (Exception exc) {
             throw new ReflectionException( exc ) ;
         }
@@ -154,7 +161,7 @@ public class AttributeDescriptor {
         checkType( AttributeType.SETTER ) ;
 
         try {
-            method.invoke( target, tc.fromManagedEntity( value ) ) ;
+            _method.invoke( target, _tc.fromManagedEntity( value ) ) ;
         } catch (Exception exc) {
             throw new ReflectionException( exc ) ;
         }
@@ -213,66 +220,66 @@ public class AttributeDescriptor {
     public AttributeDescriptor( ManagedObjectManagerInternal mom, Method m, 
         String extId, String description ) {
 
-        this.method = m ;
-        this.id = extId ;
-        this.description = description ;
+        this._method = m ;
+        this._id = extId ;
+        this._description = description ;
 
         final String name = m.getName() ;
         if (startsWithNotEquals( name, "get" )) {
             if (extId.equals( "" )) {
-                id = stripPrefix( name, "get" ) ;
+                _id = stripPrefix( name, "get" ) ;
             }
 
-            this.atype = AttributeType.GETTER ;
+            this._atype = AttributeType.GETTER ;
 
             if (m.getGenericReturnType() == void.class) 
                 throw new IllegalArgumentException( m + " is an illegal getter method" ) ;
             if (m.getGenericParameterTypes().length != 0)
                 throw new IllegalArgumentException( m + " is an illegal getter method" ) ;
-            this.type = m.getGenericReturnType() ;
+            this._type = m.getGenericReturnType() ;
         } else if (startsWithNotEquals( name, "set" )) {
             if (extId.equals( "" )) {
-                id = stripPrefix( name, "set" ) ;
+                _id = stripPrefix( name, "set" ) ;
             }
 
-            this.atype = AttributeType.SETTER ;
+            this._atype = AttributeType.SETTER ;
 
             if (m.getGenericReturnType() != void.class) 
                 throw new IllegalArgumentException( m + " is an illegal setter method" ) ;
             if (m.getGenericParameterTypes().length != 1 ) 
                 throw new IllegalArgumentException( m + " is an illegal setter method" ) ;
-            this.type = m.getGenericParameterTypes()[0] ;
+            this._type = m.getGenericParameterTypes()[0] ;
         } else if (startsWithNotEquals( name, "is" )) {
             if (extId.equals( "" )) {
-                id = stripPrefix( name, "is" ) ;
+                _id = stripPrefix( name, "is" ) ;
             }
 
-            this.atype = AttributeType.GETTER ;
+            this._atype = AttributeType.GETTER ;
 
             if (m.getGenericParameterTypes().length != 0)
                 throw new IllegalArgumentException( m + " is an illegal \"is\" method" ) ;
-            this.type = m.getGenericReturnType() ;
-            if (!type.equals( boolean.class ) && !type.equals( Boolean.class ))
+            this._type = m.getGenericReturnType() ;
+            if (!_type.equals( boolean.class ) && !_type.equals( Boolean.class ))
                 throw new IllegalArgumentException( m + " is an illegal \"is\" method" ) ;
         } else {
             if (extId.equals( "" )) {
-                id = name ;
+                _id = name ;
             }
             
             Type rtype = m.getGenericReturnType() ;
             Type[] ptypes = m.getGenericParameterTypes() ;
             if (rtype.equals( void.class ) && (ptypes.length == 1)) {
-                this.type = ptypes[0] ;
-                this.atype = AttributeType.SETTER ;
+                this._type = ptypes[0] ;
+                this._atype = AttributeType.SETTER ;
             } else if (!rtype.equals( void.class ) && (ptypes.length == 0)) {
-                this.type = rtype ;
-                this.atype = AttributeType.GETTER ;
+                this._type = rtype ;
+                this._atype = AttributeType.GETTER ;
             } else {
                 throw new IllegalArgumentException( m + " is not a valid attribute method" ) ;
             }
         }
 
-        this.tc = mom.getTypeConverter( this.type ) ;
+        this._tc = mom.getTypeConverter( this._type ) ;
     }
 
     // Handle a method with an @ManagedAttribute annotation

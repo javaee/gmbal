@@ -39,7 +39,9 @@ import java.util.List ;
 import java.util.Map ;
 import java.util.ArrayList ;
 
-public abstract class Algorithms {
+public final class Algorithms {
+    private Algorithms() {}
+    
     public static <A,R> UnaryFunction<A,R> mapToFunction( final Map<A,R> map ) {
 	return new UnaryFunction<A,R>() {
 	    public R evaluate( A arg ) {
@@ -52,9 +54,10 @@ public abstract class Algorithms {
 	final UnaryFunction<A,R> func ) {
 
 	for (A a : arg) {
-	    R newArg = func.evaluate( a ) ;
-	    if (newArg != null)
+	    final R newArg = func.evaluate( a ) ;
+	    if (newArg != null) {
 		result.add( newArg ) ;
+            }
 	}
     }
 

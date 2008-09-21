@@ -39,9 +39,9 @@ package com.sun.jmxa.generic ;
  * and other similar uses.
  */
 public class Triple<S,T,U> {
-    private Pair<S,Pair<T,U>> delegate ;
+    private final Pair<S,Pair<T,U>> delegate ;
 
-    public Triple( S first, T second, U third ) {
+    public Triple( final S first, final T second, final U third ) {
         delegate = new Pair<S,Pair<T,U>>( first,
             new Pair<T,U>( second, third ) ) ;
     }
@@ -58,10 +58,12 @@ public class Triple<S,T,U> {
         return delegate.second().second() ;
     }
 
+    @Override
     public int hashCode() {
         return delegate.hashCode() ;
     }
 
+    @Override
     public boolean equals( Object obj ) {
         return delegate.equals( obj ) ;
     }
