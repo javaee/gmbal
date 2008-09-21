@@ -36,22 +36,13 @@
 
 package com.sun.jmxa.impl ;
 
-import java.util.Collections ;
 import java.util.List ;
-import java.util.Set ;
-import java.util.HashSet ;
-import java.util.Queue ;
-import java.util.LinkedList ;
-import java.util.ArrayList ;
-import java.util.Map ;
-import java.util.WeakHashMap ;
 
 import java.lang.reflect.Method ;
 import java.lang.reflect.Type ;
 
 import javax.management.ReflectionException ;
 
-import java.lang.annotation.Annotation ;
 
 import com.sun.jmxa.generic.Algorithms ;
 

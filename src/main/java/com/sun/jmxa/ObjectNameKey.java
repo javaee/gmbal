@@ -49,8 +49,9 @@ import java.lang.annotation.RetentionPolicy ;
 @Target(ElementType.METHOD) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ObjectNameKey {
-    /** The name in the name/value pair to be added to the ObjectName when the MBean is registered.
-     * The default value is the same as in an attribute getter method.
+    /** The name in the name/value pair to be added to the ObjectName when the 
+     * MBean is registered.
+     * The default value is the same as the id in an attribute getter method.
      */
     String value() default "" ;
 }

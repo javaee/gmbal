@@ -38,36 +38,16 @@ package com.sun.jmxa.impl ;
 
 import java.util.Collections ;
 import java.util.List ;
-import java.util.Set ;
-import java.util.HashSet ;
-import java.util.Queue ;
-import java.util.LinkedList ;
 import java.util.ArrayList ;
-import java.util.Map ;
-import java.util.WeakHashMap ;
 
 import java.lang.reflect.AnnotatedElement ;
 import java.lang.reflect.Method ;
-import java.lang.reflect.Type ;
 
 import java.lang.annotation.Annotation ;
 
 import com.sun.jmxa.generic.UnaryBooleanFunction ;
-import com.sun.jmxa.generic.UnaryFunction ;
-import com.sun.jmxa.generic.BinaryVoidFunction ;
-import com.sun.jmxa.generic.BinaryFunction ;
-import com.sun.jmxa.generic.Algorithms ;
-import com.sun.jmxa.generic.Pair ;
 import com.sun.jmxa.generic.Graph ;
 
-import com.sun.jmxa.ManagedObjectManager ;
-import com.sun.jmxa.ManagedObject ;
-import com.sun.jmxa.ManagedData ;
-import com.sun.jmxa.ManagedAttribute ;
-import com.sun.jmxa.ManagedOperation ;
-import com.sun.jmxa.InheritedAttribute ;
-import com.sun.jmxa.InheritedAttributes ;
-import com.sun.jmxa.IncludeSubclass ;
     
 /** Analyzes class inheritance hiearchy and provides methods for searching for
  * classes and methods.

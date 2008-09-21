@@ -72,15 +72,11 @@ import javax.management.openmbean.TabularData ;
 import javax.management.openmbean.TabularDataSupport ;
 
 import com.sun.jmxa.generic.Pair ;
-import com.sun.jmxa.generic.Algorithms ;
 
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ManagedData ;
 import com.sun.jmxa.ManagedAttribute ;
-import com.sun.jmxa.ManagedOperation ;
 import com.sun.jmxa.InheritedAttribute ;
-import com.sun.jmxa.InheritedAttributes ;
-import com.sun.jmxa.IncludeSubclass ;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, ObjectName, 
  * TabularData, or CompositeData.
