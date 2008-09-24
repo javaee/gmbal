@@ -44,24 +44,27 @@ import java.util.Properties ;
 import java.util.Hashtable ;
 import java.util.Enumeration ;
 
+import java.io.IOException ;
+
 import java.lang.reflect.Type ;
+import java.lang.reflect.AnnotatedElement ;
 
 import java.lang.management.ManagementFactory ;
 
 import javax.management.MBeanServer ;
+import javax.management.JMException ;
 import javax.management.ObjectName ;
-import javax.management.DynamicMBean ;
+import javax.management.NotificationEmitter;
 
 import com.sun.jmxa.generic.Pair ;
 
 import com.sun.jmxa.ManagedObjectManager ;
 import com.sun.jmxa.ManagedObject ;
+import com.sun.jmxa.Description ;
 
-// XXX What about cleanup?  Probably want a close() method that unregisters
-// all registered objects and flushes caches.
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final String domain ;
-    private ResourceBundle rb ;
+    private ResourceBundle resourceBundle ;
     private MBeanServer server ; 
     private final Map<Object,ObjectName> objectMap ;
     private final Map<ObjectName,Object> objectNameMap ;
@@ -71,6 +74,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private static final TypeConverter recursiveTypeMarker = 
         new TypeConverterImpl.TypeConverterPlaceHolderImpl() ;
 
+    public void close() throws IOException {
+        for (Map.Entry<Object,ObjectName> entry : objectMap.entrySet()) {
+            unregister( entry.getValue() ) ;
+        }
+        
+        objectMap.clear() ;
+        objectNameMap.clear() ;
+        skeletonMap.clear() ;
+        typeConverterMap.clear() ;
+        server = null ;
+        resourceBundle = null ;
+    }
     public synchronized DynamicMBeanSkeleton getSkeleton( Class<?> cls ) {
 	DynamicMBeanSkeleton result = skeletonMap.get( cls ) ;	
 
@@ -121,31 +136,36 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
      * Each element in props must be in the "name=value" form.
      * @return The ManagedObjectManager delegate
      * @param mom The ManagedObjectManager to which the result delegates
-     * @param props The properties to be added to each object registration
+     * @param extraProps The properties to be added to each object registration
      */
     public static ManagedObjectManager makeDelegate( 
         final ManagedObjectManagerInternal mom, 
-	final String... props ) {
+	final Map<String,String> extraProps ) {
 
 	return new ManagedObjectManagerInternal() {
-	    final Properties savedProps = makeProps( props ) ;
+            public NotificationEmitter register( Object obj, String... props ) {
+                final Map<String,String> map = 
+                    new HashMap<String,String>( extraProps ) ;
+                addToMap( map, props ) ;
+                return register( obj, map ) ;
+            }
 
-	    public void register( Object obj, String... mprops )  {
-		Properties lprops = new Properties( savedProps ) ;
-		addToProperties( lprops, mprops ) ;
-		mom.register( obj, lprops ) ;
-	    }
+            public NotificationEmitter register( final Object obj, 
+                final Properties props ) {
 
-	    public void register( Object obj, Properties mprops ) {
-		Properties lprops = new Properties( savedProps ) ;
-		Enumeration<?> names = mprops.propertyNames() ;
-		while (names.hasMoreElements()) {
-		    String name = (String)names.nextElement() ;
-		    String value = mprops.getProperty( name ) ;
-		    lprops.setProperty( name, value ) ;
-		}
+                final Map<String,String> map = 
+                    new HashMap<String,String>( extraProps ) ;
+                addToMap( map, props ) ;
+                return register( obj, map ) ;
+            }
 
-		mom.register( obj, lprops ) ;
+	    public synchronized NotificationEmitter register( final Object obj, 
+                final Map<String,String> props )  {
+
+                final Map<String,String> map = 
+                    new HashMap<String,String>( extraProps ) ;
+                map.putAll( props ) ;
+		return mom.register( obj, map ) ;
 	    }
 
 	    public void unregister( Object obj ) {
@@ -187,22 +207,36 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             public ResourceBundle getResourceBundle() {
                 return mom.getResourceBundle() ;
             }
+            
+            public String getDescription( AnnotatedElement element ) {
+                return mom.getDescription( element ) ;
+            }
+            
+            public void close() throws IOException {
+                mom.close() ;
+            }
 	} ;
     }
 
-    private static void addToMap( Map<String,String> base, Properties props ) {
-        for (String str : props.propertyNames()) {
-            String value = props.getProperty( str ) ;
-            base.put( str, value ) ;
+    public static void addToMap( Map<String,String> base, Properties props ) {
+        @SuppressWarnings("unchecked")
+        Enumeration<String> enumeration = 
+            (Enumeration<String>)(props.propertyNames()) ;
+        while (enumeration.hasMoreElements()) {
+            String key = enumeration.nextElement() ;
+            String value = props.getProperty( key ) ;
+            base.put( key, value ) ;
         }
     }
 
-    private static void addToMap( Map<String,String> base, String... props ) {
+    public static void addToMap( Map<String,String> base, String... props ) {
 	for (String str : props) {
 	    int eqIndex = str.indexOf( "=" ) ;
 	    if (eqIndex < 1) {
+                // XXX I18N
 		throw new IllegalArgumentException( 
-		    "All properties must contain an = after the (non-empty) property name" ) ;
+		    "All properties must contain an = "
+                    + "after the (non-empty) property name" ) ;
             }
 	    String name = str.substring( 0, eqIndex ) ;
 	    String value = str.substring( eqIndex+1 ) ;
@@ -210,46 +244,66 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	}
     }
 
-    public void register( Object obj, String... props ) {
-	register( obj, makeProps(props) ) ;
+    public NotificationEmitter register( Object obj, String... props ) {
+        Map<String,String> map = new HashMap<String,String>() ;
+        addToMap( map, props ) ;
+	return register( obj, map ) ;
     }
 
-    /** The ObjectName constructor expects a Hashtable, not properties,
-     * so we need to convert to a flat Hashtable, otherwise any property
-     * defaults will be missed in the ObjectName constructor.
-     */
-    private void addToHashtable( Hashtable table, Properties props ) {
-	Enumeration<?> names = props.propertyNames() ;
-	while (names.hasMoreElements()) {
-	    String name = (String)names.nextElement() ;
-	    String value = props.getProperty( name ) ;
-	    table.put( name, value ) ;
-	}
-	return result ;
-    }
-
-    public synchronized void register( final Object obj, 
+    public NotificationEmitter register( final Object obj, 
 	final Properties props ) {
+
+        Map<String,String> map = new HashMap<String,String>() ;
+        addToMap( map, props ) ;
+	return register( obj, map ) ;
+    }
+
+    @SuppressWarnings({"unchecked"})
+    public synchronized NotificationEmitter register( final Object obj, 
+	final Map<String,String> props ) {
 
 	final Class<?> cls = obj.getClass() ;
 	final DynamicMBeanSkeleton skel = getSkeleton( cls ) ;
-	final DynamicMBean mbean = new DynamicMBeanImpl( skel, obj ) ;
-        final Properties oknProps = skel.getObjectNameProperties( obj ) ;
-	final Properties myProps = new Properties( oknProps ) ;
 	final String type = skel.getType() ;
+	final DynamicMBeanImpl mbean = new DynamicMBeanImpl( skel, obj ) ;
+        
+        final Map<String,String> fullProps ;
+        try {
+            fullProps = skel.getObjectNameProperties( obj ) ;
+        } catch (Exception exc) {
+            throw new RuntimeException( exc ) ;
+        }
+        
+        fullProps.putAll( props ) ;
+	fullProps.put( "type", type ) ;
 
-	myProps.setProperty( "type", type ) ;
-        Hashtable propsTable = new Hashtable() ;
-        addToHashTable( propsTable, oknProps ) ;
+        @SuppressWarnings("unchecked")
+        final Hashtable onameProps = new Hashtable( (Map)fullProps ) ;
 
 	ObjectName oname ;
 	try {
-	    oname = new ObjectName( domain, onProps ) ;
-	    server.registerMBean( mbean, oname ) ;
+	    oname = new ObjectName( domain, onameProps ) ;
 
-	    objectMap.put( obj, oname ) ;
+            if (objectMap.containsKey( obj )) {
+                // XXX I18N
+                throw new IllegalArgumentException(
+                    "Object " + obj + " has already been registered" ) ;
+            }
+            
+            if (objectNameMap.containsKey( oname )) {
+                throw new IllegalArgumentException(
+                    // XXX I18N
+                    "An Object has already been registered with ObjectName "
+                    + oname ) ;
+            }
+
+            server.registerMBean( mbean, oname ) ;
+            
 	    objectNameMap.put( oname, obj ) ;
-	} catch (Exception exc) {
+	    objectMap.put( obj, oname ) ;
+
+            return mbean ;
+	} catch (JMException exc) {
 	    throw new IllegalArgumentException( exc ) ;
 	}
     }
@@ -290,11 +344,28 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public void setResourceBundle( ResourceBundle rb ) {
-        this.rb = rb ;
+        this.resourceBundle = rb ;
     }
 
     public ResourceBundle getResourceBundle() {
-        return rb ;
+        return resourceBundle ;
+    }
+    
+    public String getDescription( AnnotatedElement element ) {
+        Description desc = element.getAnnotation( Description.class ) ;
+        String result ;
+        if (desc == null) {
+            // XXX I18N
+            result = "No description available!" ;
+        } else {
+            result = desc.value() ;
+        }
+        
+        if (resourceBundle != null) {
+            result = resourceBundle.getString( result ) ;
+        }
+        
+        return result ;
     }
 }
 

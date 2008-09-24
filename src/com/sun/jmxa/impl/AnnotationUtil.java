@@ -52,11 +52,13 @@ import com.sun.jmxa.IncludeSubclass ;
 public class AnnotationUtil {
     private AnnotationUtil() {}
 
-    /** Find the superclass or superinterface of cls (which may be cls itself) that has the
-     * given annotationClass as an annotation.  If the annotated Class has an IncludeSubclass
-     * annotation, add those classes into the ClassAnalyzer for the annotated class.
+    /* Find the superclass or superinterface of cls (which may be cls itself) 
+     * that has the given annotationClass as an annotation.  If the annotated 
+     * Class has an IncludeSubclass annotation, add those classes into the 
+     * ClassAnalyzer for the annotated class.
      */
-    public static Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( final Class<?> cls, 
+    public static Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
+        final Class<?> cls, 
         final Class<? extends Annotation> annotationClass ) {
 
         ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
@@ -64,7 +66,8 @@ public class AnnotationUtil {
         Class<?> annotatedClass = Algorithms.getOne( 
             ca.findClasses( ca.forAnnotation( annotationClass ) ),
             "No " + annotationClass.getName() + " annotation found",
-            "More than one " + annotationClass.getName() + " annotation found" ) ;
+            "More than one " + annotationClass.getName() 
+            + " annotation found" ) ;
         */
         
         final Class<?> annotatedClass = Algorithms.getFirst( 
@@ -73,7 +76,8 @@ public class AnnotationUtil {
         
         final List<Class<?>> classes = new ArrayList<Class<?>>() ;
         classes.add( annotatedClass ) ;
-	final IncludeSubclass incsub = annotatedClass.getAnnotation( IncludeSubclass.class ) ;
+	final IncludeSubclass incsub = annotatedClass.getAnnotation( 
+            IncludeSubclass.class ) ;
 	if (incsub != null) {
             for (Class<?> klass : incsub.cls()) {
                 classes.add( klass ) ;
@@ -84,24 +88,28 @@ public class AnnotationUtil {
             ca = new ClassAnalyzer( classes ) ;
         }
         
-        return new Pair( annotatedClass, ca ) ;
+        return new Pair<Class<?>,ClassAnalyzer>( annotatedClass, ca ) ;
     }
 
     public static InheritedAttribute[] getInheritedAttributes( Class<?> cls ) {
 	// Check for @InheritedAttribute(s) annotation.  
 	// Find methods for these attributes in superclasses. 
-	final InheritedAttribute ia = cls.getAnnotation( InheritedAttribute.class ) ;
-	final InheritedAttributes ias = cls.getAnnotation( InheritedAttributes.class ) ;
-	if ((ia != null) && (ias != null)) 
+	final InheritedAttribute ia = cls.getAnnotation( 
+            InheritedAttribute.class ) ;
+	final InheritedAttributes ias = cls.getAnnotation( 
+            InheritedAttributes.class ) ;
+	if ((ia != null) && (ias != null)) {
 	    throw new IllegalArgumentException( 
 		"Only one of the annotations InheritedAttribute or "
 		+ "InheritedAttributes may appear on a class" ) ;
+        }
 
 	InheritedAttribute[] iaa = null ;
-	if (ia != null)	
+	if (ia != null)	{
 	    iaa = new InheritedAttribute[] { ia } ;
-	else if (ias != null) 
+        } else if (ias != null) {
 	    iaa = ias.attributes() ;
+        }
 
 	return iaa ;
     }

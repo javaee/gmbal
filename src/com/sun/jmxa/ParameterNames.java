@@ -33,17 +33,25 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
+package com.sun.jmxa ;
 
-package com.sun.jmxa.impl ;
+import java.lang.annotation.Documented ;
+import java.lang.annotation.Target ;
+import java.lang.annotation.ElementType ;
+import java.lang.annotation.Retention ;
+import java.lang.annotation.RetentionPolicy ;
 
-import java.lang.reflect.Type ;
-
-import java.lang.reflect.AnnotatedElement ;
-
-import com.sun.jmxa.ManagedObjectManager ;
-
-public interface ManagedObjectManagerInternal extends ManagedObjectManager {
-    TypeConverter getTypeConverter( Type type ) ;
-    
-    String getDescription( AnnotatedElement element ) ;
+/** This annotation is applied to a method that represents an MBean operation.
+ * It defines the names of the parameters of the operation.  It must contain 
+ * as many arguments as there are parameters in the annotated method.
+ */
+@Documented 
+@Target(ElementType.METHOD) 
+@Retention(RetentionPolicy.RUNTIME)
+/**
+ *
+ * @author ken
+ */
+public @interface ParameterNames {
+    String[] value() ;
 }

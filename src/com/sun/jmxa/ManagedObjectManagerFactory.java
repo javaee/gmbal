@@ -36,6 +36,10 @@
 
 package com.sun.jmxa ;
 
+import java.util.Map ;
+import java.util.HashMap ;
+import java.util.Properties ;
+
 import com.sun.jmxa.impl.ManagedObjectManagerImpl ;
 import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
 
@@ -44,21 +48,66 @@ import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
 public final class ManagedObjectManagerFactory {
     private ManagedObjectManagerFactory() {}
 
-    /** Create a new ManagedObjectManager.  All objectnames created will share the
-     * domain value passed on this call.
+    /** Create a new ManagedObjectManager.  All objectnames created will share
+     * the domain value passed on this call.
+     * @param domain The domain to use for all ObjectNames created when
+     * MBeans are registered.
+     * @return A new ManagedObjectManager.
      */
-    public static ManagedObjectManager create( String domain ) {
+    public static ManagedObjectManager create( final String domain ) {
 	return new ManagedObjectManagerImpl( domain ) ;
     }
 
-    /** Create a new ManagedObjectManager that delegates all calls to the old one.
-     * In addition, the props specified on this call are added to register calls.
-     * This allows creating a ManagedObjectManager for managed objects that share
-     * a set of properties in their ObjectNames.
+    /** Create a new ManagedObjectManager that delegates all calls to the old 
+     * one.  In addition, the props specified on this call are added to register 
+     * calls.  This allows creating a ManagedObjectManager for managed objects 
+     * that share a set of properties in their ObjectNames.
+     * @param mom The MaangedObjectManager to which calls are delegated.
+     * @param props The properties to be added to all registration calls.
+     * @return The ManagedObjectManager that delegates to mom, adding props
+     * to the ObjectNames created whenever a new MBean is registered.
      */
-    public static ManagedObjectManager create( ManagedObjectManager mom, String... props ) {
-	return ManagedObjectManagerImpl.makeDelegate( (ManagedObjectManagerInternal)mom, 
-            props ) ;
+    public static ManagedObjectManager create( final ManagedObjectManager mom, 
+        final String... props ) {
+        
+        final Map<String,String> map = new HashMap<String,String>() ;
+        ManagedObjectManagerImpl.addToMap( map, props ) ;
+	return ManagedObjectManagerImpl.makeDelegate( 
+            (ManagedObjectManagerInternal)mom, map ) ;
+    }
+
+    /** Create a new ManagedObjectManager that delegates all calls to the old
+     * one.  In addition, the props specified on this call are added to 
+     * register calls. This allows creating a ManagedObjectManager for managed 
+     * objects that share a set of properties in their ObjectNames.
+     * @param mom The MaangedObjectManager to which calls are delegated.
+     * @param props The properties to be added to all registration calls.
+     * @return The ManagedObjectManager that delegates to mom, adding props
+     * to the ObjectNames created whenever a new MBean is registered.
+     */
+    public static ManagedObjectManager create( final ManagedObjectManager mom, 
+        final Properties props ) {
+        
+        final Map<String,String> map = new HashMap<String,String>() ;
+        ManagedObjectManagerImpl.addToMap( map, props ) ;
+	return ManagedObjectManagerImpl.makeDelegate( 
+            (ManagedObjectManagerInternal)mom, map ) ;
+    }
+
+    /** Create a new ManagedObjectManager that delegates all calls to the old
+     * one.  In addition, the props specified on this call are added to register
+     * calls.  This allows creating a ManagedObjectManager for managed objects 
+     * that share a set of properties in their ObjectNames.
+     * @param mom The MaangedObjectManager to which calls are delegated.
+     * @param props The properties to be added to all registration calls.
+     * @return The ManagedObjectManager that delegates to mom, adding props
+     * to the ObjectNames created whenever a new MBean is registered.
+     */
+    public static ManagedObjectManager create( final ManagedObjectManager mom, 
+        final Map<String,String> props ) {
+	
+        return ManagedObjectManagerImpl.makeDelegate( 
+            (ManagedObjectManagerInternal)mom, props ) ;
     }
 }
 

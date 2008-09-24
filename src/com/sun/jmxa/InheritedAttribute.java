@@ -61,7 +61,9 @@ import java.lang.annotation.RetentionPolicy ;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface InheritedAttribute {
     /** The description of the attribute.  Should be a key to a resource
-     * bundle for I18N support.
+     * bundle for I18N support. Note that this needs a description, otherwise
+     * the InheritedAttributes annotation won't work.  We'll use the Description
+     * annotation for the other cases.
      */
     String description() default "" ;
 

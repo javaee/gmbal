@@ -48,12 +48,8 @@ import java.lang.annotation.RetentionPolicy ;
 @Target(ElementType.METHOD) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ManagedAttribute {
-    /** The description of the attribute.  Should be a key to a resource
-     * bundle for I18N support.
-     */
-    String description() default "" ;
-
     /** The id of the attribute.  Defaults to value derived from method name.
+     * @return The id (default "").
      */
     String id() default "" ;
 }

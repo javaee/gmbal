@@ -44,11 +44,9 @@ import java.lang.annotation.RetentionPolicy ;
 import java.lang.reflect.Method ;
 
 import java.util.Iterator ;
-import java.util.Properties ;
 import java.util.Map ;
 import java.util.HashMap ;
 import java.util.Hashtable ;
-import java.util.List ;
 import java.util.ArrayList ;
 import java.util.Arrays ;
 import java.util.List ;
@@ -56,7 +54,6 @@ import java.util.Set ;
 import java.util.HashSet ;
 import java.util.Date ;
 
-import java.io.PrintWriter ;
 
 import java.math.BigInteger ;
 import java.math.BigDecimal ;
@@ -72,22 +69,12 @@ import javax.management.openmbean.CompositeType ;
 import com.sun.jmxa.generic.UnaryFunction ;
 import com.sun.jmxa.generic.UnaryBooleanFunction ;
 import com.sun.jmxa.generic.Algorithms ;
-import com.sun.jmxa.generic.Pair ;
 
-import com.sun.jmxa.ManagedData ;
-import com.sun.jmxa.ManagedObject ;
-import com.sun.jmxa.ManagedAttribute ;
-import com.sun.jmxa.ManagedOperation ;
-import com.sun.jmxa.ManagedObjectManager ;
-import com.sun.jmxa.ManagedObjectManagerFactory ;
 
 import com.sun.jmxa.impl.TypeConverter ;
 import com.sun.jmxa.impl.AttributeDescriptor ;
 import com.sun.jmxa.impl.ClassAnalyzer ;
-import com.sun.jmxa.impl.AnnotationUtil ;
 import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
-
-import static java.util.Arrays.asList ;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -101,8 +88,9 @@ public class JmxaTest extends TestCase {
 	Iterator<A> resIter = result.iterator() ;
 	Iterator<A> sdataIter = sdata.iterator() ;
 
-	while (resIter.hasNext() && sdataIter.hasNext()) 
-	    assertEquals( resIter.next(), sdataIter.next() ) ;
+	while (resIter.hasNext() && sdataIter.hasNext()) {
+            assertEquals(resIter.next(), sdataIter.next());
+        }
 
 	assertEquals( resIter.hasNext(), sdataIter.hasNext() ) ;
     }
@@ -152,8 +140,9 @@ public class JmxaTest extends TestCase {
 	final List<Integer> sdata = new ArrayList<Integer>() ;
 
 	for (Integer i : data) {
-	    if ((i & 2) == 0)
-		sdata.add( i ) ;
+	    if ((i & 2) == 0) {
+                sdata.add(i);
+            }
 	}
 
 	final UnaryBooleanFunction<Integer> ifEven = new UnaryBooleanFunction<Integer>() {
@@ -171,8 +160,9 @@ public class JmxaTest extends TestCase {
 	final List<Integer> sdata = new ArrayList<Integer>() ;
 
 	for (Integer i : data) {
-	    if ((i & 2) == 0)
-		sdata.add( i ) ;
+	    if ((i & 2) == 0) {
+                sdata.add(i);
+            }
 	}
 
 	final UnaryBooleanFunction<Integer> ifEven = new UnaryBooleanFunction<Integer>() {
@@ -332,8 +322,8 @@ public class JmxaTest extends TestCase {
 		public boolean evaluate( Object obj ) {
                     Method method = (Method)obj ;
 
-		    return (method.getName() == "barA") &&
-			(method.getReturnType() == int.class) ;
+		    return method.getName().equals("barA") &&
+			method.getReturnType() == int.class ;
 		}
 	    } ;
 
@@ -382,12 +372,12 @@ public class JmxaTest extends TestCase {
     private static Method setter_fooD = getMethod( DD.class, "setFooD", int.class ) ;
 
     public void testIsSetterIsGetter() {
-	Method m = null ;
+	Method m ;
         ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory.create( "ORBTest" ) ;
 
-        AttributeDescriptor ad = null ;
+        AttributeDescriptor ad ;
 
         ad = AttributeDescriptor.findAttribute( mom, ca, "fooA", "null description", 
             AttributeDescriptor.AttributeType.GETTER ) ;
@@ -511,8 +501,9 @@ public class JmxaTest extends TestCase {
     public static final String MDE_ATTR_ID_NAME = "name" ;
     public static final String MDE_ATTR_ID_DATE = "currentDate" ;
 
-    @ManagedData( description=MDE_DESCRIPTION )
-    public class ManagedDataExample {
+    @ManagedData
+    @Description( MDE_DESCRIPTION )
+    public static class ManagedDataExample {
 	private String name ;
 	private Date date ;
 
@@ -521,27 +512,33 @@ public class JmxaTest extends TestCase {
 	    date = new Date() ;
 	}
 
-	@ManagedAttribute( description=MDE_ATTR_DESC_NAME, id=MDE_ATTR_ID_NAME )
+	@ManagedAttribute( id=MDE_ATTR_ID_NAME )
+        @Description( MDE_ATTR_DESC_NAME ) 
 	public String name() {
 	    return name ;
 	}
 
-	@ManagedAttribute( description=MDE_ATTR_DESC_DATE, id=MDE_ATTR_ID_DATE )
+	@ManagedAttribute( id=MDE_ATTR_ID_DATE )
+        @Description( MDE_ATTR_DESC_DATE )
 	public Date date() {
 	    return date ;
 	}
 
+        @Override
 	public boolean equals( Object obj ) {
-	    if (this.equals( obj ))
-		return true ;
+	    if (this == obj) {
+                return true;
+            }
 
-	    if (!(obj instanceof ManagedDataExample))
-		return false ;
+	    if (!(obj instanceof ManagedDataExample)) {
+                return false;
+            }
 
 	    ManagedDataExample mde = (ManagedDataExample)obj ;
 	    return mde.name.equals( name ) && mde.date.equals( date ) ;
 	}
 
+        @Override
 	public int hashCode() {
 	    return name.hashCode() ^ date.hashCode() ;
 	}
@@ -554,7 +551,8 @@ public class JmxaTest extends TestCase {
     public static final String MOE_OP_DESC_INCREMENT = "Description of ManagedOperation increment" ;
     public static final String MOE_OP_DESC_DECREMENT = "Description of ManagedOperation decrement" ;
 
-    @ManagedObject( description=MOE_DESCRIPTION ) 
+    @ManagedObject
+    @Description( MOE_DESCRIPTION ) 
     public class ManagedObjectExample {
 	private int num ;
 	private String name ;
@@ -566,27 +564,32 @@ public class JmxaTest extends TestCase {
 	    this.mde = new ManagedDataExample( name ) ;
 	}
 
-	@ManagedAttribute( description=MOE_ATTR_DESC_NAME )
+	@ManagedAttribute
+        @Description( MOE_ATTR_DESC_NAME )
 	public String getName() {
 	    return name ;
 	}
 
-	@ManagedAttribute( description=MOE_ATTR_DESC_NUM ) 
+	@ManagedAttribute
+        @Description( MOE_ATTR_DESC_NUM ) 
 	public int getNum() {
 	    return num ;
 	}
 
-	@ManagedAttribute( description=MOE_ATTR_DESC_MDE )
+	@ManagedAttribute
+        @Description( MOE_ATTR_DESC_MDE )
 	public ManagedDataExample getMde() {
 	    return mde ;
 	}
 
-	@ManagedOperation( description=MOE_OP_DESC_INCREMENT ) 
+	@ManagedOperation
+        @Description( MOE_OP_DESC_INCREMENT ) 
 	public int increment( int value ) {
 	    return num+=value ;
 	}
 
-	@ManagedOperation( description=MOE_OP_DESC_DECREMENT ) 
+	@ManagedOperation
+        @Description( MOE_OP_DESC_DECREMENT ) 
 	public int decrement( int value ) {
 	    return num-=value ;
 	}
@@ -596,6 +599,7 @@ public class JmxaTest extends TestCase {
 	}
     }
 
+    @SuppressWarnings({"unchecked"})
     public void testManagedObjectExample() {
 	final String domain = "ORBTest" ;
 	final int num = 12 ;
@@ -625,9 +629,9 @@ public class JmxaTest extends TestCase {
 	    assertEquals( mbs.getAttribute( moeName, "name" ), name ) ;
 	    Object obj = mbs.getAttribute( moeName, "mde" ) ;
 	    assertTrue( obj instanceof CompositeData ) ;
-	    CompositeData cdata = (CompositeData)obj ;
-	    assertEquals( moe.getMde().name(), cdata.get( MDE_ATTR_ID_NAME ) ) ;
-	    assertEquals( moe.getMde().date(), cdata.get( MDE_ATTR_ID_DATE ) ) ;
+	    CompositeData compData = (CompositeData)obj ;
+	    assertEquals( moe.getMde().name(), compData.get( MDE_ATTR_ID_NAME ) ) ;
+	    assertEquals( moe.getMde().date(), compData.get( MDE_ATTR_ID_DATE ) ) ;
 
 	    // Validate operations
 	} catch (Exception exc) {
@@ -645,6 +649,7 @@ public class JmxaTest extends TestCase {
 	// make sure object is really gone
     }
 
+    @SuppressWarnings("unchecked")
     public void testManagedDataTypeConverter() {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory.create( "ORBTest" ) ;
@@ -673,10 +678,10 @@ public class JmxaTest extends TestCase {
 	Object managed = tc.toManagedEntity( value ) ;
 
 	assertTrue( managed instanceof CompositeData ) ;
-	CompositeData cdata = (CompositeData)managed ;
-	assertEquals( cdata.getCompositeType(), ctype ) ;
-	assertEquals( value.name(), (String)cdata.get( MDE_ATTR_ID_NAME ) ) ;
-	assertEquals( value.date(), (Date)cdata.get( MDE_ATTR_ID_DATE ) ) ;
+	CompositeData compData = (CompositeData)managed ;
+	assertEquals( compData.getCompositeType(), ctype ) ;
+	assertEquals( value.name(), (String)compData.get( MDE_ATTR_ID_NAME ) ) ;
+	assertEquals( value.date(), (Date)compData.get( MDE_ATTR_ID_DATE ) ) ;
     }
 
     public static Test suite() {

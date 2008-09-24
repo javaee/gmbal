@@ -38,62 +38,116 @@ package com.sun.jmxa ;
 
 import java.util.Properties ;
 import java.util.ResourceBundle ;
+import java.util.Map ;
+
+import java.io.Closeable ;
 
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
+import javax.management.NotificationEmitter ;
 
 /** An interface used to managed Open MBeans created from annotated
  * objects.  This is mostly a facade over MBeanServer.
+ * 
+ * XXX Do we need to support an @Notification annotation as in JSR 255?
+ * XXX Do we need dependency injection (@Resource)?
+ * XXX Test attribute change notification.
+ * XXX Test @ObjectNameKey
+ * XXX Should we automate handling of recursive types using @Key/@Map?
+ * XXX Do we need to support @Descriptor from JSR 255?
+ * XXX Do we want simplified exception wrapper scheme for I18N of exceptions?
  */
-public interface ManagedObjectManager {
+public interface ManagedObjectManager extends Closeable {
     /** Construct an Open Mean for obj according to its annotations,
      * and register it with domain getDomain() and the key/value pairs
      * given by props in the form key=value.  The MBeanServer from 
      * setMBeanServer (or its default) is used.
+     * @param obj The object used to construct an OpenMbean that is registered
+     * with the MBeanServer.
+     * @param props The additional properties to use in constructing the 
+     * ObjectNameKey for the registered MBean.  May be null, in which case
+     * the ObjectNameKey annotations are used to construct the 
+     * ObjectNameKey.
+     * @return The NotificationEmitter that can be used to register 
+     * NotificationListeners against the registered MBean.  Only
+     * AttributeChangeNotifications are supported.
      */
-    void register( Object obj, String... props ) ;
+    NotificationEmitter register( Object obj, String... props ) ;
 
     /** Same as register( Object, String...) except that key/value
      * pairs are given as properties.
-     */
-    void register( Object obj, Properties props )  ;
+     * @param obj The object used to construct an OpenMbean that is registered
+     * with the MBeanServer.
+     * @param props The additional properties to use in constructing the 
+     * ObjectNameKey for the registered MBean.  May be null, in which case
+     * the ObjectNameKey annotations are used to construct the 
+     * ObjectNameKey.
+     * @return The NotificationEmitter that can be used to register 
+     * NotificationListeners against the registered MBean.  Only
+     * AttributeChangeNotifications are supported.     */
+    NotificationEmitter register( Object obj, Properties props )  ;
 
     /** Same as register( Object, String...) except that key/value
      * pairs are given as properties.
-     */
-    void register( Object obj, Map<String,String> props ) ;
+     * @param obj The object used to construct an OpenMbean that is registered
+     * with the MBeanServer.
+     * @param props The additional properties to use in constructing the 
+     * ObjectNameKey for the registered MBean.  May be null, in which case
+     * the ObjectNameKey annotations are used to construct the 
+     * ObjectNameKey.
+     * @return The NotificationEmitter that can be used to register 
+     * NotificationListeners against the registered MBean.  Only
+     * AttributeChangeNotifications are supported.     */
+    NotificationEmitter register( Object obj, Map<String,String> props ) ;
 
     /** Unregister the Open MBean corresponding to obj from the
      * mbean server.
+     * @param obj The object originally passed to a register method.
      */
     void unregister( Object obj ) ;
 
     /** Get the ObjectName for the given object (which must have
      * been registered via a register call).
+     * @param obj The object originally passed to a register call.
+     * @return The ObjectName used to register the MBean.
      */
     ObjectName getObjectName( Object obj ) ;
 
     /** Get the Object that was registered with the given ObjectName.
+     * Note that getObject and getObjectName are inverse operations.
+     * @param oname The ObjectName used to register the object.
+     * @return The Object passed to the register call.
      */
     Object getObject( ObjectName oname ) ;
 
     /** Return the domain name that was used when this ManagedObjectManager
      * was created.
+     * @return Get the domain name for this ManagedObjectManager.
      */
     String getDomain() ;
 
     /** Set the MBeanServer to which all MBeans using this interface
      * are published.  The default value is 
      * java.lang.management.ManagementFactory.getPlatformMBeanServer().
+     * @param server The MBeanServer to set as the MBeanServer for this 
+     * ManagedObjectManager.
      */
     void setMBeanServer( MBeanServer server ) ;
 
+    /** Get the current MBeanServer.
+     * @return The current MBeanServer, either the default, or the value passed
+     * to setMBeanServer.
+     */
     MBeanServer getMBeanServer() ;
 
     /** Set the ResourceBundle to use for getting localized descriptions.
      * If not set, the description is the value in the annotation.
+     * @param rb The resource bundle to use.  May be null.
      */
     void setResourceBundle( ResourceBundle rb ) ;
 
+    /** Get the resource bundle (if any) set by setResourceBundle.
+     * @return The resource bundle set by setResourceBundle: may be null.
+     */
     ResourceBundle getResourceBundle() ;
 }

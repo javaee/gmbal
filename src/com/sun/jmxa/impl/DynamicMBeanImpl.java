@@ -44,16 +44,15 @@ import javax.management.AttributeNotFoundException ;
 import javax.management.ReflectionException ;
 import javax.management.MBeanInfo ;
 import javax.management.DynamicMBean ;
-import javax.management.MBeanAttributeInfo ;
-import javax.management.MBeanConstructorInfo ;
-import javax.management.MBeanOperationInfo ;
+import javax.management.NotificationBroadcasterSupport ;
 import javax.management.MBeanNotificationInfo ;
+import javax.management.AttributeChangeNotification ;
 
-class DynamicMBeanImpl implements DynamicMBean {
+class DynamicMBeanImpl extends NotificationBroadcasterSupport implements DynamicMBean {
     // Just delegates to the skeleton which does all of the work.
-    // This allows a skeleton to be computed once for a particular class and then
-    // cached.  Creating an mbean then simply requires finding a skeleton and
-    // creating an instance of this class with the appropriate object.
+    // This allows a skeleton to be computed once for a particular class and 
+    // then cached.  Creating an mbean then simply requires finding a skeleton
+    // and creating an instance of this class with the appropriate object.
     private DynamicMBeanSkeleton skel ;
     private Object target ;
 
@@ -62,8 +61,8 @@ class DynamicMBeanImpl implements DynamicMBean {
 	this.target = obj ;
     }
 
-    public Object getAttribute(String attribute) throws AttributeNotFoundException,
-	MBeanException, ReflectionException {
+    public Object getAttribute(String attribute) 
+        throws AttributeNotFoundException, MBeanException, ReflectionException {
 
 	return skel.getAttribute( target, attribute ) ;
     }
@@ -71,7 +70,7 @@ class DynamicMBeanImpl implements DynamicMBean {
     public void setAttribute(Attribute attribute) throws AttributeNotFoundException,
 	InvalidAttributeValueException, MBeanException, ReflectionException  {
 
-	skel.setAttribute( target, attribute ) ;
+	skel.setAttribute( this, target, attribute ) ;
     }
         
     public AttributeList getAttributes(String[] attributes) {
@@ -79,7 +78,7 @@ class DynamicMBeanImpl implements DynamicMBean {
     }
         
     public AttributeList setAttributes(AttributeList attributes) {
-	return skel.setAttributes( target, attributes ) ;
+	return skel.setAttributes( this, target, attributes ) ;
     }
     
     public Object invoke(String actionName, Object params[], String signature[])
@@ -90,5 +89,18 @@ class DynamicMBeanImpl implements DynamicMBean {
     
     public MBeanInfo getMBeanInfo() {
 	return skel.getMBeanInfo() ;
+    }
+    
+    private static final MBeanNotificationInfo[] 
+        ATTRIBUTE_CHANGE_NOTIFICATION_INFO =
+    { new MBeanNotificationInfo(
+            new String[] { AttributeChangeNotification.ATTRIBUTE_CHANGE },
+            AttributeChangeNotification.class.getName(),
+            "An Attribute of this MBean has changed" ) 
+    } ;
+    
+    @Override
+    public MBeanNotificationInfo[] getNotificationInfo() {
+        return ATTRIBUTE_CHANGE_NOTIFICATION_INFO ;
     }
 }

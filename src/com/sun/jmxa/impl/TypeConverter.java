@@ -45,22 +45,29 @@ import javax.management.openmbean.OpenType ;
  */
 public interface TypeConverter {
     /** Java generic type of attribute in problem-domain Object.
+     * @return The Java type that this TypeConverter handles.
      */
     Type getDataType() ;
 
     /** Open MBeans Open Type for management domain object.
+     * @return The OpenType that this TypeConverter handles.
      */
     OpenType getManagedType() ;
 
-    /** Convert from a problem-domain Object obj to a ManagedEntity.
+    /** Convert from a problem-domain Object obj to a managed entity.
+     * @param obj The Java object to be converted to an open type.
+     * @return The resulting open type.
      */
     Object toManagedEntity( Object obj ) ;
 
     /** Convert from a ManagedEntity to a problem-domain Object.
+     * @param entity The managed entity to be converted to a java type.
+     * @return The resulting java type.
      */
     Object fromManagedEntity( Object entity ) ;
 
     /** Returns true if this TypeConverter is an identity transformation.
+     * @return True if this TypeConverter is an identity transformation.
      */
     boolean isIdentity() ;
 }

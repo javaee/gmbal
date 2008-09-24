@@ -96,7 +96,8 @@ public class AttributeDescriptor {
         }
 
 	final String mname = method.getName() ;
-	final String initCapId = ident.substring(0,1).toUpperCase() + ident.substring(1) ;
+	final String initCapId = ident.substring(0,1).toUpperCase() 
+            + ident.substring(1) ;
 
 	if (mname.equals( ident )) {
 	    return true ;
@@ -112,24 +113,29 @@ public class AttributeDescriptor {
     // Tested by testIsSetterIsGetter
     public static boolean isGetter( final Method m, final String id ) {
 	Class<?> rt = m.getReturnType() ;
-	if (rt == void.class) 
+	if (rt == void.class) {
 	    return false ;
-	if (m.getParameterTypes().length != 0)
+        }
+	if (m.getParameterTypes().length != 0) {
 	    return false ;
+        }
 
 	final String mname = m.getName() ;
-	final String initCapId = id.substring(0,1).toUpperCase() + id.substring(1) ;
+	final String initCapId = id.substring(0,1).toUpperCase() 
+            + id.substring(1) ;
 
-	if (mname.equals( id ))
+	if (mname.equals( id )) {
 	    return true ;
+        }
 
-	if (mname.equals( "get" + initCapId ))
+	if (mname.equals( "get" + initCapId )) {
 	    return true ;
-
+        }
 
 	if (rt.equals( boolean.class ) || rt.equals( Boolean.class)) {
-	    if (mname.equals( "is" + initCapId ))
+	    if (mname.equals( "is" + initCapId )) {
 		return true ;
+            }
 	}
 
 	return false ;
@@ -141,8 +147,9 @@ public class AttributeDescriptor {
     }
 
     private void checkType( AttributeType at ) {
-        if (at != _atype)
+        if (at != _atype) {
             throw new RuntimeException( "Required AttributeType is " + at ) ;
+        }
     }
 
     public Object get( Object obj ) throws ReflectionException {
@@ -171,7 +178,8 @@ public class AttributeDescriptor {
 
     private static String stripPrefix( String str, String prefix ) {
 	int prefixLength = prefix.length() ;
-	String first = str.substring( prefixLength, prefixLength+1 ).toLowerCase() ;
+	String first = str.substring( prefixLength, 
+            prefixLength+1 ).toLowerCase() ;
 	if (str.length() == prefixLength + 1) {
 	    return first ;
 	} else {
@@ -179,38 +187,44 @@ public class AttributeDescriptor {
 	}
     }
     
-    /** Find the attribute corresponding to a getter or setter with the given id.
-     * Returns null if no such attribute is found.
+    /* Find the attribute corresponding to a getter or setter with the given
+     * id. Returns null if no such attribute is found.
      */
-    public static AttributeDescriptor findAttribute( ManagedObjectManagerInternal mom,
+    public static AttributeDescriptor findAttribute( 
+        final ManagedObjectManagerInternal mom,
         final ClassAnalyzer ca, final String id, 
         final String description, final AttributeType at ) {
 
-        List<Method> methods = ca.findMethods( 
+        final List<Method> methods = ca.findMethods( 
 	    new ClassAnalyzer.Predicate() {
-		public boolean evaluate( Object m ) {
-                    if (at == AttributeType.GETTER)
+		public boolean evaluate( final Object m ) {
+                    if (at == AttributeType.GETTER) {
                         return isGetter( (Method)m, id ) ;
-                    else
+                    } else {
                         return isSetter( (Method)m, id ) ;
+                    }
 		}
 	    }
 	) ;
 
-        if (methods.size() == 0) 
+        if (methods.size() == 0) {
             return null ;
+        }
 
         return new AttributeDescriptor( mom, methods, id, description, at ) ;
     }
 
-    private AttributeDescriptor( ManagedObjectManagerInternal mom, final List<Method> methods, 
-        final String id, final String description, final AttributeType at ) {
+    private AttributeDescriptor( ManagedObjectManagerInternal mom, 
+        final List<Method> methods, final String id, final String description, 
+        final AttributeType at ) {
 
         this( mom, 
             (at == AttributeType.GETTER) ?
-                Algorithms.getFirst( methods, "No getter named " + id + " found" )
+                Algorithms.getFirst( methods, "No getter named " + id 
+                    + " found" )
             :
-                Algorithms.getFirst( methods, "No setter named " + id + " found" ),
+                Algorithms.getFirst( methods, "No setter named " + id 
+                    + " found" ),
             id, description ) ;
     }
 
@@ -230,10 +244,14 @@ public class AttributeDescriptor {
 
             this._atype = AttributeType.GETTER ;
 
-            if (m.getGenericReturnType() == void.class) 
-                throw new IllegalArgumentException( m + " is an illegal getter method" ) ;
-            if (m.getGenericParameterTypes().length != 0)
-                throw new IllegalArgumentException( m + " is an illegal getter method" ) ;
+            if (m.getGenericReturnType() == void.class) {
+                throw new IllegalArgumentException( m 
+                    + " is an illegal getter method" ) ;
+            }
+            if (m.getGenericParameterTypes().length != 0) {
+                throw new IllegalArgumentException( m 
+                    + " is an illegal getter method" ) ;
+            }
             this._type = m.getGenericReturnType() ;
         } else if (startsWithNotEquals( name, "set" )) {
             if (extId.equals( "" )) {
@@ -242,10 +260,14 @@ public class AttributeDescriptor {
 
             this._atype = AttributeType.SETTER ;
 
-            if (m.getGenericReturnType() != void.class) 
-                throw new IllegalArgumentException( m + " is an illegal setter method" ) ;
-            if (m.getGenericParameterTypes().length != 1 ) 
-                throw new IllegalArgumentException( m + " is an illegal setter method" ) ;
+            if (m.getGenericReturnType() != void.class) {
+                throw new IllegalArgumentException( m 
+                    + " is an illegal setter method" ) ;
+            }
+            if (m.getGenericParameterTypes().length != 1 ) {
+                throw new IllegalArgumentException( m 
+                    + " is an illegal setter method" ) ;
+            }
             this._type = m.getGenericParameterTypes()[0] ;
         } else if (startsWithNotEquals( name, "is" )) {
             if (extId.equals( "" )) {
@@ -254,11 +276,17 @@ public class AttributeDescriptor {
 
             this._atype = AttributeType.GETTER ;
 
-            if (m.getGenericParameterTypes().length != 0)
-                throw new IllegalArgumentException( m + " is an illegal \"is\" method" ) ;
+            if (m.getGenericParameterTypes().length != 0) {
+                throw new IllegalArgumentException( m 
+                    + " is an illegal \"is\" method" ) ;
+            }
             this._type = m.getGenericReturnType() ;
-            if (!_type.equals( boolean.class ) && !_type.equals( Boolean.class ))
-                throw new IllegalArgumentException( m + " is an illegal \"is\" method" ) ;
+            if (!_type.equals( boolean.class ) && 
+                !_type.equals( Boolean.class )) {
+                
+                throw new IllegalArgumentException( m 
+                    + " is an illegal \"is\" method" ) ;
+            }
         } else {
             if (extId.equals( "" )) {
                 _id = name ;
@@ -273,7 +301,8 @@ public class AttributeDescriptor {
                 this._type = rtype ;
                 this._atype = AttributeType.GETTER ;
             } else {
-                throw new IllegalArgumentException( m + " is not a valid attribute method" ) ;
+                throw new IllegalArgumentException( m 
+                    + " is not a valid attribute method" ) ;
             }
         }
 
@@ -284,14 +313,17 @@ public class AttributeDescriptor {
     public AttributeDescriptor( ManagedObjectManagerInternal mom, Method m ) {
         this( mom, m,
             m.getAnnotation( ManagedAttribute.class ).id(),
-            m.getAnnotation( ManagedAttribute.class ).description() ) ;
+            mom.getDescription( m ) ) ;
     }
 
     public static class WrappedException extends RuntimeException {
+        private static final long serialVersionUID = -3289041604278946501L;
+        
 	public WrappedException( Exception exc ) {
 	    super( exc ) ;
 	}
 
+        @Override
 	public Exception getCause() {
 	    return (Exception)super.getCause() ;
 	}

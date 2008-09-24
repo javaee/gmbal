@@ -107,25 +107,29 @@ public class ClassAnalyzer {
     private String contents = null ;
 
     private ClassAnalyzer( Graph<Class<?>> gr ) {
-	List<Class<?>> result = new ArrayList<Class<?>>( gr.getPostorderList() ) ;
+	List<Class<?>> result = new ArrayList<Class<?>>( 
+            gr.getPostorderList() ) ;
 	Collections.reverse( result ) ;
         classInheritance = result ;
     }
 
-    public ClassAnalyzer( Class<?> cls ) {
-	this( new Graph( cls, finder ) ) ;
+    public ClassAnalyzer( final Class<?> cls ) {
+	this( new Graph<Class<?>>( cls, finder ) ) ;
     }
 
-    public ClassAnalyzer( List<Class<?>> classes ) {
-	this( new Graph( classes, finder ) ) ;
+    public ClassAnalyzer( final List<Class<?>> classes ) {
+	this( new Graph<Class<?>>( classes, finder ) ) ;
     }
 
     public interface Predicate extends UnaryBooleanFunction<Object> {} ;
 
-    public Predicate forAnnotation( final Class<? extends Annotation> annotation ) {
+    public Predicate forAnnotation( 
+        final Class<? extends Annotation> annotation ) {
+        
         return new Predicate() {
             public boolean evaluate( Object elem ) {
-                return ((AnnotatedElement)elem).getAnnotation( annotation ) != null ;
+                return ((AnnotatedElement)elem).isAnnotationPresent( 
+                    annotation ) ;
             }
         } ;
     }
@@ -166,6 +170,7 @@ public class ClassAnalyzer {
 	return result ;
     }
 
+    @Override
     public synchronized String toString() {
         if (contents == null) {
             StringBuilder sb = new StringBuilder() ;

@@ -49,11 +49,6 @@ import java.lang.annotation.RetentionPolicy ;
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ManagedData {
-    /** The description of the CompositeData.  Should be a key to a resource
-     * bundle for I18N support.
-     */
-    String description() default "" ;
-
     /** The name of the ManagedData.  A default of "" is interpreted as the class name.
      */
     String name() default "" ;

@@ -37,17 +37,17 @@
 package com.sun.jmxa.impl ;
 
 import java.util.List ;
-import java.util.Iterator ;
-import java.util.ArrayList ;
 import java.util.Arrays ;
+import java.util.ArrayList ;
 import java.util.Map ;
 import java.util.HashMap ;
 import java.util.Set ;
 import java.util.HashSet ;
+import java.util.Iterator ;
+import java.util.concurrent.atomic.AtomicLong ;
 
 import java.lang.reflect.Method ;
 import java.lang.reflect.Type ;
-
 
 import javax.management.Attribute ;
 import javax.management.AttributeList ;
@@ -59,27 +59,34 @@ import javax.management.MBeanInfo ;
 import javax.management.MBeanOperationInfo ;
 import javax.management.MBeanParameterInfo ;
 
-import javax.management.openmbean.OpenMBeanInfoSupport ;
 import javax.management.openmbean.OpenMBeanAttributeInfo ;
 import javax.management.openmbean.OpenMBeanAttributeInfoSupport ;
 import javax.management.openmbean.OpenMBeanOperationInfo ;
 import javax.management.openmbean.OpenMBeanOperationInfoSupport ;
 import javax.management.openmbean.OpenMBeanParameterInfo ;
 import javax.management.openmbean.OpenMBeanParameterInfoSupport ;
+import javax.management.openmbean.OpenMBeanInfoSupport ;
+import javax.management.NotificationBroadcasterSupport ;
+import javax.management.AttributeChangeNotification ;
 
-import com.sun.jmxa.generic.Pair ;
 import com.sun.jmxa.generic.BinaryFunction ;
-
-import com.sun.jmxa.ManagedObject ;
+import com.sun.jmxa.InheritedAttribute ;
+import com.sun.jmxa.ObjectNameKey ;
 import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.ManagedOperation ;
-import com.sun.jmxa.InheritedAttribute ;
+import com.sun.jmxa.ManagedObject ;
+import com.sun.jmxa.ParameterNames ;
 
-class DynamicMBeanSkeleton {
-    // Object evaluate( Object, List<Object> ) (or Result evaluate( Target, ArgList ))
-    public interface Operation extends BinaryFunction<Object,List<Object>,Object> {} ;
+import com.sun.jmxa.generic.Pair ;
 
-    private String type ;
+public class DynamicMBeanSkeleton {
+    // Object evaluate( Object, List<Object> ) 
+    // (or Result evaluate( Target, ArgList ))
+    public interface Operation 
+        extends BinaryFunction<Object,List<Object>,Object> {} ;
+
+    private final String type ;
+    private final AtomicLong sequenceNumber ;
     private final MBeanInfo mbInfo ;
     private final ManagedObjectManagerInternal mom ;
     private final Map<String,AttributeDescriptor> setters ;
@@ -93,7 +100,7 @@ class DynamicMBeanSkeleton {
     private void processAttribute( AttributeDescriptor getter, 
         AttributeDescriptor setter ) {
 
-        if ((setter == null) && (getter == null))
+        if ((setter == null) && (getter == null)) {
             throw new IllegalArgumentException(
                 "At least one of getter and setter must not be null" ) ;
         }
@@ -104,7 +111,8 @@ class DynamicMBeanSkeleton {
 		    "Getter and setter types do not match" ) ;
         }
 
-        AttributeDescriptor nonNullDescriptor = (getter != null) ? getter : setter ;
+        AttributeDescriptor nonNullDescriptor = 
+            (getter != null) ? getter : setter ;
 
         String name = nonNullDescriptor.id() ;
         String description = nonNullDescriptor.description() ;
@@ -117,25 +125,36 @@ class DynamicMBeanSkeleton {
 	mbeanAttributeInfoList.add( ainfo ) ;
     }
 
-    private void analyzeInheritedAttributes( Class<?> annotatedClass, ClassAnalyzer ca ) {
+    private void analyzeInheritedAttributes( final Class<?> annotatedClass, 
+        final ClassAnalyzer ca ) {
 	// Check for @InheritedAttribute(s) annotation.  
         // Find methods for these attributes in superclasses. 
-	final InheritedAttribute[] iaa = AnnotationUtil.getInheritedAttributes( annotatedClass ) ;
+	final InheritedAttribute[] iaa = AnnotationUtil.getInheritedAttributes( 
+            annotatedClass ) ;
 	if (iaa != null) {
 	    for (InheritedAttribute attr : iaa) {
-		AttributeDescriptor setterInfo = AttributeDescriptor.findAttribute( 
-                    mom, ca, attr.id(), attr.description(), 
-                    AttributeDescriptor.AttributeType.SETTER ) ; 
+		AttributeDescriptor setterInfo = 
+                    AttributeDescriptor.findAttribute( mom, ca, attr.id(), 
+                        attr.description(), 
+                        AttributeDescriptor.AttributeType.SETTER ) ; 
 
-		AttributeDescriptor getterInfo = AttributeDescriptor.findAttribute( 
-                    mom, ca, attr.id(), attr.description(), 
-                    AttributeDescriptor.AttributeType.GETTER ) ; 
+		AttributeDescriptor getterInfo = 
+                    AttributeDescriptor.findAttribute( mom, ca, attr.id(), 
+                        attr.description(), 
+                        AttributeDescriptor.AttributeType.GETTER ) ; 
 
 		processAttribute( getterInfo, setterInfo ) ;
 	    }
 	}
     }
 
+    private static <K,V> void putIfNotPresent( Map<K,V> map,
+        K key, V value ) {
+    
+        if (!map.containsKey( key )) {
+            map.put( key, value ) ;
+        }
+    }
     private void analyzeAnnotatedAttributes( ClassAnalyzer ca ) {
 	final List<Method> attributes = ca.findMethods( 
             ca.forAnnotation( ManagedAttribute.class ) ) ;
@@ -144,13 +163,13 @@ class DynamicMBeanSkeleton {
 	    AttributeDescriptor minfo = new AttributeDescriptor( mom, m ) ;
 
 	    if (minfo.atype() == AttributeDescriptor.AttributeType.GETTER) {
-		getters.put( minfo.id(), minfo ) ;
+                putIfNotPresent( getters, minfo.id(), minfo ) ;
 	    } else {
-		setters.put( minfo.id(), minfo ) ;
+                putIfNotPresent( setters, minfo.id(), minfo ) ;
 	    }
 	}
 
-	final Set<String> setterNames = new HashSet<String>( setters.keySet() ) ;
+	final Set<String> setterNames = new HashSet<String>(setters.keySet()) ;
 	for (String str : getters.keySet()) {
 	    processAttribute( getters.get( str ), setters.get( str ) ) ;
 	    setterNames.remove( str ) ;
@@ -171,14 +190,17 @@ class DynamicMBeanSkeleton {
             String id = onk.value() ;
             AttributeDescriptor ad = new AttributeDescriptor( mom, m,
                 id, "" ) ;
-            objectNameKeys.put( ad.id(), ad ) ;
+            putIfNotPresent( objectNameKeys, ad.id(), ad ) ;
         }
     }
-    private Pair<Operation,OpenMBeanOperationInfo> makeOperation( final Method m ) {
-	final ManagedOperation mo = m.getAnnotation( ManagedOperation.class ) ;
-	final String desc = mo.description() ;
+    
+    private Pair<Operation,OpenMBeanOperationInfo> makeOperation( 
+        final Method m ) {
+	
+	final String desc = mom.getDescription( m ) ;
 	final Type rtype = m.getGenericReturnType() ;
-	final TypeConverter rtc = rtype == null ? null : mom.getTypeConverter( rtype ) ;
+	final TypeConverter rtc = rtype == null ? null : mom.getTypeConverter( 
+            rtype ) ;
 	final Type[] atypes = m.getGenericParameterTypes() ;
 	final List<TypeConverter> atcs = new ArrayList<TypeConverter>() ;
 	for (Type ltype : atypes) {
@@ -211,27 +233,45 @@ class DynamicMBeanSkeleton {
 	    }
 	} ;
 
-	final OpenMBeanParameterInfo[] paramInfo = new OpenMBeanParameterInfo[ atcs.size() ] ;
+        final String[] pnames = 
+            m.getAnnotation( ParameterNames.class ).value() ;
+        if (pnames != null && pnames.length != atcs.size()) {
+            // XXX I18N
+            throw new IllegalArgumentException( 
+                "ParametersNames annotation must have the same number" 
+                + " of arguments as the length of the method parameter list" );
+        }
+        
+	final OpenMBeanParameterInfo[] paramInfo = 
+            new OpenMBeanParameterInfo[ atcs.size() ] ;
 	int ctr = 0 ;
 	for (TypeConverter tc : atcs) {
-	    paramInfo[ctr++] = new OpenMBeanParameterInfoSupport( 
-		"arg" + ctr, desc, tc.getManagedType() ) ;
+	    paramInfo[ctr] = new OpenMBeanParameterInfoSupport( 
+		(pnames == null) ? "arg" + ctr : pnames[ctr], 
+                desc, tc.getManagedType() ) ;
+            ctr++ ;
 	}
 
-	// XXX Note that impact is always set to ACTION_INFO here.  If this is useful to set
-	// in general, we need to add impact to the ManagedOperation annotation.
+	// XXX Note that impact is always set to ACTION_INFO here.  If this is 
+        // useful to set in general, we need to add impact to the 
+        // ManagedOperation annotation.
         // This is basically what JSR 255 does.
-	final OpenMBeanOperationInfo operInfo = new OpenMBeanOperationInfoSupport( m.getName(),
-	    desc, paramInfo, rtc.getManagedType(), MBeanOperationInfo.ACTION_INFO ) ;
+	final OpenMBeanOperationInfo operInfo = 
+            new OpenMBeanOperationInfoSupport( m.getName(),
+	    desc, paramInfo, rtc.getManagedType(), 
+            MBeanOperationInfo.ACTION_INFO ) ;
 
 	return new Pair<Operation,OpenMBeanOperationInfo>( oper, operInfo ) ;
     }
 
     private void analyzeOperations( ClassAnalyzer ca ) {
-	// Scan for all methods annotation with @ManagedOperation, including inherited methods.
-	final List<Method> ops = ca.findMethods( ca.forAnnotation( ManagedOperation.class ) ) ;
+	// Scan for all methods annotation with @ManagedOperation, 
+        // including inherited methods.
+	final List<Method> ops = ca.findMethods( ca.forAnnotation( 
+            ManagedOperation.class ) ) ;
 	for (Method m : ops) {
-            final Pair<Operation,OpenMBeanOperationInfo> data = makeOperation( m ) ;
+            final Pair<Operation,OpenMBeanOperationInfo> data = 
+                makeOperation( m ) ;
             final OpenMBeanOperationInfo info = data.second() ;
             
             final List<String> dataTypes = new ArrayList<String>() ;
@@ -247,25 +287,29 @@ class DynamicMBeanSkeleton {
                 operations.put( m.getName(), map ) ;
             }
 
-            // XXX we might want to check and see if this was previously defined
-            map.put( dataTypes, data.first() ) ;
+            // Note that the first occurrence of any method will be the most
+            // derived, so if there is already an entry, don't overwrite it.
+            putIfNotPresent( map, dataTypes, data.first() ) ;
 
             mbeanOperationInfoList.add( info ) ;
 	}
     }
 
-    public DynamicMBeanSkeleton( final Class<?> annotatedClass, final ClassAnalyzer ca,
-        final ManagedObjectManagerInternal mom ) {
+    public DynamicMBeanSkeleton( final Class<?> annotatedClass, 
+        final ClassAnalyzer ca, final ManagedObjectManagerInternal mom ) {
 
 	this.mom = mom ;
 
-        final ManagedObject mo = annotatedClass.getAnnotation( ManagedObject.class ) ;
+        final ManagedObject mo = annotatedClass.getAnnotation( 
+            ManagedObject.class ) ;
         
-	type = mo.type() ;
-	if (type.equals( "" )) {
+        if (mo.type().equals("")) {
 	    type = annotatedClass.getName() ;
+        } else {
+            type = mo.type() ;
         }
 
+        sequenceNumber = new AtomicLong() ;
 	setters = new HashMap<String,AttributeDescriptor>() ;
 	getters = new HashMap<String,AttributeDescriptor>() ; 
         objectNameKeys = new HashMap<String,AttributeDescriptor>() ;
@@ -276,13 +320,17 @@ class DynamicMBeanSkeleton {
         analyzeInheritedAttributes( annotatedClass, ca ) ;
         analyzeAnnotatedAttributes( ca ) ;
         analyzeOperations( ca ) ;
+        analyzeObjectNameKeys( ca ) ;
         
 	OpenMBeanAttributeInfo[] attrInfos = mbeanAttributeInfoList.toArray( 
 	    new OpenMBeanAttributeInfo[mbeanAttributeInfoList.size()] ) ;
 	OpenMBeanOperationInfo[] operInfos = mbeanOperationInfoList.toArray(
 	    new OpenMBeanOperationInfo[mbeanOperationInfoList.size() ] ) ;
+        // XXX Do we want to use the class analyzer to handle an inherited 
+        // @Description annotation?
 	mbInfo = new OpenMBeanInfoSupport( 
-	    type, mo.description(), attrInfos, null, operInfos, null ) ;
+	    type, mom.getDescription( annotatedClass ), attrInfos, null, 
+            operInfos, null ) ;
     }
 
     // The rest of the methods are used in the DynamicMBeanImpl code.
@@ -291,29 +339,52 @@ class DynamicMBeanSkeleton {
 	return type ;
     }
 
-    public Object getAttribute( Object obj, String name) throws AttributeNotFoundException,
-	MBeanException, ReflectionException {
+    public Object getAttribute( Object obj, String name) 
+        throws AttributeNotFoundException, MBeanException, ReflectionException {
 
 	AttributeDescriptor getter = getters.get( name ) ;
 	if (getter == null) {
-	    throw new AttributeNotFoundException( "Could not find attribute " + name ) ;
+	    throw new AttributeNotFoundException( "Could not find attribute " 
+                + name ) ;
         }
 
         return getter.get( obj ) ;
     }
     
-    public void setAttribute(Object obj, Attribute attribute) throws AttributeNotFoundException,
-	InvalidAttributeValueException, MBeanException, ReflectionException  {
+    public void setAttribute( final NotificationBroadcasterSupport emitter, 
+        final Object obj, final Attribute attribute) 
+        throws AttributeNotFoundException, InvalidAttributeValueException, 
+        MBeanException, ReflectionException  {
 
-	String name = attribute.getName() ;
-	Object value = attribute.getValue() ;
-	AttributeDescriptor setter = setters.get( name ) ;
+	final String name = attribute.getName() ;
+	final Object value = attribute.getValue() ;
+        final AttributeDescriptor getter = getters.get( name ) ;
+        final Object oldValue = (getter == null) ?
+            null :
+            getter.get( obj ) ;
+        
+	final AttributeDescriptor setter = setters.get( name ) ;
 	if (setter == null) {
-	    throw new AttributeNotFoundException( "Could not find writable attribute " + name ) ;
+	    throw new AttributeNotFoundException( 
+                "Could not find writable attribute " + name ) ;
 
         }
         
         setter.set( obj, value ) ;
+        
+        // Note that this code assumes that emitter is also the MBean,
+        // because the MBean extends NotificationBroadcasterSupport!
+        AttributeChangeNotification notification =
+            new AttributeChangeNotification( emitter,
+                sequenceNumber.incrementAndGet(),
+                System.currentTimeMillis(),
+                "Changed attribute " + type,
+                type,
+                setter.tc().getManagedType().toString(),
+                oldValue,
+                value ) ;
+        
+        emitter.sendNotification( notification ) ;     
     }
         
     public AttributeList getAttributes( Object obj, String[] attributes) {
@@ -332,10 +403,13 @@ class DynamicMBeanSkeleton {
 	return result ;
     }
         
-    public AttributeList setAttributes( Object obj, AttributeList attributes) {
-	for (Object attr : attributes) {
+    public AttributeList setAttributes( 
+        final NotificationBroadcasterSupport emitter,
+        final Object obj, final AttributeList attributes) {
+	
+        for (Object attr : attributes) {
 	    try {
-		setAttribute( obj, (Attribute)attr ) ;
+		setAttribute( emitter, obj, (Attribute)attr ) ;
 	    } catch (Exception exc) {
 		throw new IllegalArgumentException( exc ) ;
 	    }
@@ -343,19 +417,20 @@ class DynamicMBeanSkeleton {
 	return attributes ;
     }
     
-    public Object invoke( Object obj, String actionName, Object params[], String signature[])
-	throws MBeanException, ReflectionException  {
+    public Object invoke( Object obj, String actionName, Object params[], 
+        String signature[]) throws MBeanException, ReflectionException  {
 
-	Map<List<String>,Operation> opMap = operations.get( actionName ) ;
+	final Map<List<String>,Operation> opMap = operations.get( actionName ) ;
 	if (opMap == null) {
-	    throw new IllegalArgumentException( "Could not find operation named " + actionName ) ;
-
+	    throw new IllegalArgumentException( 
+                "Could not find operation named " + actionName ) ;
         }
         
-	List<String> sig = Arrays.asList( signature ) ;
-	Operation op = opMap.get( sig ) ;
+	final List<String> sig = Arrays.asList( signature ) ;
+	final Operation op = opMap.get( sig ) ;
 	if (op == null) {
-	    throw new IllegalArgumentException( "Could not find operation named " + actionName 
+	    throw new IllegalArgumentException( 
+                "Could not find operation named " + actionName 
 		+ " with signature " + sig ) ;
 
         }
@@ -367,14 +442,18 @@ class DynamicMBeanSkeleton {
 	}
     }
     
-    public Properties getObjectNameProperties( Object obj ) 
+    public Map<String,String> getObjectNameProperties( final Object obj ) 
         throws ReflectionException {
         
-        Properties result = new Properties() ;
-        for (Map.Entry<String,AttributeDescriptor> entry : objectNameKeys.entrySet()) {
-            String key = entry.getKey() ;
-            AttributeDescriptor ad = entry.getValue() ;
-            String value = (String)ad.get( obj ) ;
+        final Map<String,String> result = new HashMap<String,String>() ;
+        for (Map.Entry<String,AttributeDescriptor> entry : 
+            objectNameKeys.entrySet()) {
+            
+            final String key = entry.getKey() ;
+            final AttributeDescriptor ad = entry.getValue() ;
+            // XXX Should this use a type converter?  If not, check that 
+            // type is reasonable.
+            final String value = ad.get( obj ).toString() ;
             result.put( key, value ) ;
         }
         return result ;

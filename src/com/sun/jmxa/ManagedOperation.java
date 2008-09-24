@@ -47,11 +47,6 @@ import java.lang.annotation.RetentionPolicy ;
 @Target(ElementType.METHOD) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ManagedOperation {
-    /** The description of the operation.  Should be a key to a resource
-     * bundle for I18N support.
-     */
-    String description() default "" ;
-
     /** The id of the operation.  Defaults to the method name.
      */
     String id() default "" ;

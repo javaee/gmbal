@@ -44,16 +44,12 @@ import java.lang.annotation.RetentionPolicy ;
 /** This annotation defines a Managed Object.   An interface or class annotated as ManagedObject
  * has a corresponding open MBean constructed according to the ManagedAttribute and
  * ManagedOperation annotations on its methods.
+ * XXX Should we change this to @MXBean to match JSR 255?  Is that deceptive?
  */
 @Documented 
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ManagedObject {
-    /** The description of the open MBean.  Should be a key to a resource
-     * bundle for I18N support.
-     */
-    String description() default "" ;
-
     /** The type value stored in the ObjectName for an open MBean corresponding
      * to the annotated class.  Defaults to the class name.  This is used in
      * creating ObjectNames for mbeans with this annotation.
