@@ -49,6 +49,8 @@ import java.util.concurrent.atomic.AtomicLong ;
 import java.lang.reflect.Method ;
 import java.lang.reflect.Type ;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.Attribute ;
 import javax.management.AttributeList ;
 import javax.management.MBeanException ;
@@ -78,6 +80,7 @@ import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ParameterNames ;
 
 import com.sun.jmxa.generic.Pair ;
+import java.lang.reflect.InvocationTargetException;
 
 public class DynamicMBeanSkeleton {
     // Object evaluate( Object, List<Object> ) 
@@ -129,23 +132,20 @@ public class DynamicMBeanSkeleton {
         final ClassAnalyzer ca ) {
 	// Check for @InheritedAttribute(s) annotation.  
         // Find methods for these attributes in superclasses. 
-	final InheritedAttribute[] iaa = AnnotationUtil.getInheritedAttributes( 
-            annotatedClass ) ;
-	if (iaa != null) {
-	    for (InheritedAttribute attr : iaa) {
-		AttributeDescriptor setterInfo = 
-                    AttributeDescriptor.findAttribute( mom, ca, attr.id(), 
-                        attr.description(), 
-                        AttributeDescriptor.AttributeType.SETTER ) ; 
+	final List<InheritedAttribute> iaa = mom.getInheritedAttributes(  ca ) ;
+	for (InheritedAttribute attr : iaa) {
+            AttributeDescriptor setterInfo =
+                AttributeDescriptor.findAttribute(mom, ca, attr.id(),
+                attr.description(),
+                AttributeDescriptor.AttributeType.SETTER);
 
-		AttributeDescriptor getterInfo = 
-                    AttributeDescriptor.findAttribute( mom, ca, attr.id(), 
-                        attr.description(), 
-                        AttributeDescriptor.AttributeType.GETTER ) ; 
+            AttributeDescriptor getterInfo =
+                AttributeDescriptor.findAttribute(mom, ca, attr.id(),
+                attr.description(),
+                AttributeDescriptor.AttributeType.GETTER);
 
-		processAttribute( getterInfo, setterInfo ) ;
-	    }
-	}
+            processAttribute(getterInfo, setterInfo);
+        }
     }
 
     private static <K,V> void putIfNotPresent( Map<K,V> map,
@@ -157,7 +157,7 @@ public class DynamicMBeanSkeleton {
     }
     private void analyzeAnnotatedAttributes( ClassAnalyzer ca ) {
 	final List<Method> attributes = ca.findMethods( 
-            ca.forAnnotation( ManagedAttribute.class ) ) ;
+            ca.forAnnotation( mom, ManagedAttribute.class ) ) ;
 
 	for (Method m : attributes) {
 	    AttributeDescriptor minfo = new AttributeDescriptor( mom, m ) ;
@@ -183,7 +183,7 @@ public class DynamicMBeanSkeleton {
 
     private void analyzeObjectNameKeys( ClassAnalyzer ca) {
         final List<Method> onkMethods = ca.findMethods(
-            ca.forAnnotation( ObjectNameKey.class )) ;
+            ca.forAnnotation( mom, ObjectNameKey.class )) ;
         
         for (Method m : onkMethods ){
             ObjectNameKey onk = m.getAnnotation( ObjectNameKey.class ) ;
@@ -227,15 +227,16 @@ public class DynamicMBeanSkeleton {
                     } else {
 			return rtc.toManagedEntity( result ) ;
                     }
-		} catch (Exception exc) {
+		} catch (IllegalAccessException exc) {
 		    throw new RuntimeException( exc ) ;
-		}
+		} catch (InvocationTargetException exc) {
+                    throw new RuntimeException( exc ) ;
+                }
 	    }
 	} ;
 
-        final String[] pnames = 
-            m.getAnnotation( ParameterNames.class ).value() ;
-        if (pnames != null && pnames.length != atcs.size()) {
+        final ParameterNames pna = m.getAnnotation( ParameterNames.class ) ;
+        if (pna != null && pna.value().length != atcs.size()) {
             // XXX I18N
             throw new IllegalArgumentException( 
                 "ParametersNames annotation must have the same number" 
@@ -247,7 +248,7 @@ public class DynamicMBeanSkeleton {
 	int ctr = 0 ;
 	for (TypeConverter tc : atcs) {
 	    paramInfo[ctr] = new OpenMBeanParameterInfoSupport( 
-		(pnames == null) ? "arg" + ctr : pnames[ctr], 
+		(pna == null) ? "arg" + ctr : pna.value()[ctr], 
                 desc, tc.getManagedType() ) ;
             ctr++ ;
 	}
@@ -267,7 +268,7 @@ public class DynamicMBeanSkeleton {
     private void analyzeOperations( ClassAnalyzer ca ) {
 	// Scan for all methods annotation with @ManagedOperation, 
         // including inherited methods.
-	final List<Method> ops = ca.findMethods( ca.forAnnotation( 
+	final List<Method> ops = ca.findMethods( ca.forAnnotation( mom,
             ManagedOperation.class ) ) ;
 	for (Method m : ops) {
             final Pair<Operation,OpenMBeanOperationInfo> data = 
@@ -391,11 +392,18 @@ public class DynamicMBeanSkeleton {
 	AttributeList result = new AttributeList() ;
 	for (String str : attributes) {
 	    Object value ;
-	    try {
-		value = getAttribute( obj, str ) ;
-	    } catch (Exception exc) {
-		throw new IllegalArgumentException( exc ) ;
-	    }
+            try {
+                value = getAttribute(obj, str);
+            } catch (AttributeNotFoundException ex) {
+                throw new IllegalArgumentException( 
+                    "Error in getting attribute " + str, ex ) ;
+            } catch (MBeanException ex) {
+                throw new IllegalArgumentException( 
+                    "Error in getting attribute " + str, ex ) ;
+            } catch (ReflectionException ex) {
+                throw new IllegalArgumentException( 
+                    "Error in getting attribute " + str, ex ) ;
+            }
 
 	    Attribute attr = new Attribute( str, value ) ;
 	    result.add( attr ) ;
@@ -408,11 +416,21 @@ public class DynamicMBeanSkeleton {
         final Object obj, final AttributeList attributes) {
 	
         for (Object attr : attributes) {
-	    try {
-		setAttribute( emitter, obj, (Attribute)attr ) ;
-	    } catch (Exception exc) {
-		throw new IllegalArgumentException( exc ) ;
-	    }
+            try {
+                setAttribute(emitter, obj, (Attribute) attr);
+            } catch (AttributeNotFoundException ex) {
+                throw new IllegalArgumentException( 
+                    "Error in setting attribute " + attr, ex ) ; 
+            } catch (InvalidAttributeValueException ex) {
+                throw new IllegalArgumentException( 
+                    "Error in setting attribute " + attr, ex ) ; 
+            } catch (MBeanException ex) {
+                throw new IllegalArgumentException( 
+                    "Error in setting attribute " + attr, ex ) ;    
+            } catch (ReflectionException ex) {
+                throw new IllegalArgumentException( 
+                    "Error in setting attribute " + attr, ex ) ;    
+            }
 	}
 	return attributes ;
     }
@@ -432,14 +450,9 @@ public class DynamicMBeanSkeleton {
 	    throw new IllegalArgumentException( 
                 "Could not find operation named " + actionName 
 		+ " with signature " + sig ) ;
-
         }
         
-	try {
-	    return op.evaluate( obj, Arrays.asList( params ) ) ;
-	} catch (Exception exc) {
-	    throw new ReflectionException( exc ) ;
-	}
+	return op.evaluate( obj, Arrays.asList( params ) ) ;
     }
     
     public Map<String,String> getObjectNameProperties( final Object obj ) 

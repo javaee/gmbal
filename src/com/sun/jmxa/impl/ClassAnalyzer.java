@@ -45,7 +45,7 @@ import java.lang.reflect.Method ;
 
 import java.lang.annotation.Annotation ;
 
-import com.sun.jmxa.generic.UnaryBooleanFunction ;
+import com.sun.jmxa.generic.Predicate ;
 import com.sun.jmxa.generic.Graph ;
 
     
@@ -121,27 +121,19 @@ public class ClassAnalyzer {
 	this( new Graph<Class<?>>( classes, finder ) ) ;
     }
 
-    public interface Predicate extends UnaryBooleanFunction<Object> {} ;
-
-    public Predicate forAnnotation( 
+    public Predicate<AnnotatedElement> forAnnotation( 
+        final ManagedObjectManagerInternal mom,
         final Class<? extends Annotation> annotation ) {
         
-        return new Predicate() {
-            public boolean evaluate( Object elem ) {
-                return ((AnnotatedElement)elem).isAnnotationPresent( 
-                    annotation ) ;
+        return new Predicate<AnnotatedElement>() {
+            public boolean evaluate( AnnotatedElement elem ) {
+                if (mom == null) {
+                    return elem.getAnnotation(annotation) != null ; 
+                } else {
+                    return mom.getAnnotation( elem, annotation ) != null ;
+                }
             }
         } ;
-    }
-    
-    private static final Predicate alwaysTrue = new Predicate() {
-        public boolean evaluate( Object elem ) {
-            return true ;
-        }
-    } ;
-
-    public Predicate alwaysTrue() {
-        return alwaysTrue ;
     }
 
     public List<Class<?>> findClasses( Predicate pred ) {

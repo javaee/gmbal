@@ -43,24 +43,39 @@ import java.util.WeakHashMap ;
 import java.util.Properties ;
 import java.util.Hashtable ;
 import java.util.Enumeration ;
+import java.util.List ;
+import java.util.ArrayList ;
 
 import java.io.IOException ;
 
 import java.lang.reflect.Type ;
 import java.lang.reflect.AnnotatedElement ;
 
+import java.lang.annotation.Annotation ;
+
 import java.lang.management.ManagementFactory ;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
 import javax.management.NotificationEmitter;
 
 import com.sun.jmxa.generic.Pair ;
+import com.sun.jmxa.generic.Algorithms ;
 
 import com.sun.jmxa.ManagedObjectManager ;
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.Description ;
+import com.sun.jmxa.IncludeSubclass ;
+import com.sun.jmxa.InheritedAttribute ;
+import com.sun.jmxa.InheritedAttributes ;
+import com.sun.jmxa.generic.Predicate;
+import com.sun.jmxa.generic.UnaryFunction;
+import javax.management.ReflectionException;
 
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final String domain ;
@@ -70,6 +85,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final Map<ObjectName,Object> objectNameMap ;
     private final Map<Class<?>,DynamicMBeanSkeleton> skeletonMap ;
     private final Map<Type,TypeConverter> typeConverterMap ;
+    private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
 
     private static final TypeConverter recursiveTypeMarker = 
         new TypeConverterImpl.TypeConverterPlaceHolderImpl() ;
@@ -90,7 +106,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	DynamicMBeanSkeleton result = skeletonMap.get( cls ) ;	
 
 	if (result == null) {
-            Pair<Class<?>,ClassAnalyzer> pair = AnnotationUtil.getClassAnalyzer( 
+            Pair<Class<?>,ClassAnalyzer> pair = getClassAnalyzer( 
                 cls, ManagedObject.class ) ;
             Class<?> annotatedClass = pair.first() ;
             ClassAnalyzer ca = pair.second() ;
@@ -129,6 +145,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	objectNameMap = new HashMap<ObjectName,Object>() ;
 	skeletonMap = new WeakHashMap<Class<?>,DynamicMBeanSkeleton>() ;
 	typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
+        addedAnnotations = 
+            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
     }
 
     /** Create another ManagedObjectManager that delegates to this one, but adds some
@@ -169,11 +187,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	    }
 
 	    public void unregister( Object obj ) {
-		try {
-		    mom.unregister( obj ) ;
-		} catch (Exception exc) {
-		    throw new IllegalArgumentException( exc ) ;
-		}
+		mom.unregister( obj ) ;
 	    }
 
 	    public ObjectName getObjectName( Object obj ) {
@@ -214,6 +228,30 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             public void close() throws IOException {
                 mom.close() ;
+            }
+            
+            public void addAnnotation( AnnotatedElement element,
+                Annotation annotation ) {
+                mom.addAnnotation( element, annotation ) ;
+            }
+            
+            public <T extends Annotation> T getAnnotation( 
+                final AnnotatedElement element,
+                final Class<T> type ) {
+                
+                return mom.getAnnotation( element, type ) ;
+            }
+            
+            public Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
+                final Class<?> cls, 
+                final Class<? extends Annotation> annotationClass ) {
+                
+                return mom.getClassAnalyzer( cls, annotationClass ) ;
+            }
+            
+            public List<InheritedAttribute> getInheritedAttributes( 
+                ClassAnalyzer ca ) {
+                return mom.getInheritedAttributes( ca ) ;
             }
 	} ;
     }
@@ -269,9 +307,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
         final Map<String,String> fullProps ;
         try {
-            fullProps = skel.getObjectNameProperties( obj ) ;
-        } catch (Exception exc) {
-            throw new RuntimeException( exc ) ;
+            fullProps = skel.getObjectNameProperties(obj);
+        } catch (ReflectionException ex) {
+            throw new IllegalArgumentException( 
+                "Could not get ObjectNameKey values", ex ) ;
         }
         
         fullProps.putAll( props ) ;
@@ -311,10 +350,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized void unregister( Object obj ) {
 	ObjectName oname = objectMap.get( obj ) ;
 	if (oname != null) {
-	    try {
-		server.unregisterMBean( oname ) ;
-	    } catch (Exception exc) {
-		throw new IllegalArgumentException( exc ) ;
+            try {
+                server.unregisterMBean(oname);
+            } catch (InstanceNotFoundException ex) {
+                throw new IllegalArgumentException( 
+                    "Could not unregister " + obj, ex ) ;
+            } catch (MBeanRegistrationException ex) {
+                throw new IllegalArgumentException( 
+                    "Could not unregister " + obj, ex ) ;
 	    } finally {
 		// Make sure obj is removed even if unregisterMBean fails
 		objectMap.remove( obj ) ;
@@ -366,6 +409,115 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
         
         return result ;
+    }
+    
+    
+    public void addAnnotation( AnnotatedElement element,
+        Annotation annotation ) {
+        
+        Map<Class, Annotation> map = addedAnnotations.get( element ) ;
+        if (map == null) {
+            map = new HashMap<Class, Annotation>() ;
+            addedAnnotations.put( element, map ) ;
+        }
+        
+        Annotation  ann = map.get( annotation.getClass() ) ;
+        if (ann != null) {
+            throw new IllegalArgumentException( "Cannot add annotation " 
+                + " to element " + element 
+                + ": an Annotation of that type is already present" ) ;
+        }
+        
+        map.put( annotation.getClass(), annotation ) ;
+    }
+       
+    @SuppressWarnings({"unchecked"})
+    public <T extends Annotation> T getAnnotation( AnnotatedElement element,
+        Class<T> type ) {
+        
+        T result = element.getAnnotation( type ) ;
+        if (result == null) {
+            Map<Class, Annotation> map = addedAnnotations.get( element );
+            if (map != null) {
+                result = (T)map.get( type ) ;
+            } 
+        }
+        
+        return result ;
+    }
+    
+    public Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
+        final Class<?> cls, 
+        final Class<? extends Annotation> annotationClass ) {
+
+        ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
+        /* This is the versions that expects EXACTLY ONE annotation
+        Class<?> annotatedClass = Algorithms.getOne( 
+            ca.findClasses( ca.forAnnotation( annotationClass ) ),
+            "No " + annotationClass.getName() + " annotation found",
+            "More than one " + annotationClass.getName() 
+            + " annotation found" ) ;
+        */
+        
+        final Class<?> annotatedClass = Algorithms.getFirst( 
+            ca.findClasses( ca.forAnnotation( this, annotationClass ) ),
+            "No " + annotationClass.getName() + " annotation found" ) ;
+        
+        final List<Class<?>> classes = new ArrayList<Class<?>>() ;
+        classes.add( annotatedClass ) ;
+	final IncludeSubclass incsub = annotatedClass.getAnnotation( 
+            IncludeSubclass.class ) ;
+	if (incsub != null) {
+            for (Class<?> klass : incsub.cls()) {
+                classes.add( klass ) ;
+            }
+	}
+
+        if (classes.size() > 1) {
+            ca = new ClassAnalyzer( classes ) ;
+        }
+        
+        return new Pair<Class<?>,ClassAnalyzer>( annotatedClass, ca ) ;
+    }
+    
+    public List<InheritedAttribute> getInheritedAttributes( 
+        final ClassAnalyzer ca ) {        
+        
+        final Predicate<AnnotatedElement> pred = Algorithms.or( 
+            ca.forAnnotation( this, InheritedAttribute.class ),
+            ca.forAnnotation( this, InheritedAttributes.class ) ) ;
+            
+        // Construct list of classes annotated with InheritedAttribute or
+        // InheritedAttributes.
+        final List<Class<?>> iaClasses = ca.findClasses( pred ) ;
+        
+        List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
+            new UnaryFunction<Class<?>,List<InheritedAttribute>>() {
+                public List<InheritedAttribute> evaluate( Class<?> cls ) {
+                    final InheritedAttribute ia = getAnnotation(cls,
+                        InheritedAttribute.class);
+                    final InheritedAttributes ias = getAnnotation(cls,
+                        InheritedAttributes.class);
+                    if ((ia != null) && (ias != null)) {
+                        throw new IllegalArgumentException( "class " + cls
+                            + " contains both the InheritedAttribute and " 
+                            + " the InheritedAttributes annotations" ) ;
+                    }
+
+                    final List<InheritedAttribute> result = 
+                        new ArrayList<InheritedAttribute>() ;
+                    
+                    if (ia != null) {
+                        result.add( ia ) ;
+                    } else if (ias != null) {
+                        result.addAll( Algorithms.asList( ias.attributes() )) ;
+                    }
+                    
+                    return result ;
+                }
+        } ) ;
+        
+        return isList ;
     }
 }
 

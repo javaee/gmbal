@@ -58,8 +58,11 @@ import java.util.Dictionary ;
 import java.math.BigDecimal ;
 import java.math.BigInteger ;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.ObjectName ;
 
+import javax.management.ReflectionException;
 import javax.management.openmbean.ArrayType ;
 import javax.management.openmbean.OpenType ;
 import javax.management.openmbean.OpenDataException ;
@@ -71,12 +74,12 @@ import javax.management.openmbean.CompositeDataSupport ;
 import javax.management.openmbean.TabularData ;
 import javax.management.openmbean.TabularDataSupport ;
 
-import com.sun.jmxa.generic.Pair ;
 
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ManagedData ;
 import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.InheritedAttribute ;
+import java.lang.reflect.InvocationTargetException;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
  * ObjectName, TabularData, or CompositeData.
@@ -439,20 +442,18 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} ;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked"})
     private static TypeConverter handleAsString( final Class cls ) {
 
-	final Constructor cs ;
-	try {
-	    cs = cls.getDeclaredConstructor( String.class ) ;
-	} catch (Exception exc) {
-            // No exception here: if no constructor, then fromManagedEntity
-            // should throw an exception if it is ever called.
-	    // throw new IllegalArgumentException( 
-            // "Error in obtaining (String) constructor for " 
-            // + cls, exc ) ;
-            throw new RuntimeException( exc ) ;
-	}
+        Constructor cs = null ;
+        try {
+            cs = cls.getDeclaredConstructor(String.class);
+        } catch (NoSuchMethodException ex) {
+            // log message
+        } catch (SecurityException ex) {
+            // log message
+        }
+
 	final Constructor cons = cs ;
 
 	return new TypeConverterImpl( cls, SimpleType.STRING ) {
@@ -472,9 +473,15 @@ public abstract class TypeConverterImpl implements TypeConverter {
 		try {
                     final String str = (String) entity;
                     return cons.newInstance(str);
-                } catch (Exception exc) {
+                } catch (InstantiationException exc) {
                     throw new IllegalArgumentException(
                         "Error in converting from String to " + cls, exc);
+                } catch (IllegalAccessException exc) {
+                    throw new IllegalArgumentException(
+                        "Error in converting from String to " + cls, exc);                 
+                } catch (InvocationTargetException exc) {
+                    throw new IllegalArgumentException(
+                        "Error in converting from String to " + cls, exc); 
                 }
 	    }
 	} ;
@@ -503,16 +510,12 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static List<AttributeDescriptor> analyzeManagedData( 
         final Class<?> cls, final ManagedObjectManagerInternal mom ) {
        
-        final Pair<Class<?>,ClassAnalyzer> pair = 
-            AnnotationUtil.getClassAnalyzer( cls, ManagedData.class ) ;
-
-        final Class<?> annotatedClass = pair.first() ;
-        final ClassAnalyzer ca = pair.second() ;
+        final ClassAnalyzer ca = mom.getClassAnalyzer( cls, 
+            ManagedData.class ).second() ;
 	
 	final List<AttributeDescriptor> ainfos = 
             new ArrayList<AttributeDescriptor>() ;
-	final InheritedAttribute[] ias = AnnotationUtil.getInheritedAttributes( 
-            annotatedClass ) ;
+	final List<InheritedAttribute> ias = mom.getInheritedAttributes( ca ) ;
 	if (ias != null) {
 	    for (InheritedAttribute attr : ias) {
                 AttributeDescriptor ainfo = AttributeDescriptor.findAttribute( 
@@ -528,7 +531,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	// Construct tables Map<String,Method> for getters (no setters in 
         // CompositeData, since CompositeData is immutable).
 	final List<Method> attributes = ca.findMethods( 
-            ca.forAnnotation( ManagedAttribute.class ) ) ;
+            ca.forAnnotation( mom, ManagedAttribute.class ) ) ;
 	for (Method m : attributes) {
 	    AttributeDescriptor ainfo = new AttributeDescriptor( mom, m ) ;
 
@@ -589,10 +592,12 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     if (minfo.isApplicable( obj )) {
                         Object value ;
                         try {
-                            value = minfo.get( obj ) ;
-                        } catch (Exception exc) {
-                            throw new RuntimeException(exc) ;
+                            value = minfo.get(obj);
+                        } catch (ReflectionException ex) {
+                            throw new IllegalArgumentException(
+                                "Could not get managed data for " + minfo, ex );
                         }
+                        
                         data.put( minfo.id(), value ) ;
                     }
 		}

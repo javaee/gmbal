@@ -53,5 +53,5 @@ import java.lang.annotation.RetentionPolicy ;
  * @author ken
  */
 public @interface ParameterNames {
-    String[] value() ;
+    String[] value() default {} ;
 }

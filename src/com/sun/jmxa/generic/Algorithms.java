@@ -42,6 +42,14 @@ import java.util.ArrayList ;
 public final class Algorithms {
     private Algorithms() {}
     
+    public static <T> List<T> asList( T[] arg ) {
+        List<T> result = new ArrayList<T>() ;
+        for (T elem : arg) {
+            result.add( elem ) ;
+        }
+        return result ;
+    }
+    
     public static <A,R> UnaryFunction<A,R> mapToFunction( final Map<A,R> map ) {
 	return new UnaryFunction<A,R>() {
 	    public R evaluate( A arg ) {
@@ -68,8 +76,60 @@ public final class Algorithms {
 	return result ;
     }
 
+    public static <A> Predicate<A> and( 
+        final Predicate<A> arg1,
+        final Predicate<A> arg2 ) {
+    
+        return new Predicate<A>() {
+            public boolean evaluate( A arg ) {
+                return arg1.evaluate( arg ) && arg2.evaluate( arg ) ;
+            }
+        } ;
+    }
+    
+    public static <A> Predicate<A> or( 
+        final Predicate<A> arg1,
+        final Predicate<A> arg2 ) {
+
+        return new Predicate<A>() {
+            public boolean evaluate( A arg ) {
+                return arg1.evaluate( arg ) || arg2.evaluate( arg ) ;
+            }
+        } ;
+    }
+    
+    public static <T> Predicate<T> FALSE(
+        ) {
+        
+        return new Predicate<T>() {
+            public boolean evaluate( T arg ) {
+                return false ;
+            }
+        } ;
+    } ;
+    
+    public static <T> Predicate<T> TRUE(
+        ) {
+        
+        return new Predicate<T>() {
+            public boolean evaluate( T arg ) {
+                return true ;
+            }
+        } ;
+    } ;
+    
+    public static <A> Predicate<A> not( 
+        final Predicate<A> arg1 ) {
+        
+        return new Predicate<A>() {
+            public boolean evaluate( A arg ) {
+                return !arg1.evaluate( arg ) ;
+            } 
+        } ;
+    }
+        
     public static <A> void filter( final List<A> arg, final List<A> result,
-	final UnaryBooleanFunction<A> predicate ) {
+	final Predicate<A> predicate ) {
 
 	final UnaryFunction<A,A> filter = new UnaryFunction<A,A>() {
 	    public A evaluate( A arg ) { 
@@ -78,13 +138,13 @@ public final class Algorithms {
 	map( arg, result, filter ) ;
     }
 
-    public static <A> List<A> filter( List<A> arg, UnaryBooleanFunction<A> predicate ) {
+    public static <A> List<A> filter( List<A> arg, Predicate<A> predicate ) {
 	List<A> result = new ArrayList<A>() ;
 	filter( arg, result, predicate ) ;
 	return result ;
     }
 
-    public static <A> A find( List<A> arg, UnaryBooleanFunction<A> predicate ) {
+    public static <A> A find( List<A> arg, Predicate<A> predicate ) {
 	for (A a : arg) {
 	    if (predicate.evaluate( a )) {
 		return a ;
@@ -101,7 +161,27 @@ public final class Algorithms {
         }
         return result ;
     }
-
+    
+    /** Flatten the results of applying map to list into a list of T.
+     * 
+     * @param <S> Type of elements of list.
+     * @param <T> Type of elements of result.
+     * @param list List of elements of type S.
+     * @param map function mapping S to List<T>.
+     * @return List<T> containg results of applying map to each element of list.
+     */
+    public static <S,T> List<T> flatten( final List<S> list,
+        final UnaryFunction<S,List<T>> map ) {        
+        
+        return fold( list, new ArrayList<T>(), 
+            new BinaryFunction<List<T>,S,List<T>>() {
+                public List<T> evaluate( List<T> arg1, S arg2 ) {
+                    arg1.addAll( map.evaluate( arg2 ) ) ;
+                    return arg1 ;
+                }
+        } ) ;     
+    }
+        
     public static <T> T getOne( List<T> list, String zeroMsg, String manyMsg ) {
         if (list.size() == 0)
             throw new IllegalArgumentException( zeroMsg ) ;

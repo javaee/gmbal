@@ -35,7 +35,7 @@
  */
 package com.sun.jmxa.generic ;
 
-public interface UnaryBooleanFunction<T> {
+public interface Predicate<T> {
     boolean evaluate( T arg ) ;
 }
 

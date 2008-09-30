@@ -36,17 +36,21 @@
 
 package com.sun.jmxa.impl ;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List ;
 
 import java.lang.reflect.Method ;
 import java.lang.reflect.Type ;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.ReflectionException ;
 
 
 import com.sun.jmxa.generic.Algorithms ;
 
 import com.sun.jmxa.ManagedAttribute ;
+import com.sun.jmxa.generic.Predicate;
     
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
@@ -154,21 +158,33 @@ public class AttributeDescriptor {
 
     public Object get( Object obj ) throws ReflectionException {
         checkType( AttributeType.GETTER ) ;
-
         try {
-            return _tc.toManagedEntity( _method.invoke( obj ) ) ;
-        } catch (Exception exc) {
-            throw new ReflectionException( exc ) ;
+            return _tc.toManagedEntity(_method.invoke(obj));
+        } catch (IllegalAccessException ex) {
+            throw new RuntimeException( "Error in get for attribute " + _id, 
+                ex ) ;
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException( "Error in get for attribute " + _id, 
+                ex ) ;
+        } catch (InvocationTargetException ex) {
+            throw new RuntimeException( "Error in get for attribute " + _id, 
+                ex ) ;
         }
     }
 
     public void set( Object target, Object value ) throws ReflectionException {
         checkType( AttributeType.SETTER ) ;
-
         try {
-            _method.invoke( target, _tc.fromManagedEntity( value ) ) ;
-        } catch (Exception exc) {
-            throw new ReflectionException( exc ) ;
+            _method.invoke(target, _tc.fromManagedEntity(value));
+        } catch (IllegalAccessException ex) {
+            throw new IllegalArgumentException( "Error in set for attribute " 
+                + _id, ex ) ;
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException( "Error in set for attribute " 
+                + _id, ex ) ;
+        } catch (InvocationTargetException ex) {
+            throw new IllegalArgumentException( "Error in set for attribute " 
+                + _id, ex ) ;
         }
     }
 
@@ -196,12 +212,12 @@ public class AttributeDescriptor {
         final String description, final AttributeType at ) {
 
         final List<Method> methods = ca.findMethods( 
-	    new ClassAnalyzer.Predicate() {
-		public boolean evaluate( final Object m ) {
+	    new Predicate<Method>() {
+		public boolean evaluate( final Method m ) {
                     if (at == AttributeType.GETTER) {
-                        return isGetter( (Method)m, id ) ;
+                        return isGetter(  m ,id ) ;
                     } else {
-                        return isSetter( (Method)m, id ) ;
+                        return isSetter(  m ,id ) ;
                     }
 		}
 	    }

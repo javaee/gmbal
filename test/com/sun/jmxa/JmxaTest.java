@@ -67,7 +67,7 @@ import javax.management.openmbean.CompositeData ;
 import javax.management.openmbean.CompositeType ;
 
 import com.sun.jmxa.generic.UnaryFunction ;
-import com.sun.jmxa.generic.UnaryBooleanFunction ;
+import com.sun.jmxa.generic.Predicate ;
 import com.sun.jmxa.generic.Algorithms ;
 
 
@@ -145,7 +145,7 @@ public class JmxaTest extends TestCase {
             }
 	}
 
-	final UnaryBooleanFunction<Integer> ifEven = new UnaryBooleanFunction<Integer>() {
+	final Predicate<Integer> ifEven = new Predicate<Integer>() {
 	    public boolean evaluate( Integer arg ) {
 		return (arg & 2) == 0 ;
 	    }
@@ -165,7 +165,7 @@ public class JmxaTest extends TestCase {
             }
 	}
 
-	final UnaryBooleanFunction<Integer> ifEven = new UnaryBooleanFunction<Integer>() {
+	final Predicate<Integer> ifEven = new Predicate<Integer>() {
 	    public boolean evaluate( Integer arg ) {
 		return (arg & 2) == 0 ;
 	    }
@@ -179,7 +179,7 @@ public class JmxaTest extends TestCase {
     public void testFind() {
 	final List<Integer> data = Arrays.asList( 12, 23, 4, 9, 17, 42, 213, 16, 1, 25 ) ;
 
-	final UnaryBooleanFunction<Integer> is42 = new UnaryBooleanFunction<Integer>() {
+	final Predicate<Integer> is42 = new Predicate<Integer>() {
 	    public boolean evaluate( Integer arg ) {
 		return arg == 42 ;
 	    }
@@ -219,7 +219,7 @@ public class JmxaTest extends TestCase {
 
     public void testGetInheritanceChain() {
         ClassAnalyzer ca = new ClassAnalyzer( I.class ) ;
-        List<Class<?>> res = ca.findClasses( ca.alwaysTrue() ) ;
+        List<Class<?>> res = ca.findClasses( Algorithms.TRUE() ) ;
 	System.out.println( "Inheritance chain for class " + I.class.getName() 
 	    + " is " + res ) ;
 
@@ -317,8 +317,8 @@ public class JmxaTest extends TestCase {
 
     public void testFindMethod() {
         final ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-	final ClassAnalyzer.Predicate predicate = 
-	    new ClassAnalyzer.Predicate() {
+	final Predicate predicate = 
+	    new Predicate() {
 		public boolean evaluate( Object obj ) {
                     Method method = (Method)obj ;
 
@@ -337,7 +337,8 @@ public class JmxaTest extends TestCase {
 
     public void testGetAnnotatedMethods() {
         ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-        List<Method> methods = ca.findMethods( ca.forAnnotation( Test2.class ) ) ;
+        List<Method> methods = ca.findMethods( ca.forAnnotation( null, 
+            Test2.class ) ) ;
 	Set<Method> methodSet = new HashSet<Method>( methods ) ;
 
 	Method[] expectedMethods = { 
@@ -358,7 +359,8 @@ public class JmxaTest extends TestCase {
         expectedResult.add( AA.class ) ;
 
         ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-        List<Class<?>> classes = ca.findClasses( ca.forAnnotation( Test3.class ) ) ;
+        List<Class<?>> classes = ca.findClasses( ca.forAnnotation( null, 
+            Test3.class ) ) ;
 
 	assertEquals( classes, expectedResult ) ;
     }

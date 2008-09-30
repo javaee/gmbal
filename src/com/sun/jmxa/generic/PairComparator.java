@@ -35,10 +35,13 @@
  */
 package com.sun.jmxa.generic ;
 
+import java.io.Serializable;
 import java.util.Comparator ;
 
-public class PairComparator<S,T> implements Comparator<Pair<S,T>>
+public class PairComparator<S,T> implements Comparator<Pair<S,T>>, Serializable
 {
+    private static final long serialVersionUID = 6796339069564409192L;
+    
     private final Comparator<? super S> sc ;
     private final Comparator<? super T> tc ;
 

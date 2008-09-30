@@ -35,9 +35,13 @@
  */
 package com.sun.jmxa.generic ;
 
+import java.io.Serializable;
 import java.util.Comparator ;
 
-public class NaturalComparator<T> implements Comparator<T> {
+public class NaturalComparator<T> implements Comparator<T>, Serializable {
+    private static final long serialVersionUID = 1877883396908826498L;
+    
+    @SuppressWarnings("unchecked")
     public int compare( T obj1, T obj2 )
     {
 	return ((Comparable<T>)obj1).compareTo( obj2 ) ;

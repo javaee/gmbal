@@ -40,6 +40,8 @@ import java.util.Map ;
 import java.util.HashMap ;
 import java.util.Properties ;
 
+import java.lang.reflect.Method ;
+
 import com.sun.jmxa.impl.ManagedObjectManagerImpl ;
 import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
 
@@ -48,6 +50,25 @@ import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
 public final class ManagedObjectManagerFactory {
     private ManagedObjectManagerFactory() {}
 
+    /** Convenience method for getting access to a method through reflection.
+     * Same as Class.getDeclaredMethod, but only throws RuntimeExceptions.
+     * @param cls The class to 
+     * @param name
+     * @param types
+     * @return
+     */
+    public static Method getMethod( final Class<?> cls, String name, 
+        Class... types ) {        
+        
+        try {
+            return cls.getDeclaredMethod( name, types ) ;
+        } catch(NoSuchMethodException exc) {
+            throw new IllegalArgumentException( exc ) ;
+        } catch (SecurityException exc) {
+            throw new IllegalArgumentException( exc ) ;
+        }
+    }
+    
     /** Create a new ManagedObjectManager.  All objectnames created will share
      * the domain value passed on this call.
      * @param domain The domain to use for all ObjectNames created when
