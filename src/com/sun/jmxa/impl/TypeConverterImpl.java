@@ -282,22 +282,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	}
 
 	if (type instanceof Class) {
-	    final Class<?> cls = (Class<?>)type ;
-	    final ManagedObject mo = cls.getAnnotation( ManagedObject.class ) ;
-	    final ManagedData md = cls.getAnnotation( ManagedData.class ) ;
+            return handleClass( (Class<?>)type, mom ) ;
+        }
 
-	    if (mo != null) {
-		return handleManagedObject( cls, mom, mo ) ;
-	    } else if (md != null) {
-		return handleManagedData( cls, mom, md ) ;
-	    } else if (cls.isEnum()) {
-		return handleEnum( cls ) ;
-	    } else {
-		// map to string
-		return handleAsString( cls ) ;
-	    }
-	} 
-	
 	if (type instanceof ParameterizedType) {
 	    return handleParameterizedType( (ParameterizedType)type, mom ) ;
 	} 
@@ -336,7 +323,25 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 + type ) ;
 	}
     }
+    
+    private static TypeConverter handleClass( final Class<?> cls, 
+        final ManagedObjectManagerInternal mom ) {
+        
+        final ManagedObject mo = cls.getAnnotation( ManagedObject.class ) ;
+        final ManagedData md = cls.getAnnotation( ManagedData.class ) ;
 
+        if (mo != null) {
+            return handleManagedObject( cls, mom, mo ) ;
+        } else if (md != null) {
+            return handleManagedData( cls, mom, md ) ;
+        } else if (cls.isEnum()) {
+            return handleEnum( cls ) ;
+        } else {
+            // map to string
+            return handleAsString( cls ) ;
+        }
+    } 
+	
     private static TypeConverter handleManagedObject( final Class type, 
 	final ManagedObjectManagerInternal mom, final ManagedObject mo ) {
 
@@ -832,6 +837,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     //    type is T<K,V>.  This maps to a TabularType, with key field named 
     //    "key" of type mapping of K, and value field "value" of type mapping 
     //    of V.
+    // 3. Otherwise return null.
     private static TypeConverter handleParameterizedType( 
         final ParameterizedType type, 
 	final ManagedObjectManagerInternal mom ) {
@@ -867,13 +873,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     return new EnumerationAdapter( (Enumeration)obj ) ;
                 }
             } ;
+        } else if (args.length != 2) {
+            result = handleClass( (Class<?>)type.getRawType(), mom ) ;
         } else {
-            // Case 2: Some kind of mapping.  Must have 2 type parameters.
-            if (args.length != 2) {
-                throw new IllegalArgumentException( cls 
-                    + " must have 2 type arguments" ) ;
-            }
-
             final Type secondType = args[0] ;
             final TypeConverter secondTc = mom.getTypeConverter( secondType ) ;
 
@@ -892,8 +894,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     }
                 } ;
             } else {
-                throw new IllegalArgumentException( type    
-                    + " is not supported" ) ;
+                result = handleClass( (Class<?>)type.getRawType(), mom ) ;
             }
         }
 

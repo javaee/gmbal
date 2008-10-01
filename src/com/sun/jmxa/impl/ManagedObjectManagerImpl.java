@@ -55,8 +55,6 @@ import java.lang.annotation.Annotation ;
 
 import java.lang.management.ManagementFactory ;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer ;
@@ -102,6 +100,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         server = null ;
         resourceBundle = null ;
     }
+    
     public synchronized DynamicMBeanSkeleton getSkeleton( Class<?> cls ) {
 	DynamicMBeanSkeleton result = skeletonMap.get( cls ) ;	
 
@@ -296,7 +295,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	return register( obj, map ) ;
     }
 
-    @SuppressWarnings({"unchecked"})
+    @SuppressWarnings("unchecked")
     public synchronized NotificationEmitter register( final Object obj, 
 	final Map<String,String> props ) {
 
@@ -316,7 +315,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         fullProps.putAll( props ) ;
 	fullProps.put( "type", type ) ;
 
-        @SuppressWarnings("unchecked")
         final Hashtable onameProps = new Hashtable( (Map)fullProps ) ;
 
 	ObjectName oname ;

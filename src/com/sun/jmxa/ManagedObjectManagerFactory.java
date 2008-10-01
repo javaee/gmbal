@@ -58,7 +58,7 @@ public final class ManagedObjectManagerFactory {
      * @return
      */
     public static Method getMethod( final Class<?> cls, String name, 
-        Class... types ) {        
+        Class<?>... types ) {        
         
         try {
             return cls.getDeclaredMethod( name, types ) ;
