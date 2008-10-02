@@ -65,11 +65,9 @@
     the compile target as the regular run target does. Again, for a list of available 
     properties which you can use, check the target you are overriding in the
     nbproject/build-impl.xml file. 
-
     -->
 
     <target name="findbugs-xml" depends="-post-jar">
-
         <property name="findbugs.home" value="lib/findbugs-1.3.3"/>
         <property name="findbugs.dir" value="dist/findbugs"/>
         <!-- <property name="findbugs.exclude.filter" value="findbugs-filter.xml"/> -->
@@ -86,6 +84,57 @@
 	    <arg file="dist/JMXAnnotations.jar"/>
 	    <arg file="build/test"/>
 	</exec>
+    </target>
+
+    <!-- path element used by EMMA taskdef below: -->
+    <target name="emma-init">
+        <property name="emma-jar" value="lib/emma.jar"/>
+        <path id="emma.lib" >
+            <pathelement location="lib/emma.jar"/>
+            <pathelement location="lib/emma_ant.jar"/>
+        </path>
+        <property name="emma.dir" value="build/coverage"/>
+        <property name="emma.classes.dir" value="${emma.dir}/classes"/>
+        <property name="emma.metadata.file" value="${emma.dir}/coverage.em"/>
+    </target>
+
+    <target name="emma-instr" depends="emma-init,-post-jar">
+        <mkdir dir="${emma.classes.dir}"/>
+        <emma>
+            <instr mode="copy" merge="true" outdir="${emma.classes.dir}" 
+                outfile="${emma.metadata.file}">
+                <instrpath>
+                    <pathelement location="build/classes"/>
+                </instrpath>
+                <filter includes="com.sun.jmxa.*"/>
+                <filter includes="com.sun.jmxa.*.*"/>
+            </instr>
+        </emma>
+    </target>
+
+    <!-- this loads <emma> and <emmajava> custom tasks: -->
+    <taskdef resource="emma_ant.properties" classpathref="emma.lib" />
+
+    <target name="emma-report" depends="emma-init">
+        <emma>
+            <report sort="+block,+name,+method,+class"
+                metrics="method:80,block:70,line:70,class:80">
+                <sourcepath>
+                    <pathelement location="src"/>
+                </sourcepath>
+                <fileset dir=".">
+                    <include name="coverage.ec"/>
+                </fileset>
+                <fileset dir="${emma.dir}" >
+                    <include name="*.ec" />
+                    <include name="*.em" />
+                </fileset>
+                <html outfile="${emma.dir}/coverage.html" depth="method"
+                    columns="name,class,method,block,line"/>
+                <xml outfile="${emma.dir}/coverage.xml" depth="method"
+                    columns="name,class,method,block,line"/>
+            </report>
+        </emma>
     </target>
 </project>
 
