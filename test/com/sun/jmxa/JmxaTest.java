@@ -555,7 +555,7 @@ public class JmxaTest extends TestCase {
 
     @ManagedObject
     @Description( MOE_DESCRIPTION ) 
-    public class ManagedObjectExample {
+    public static class ManagedObjectExample {
 	private int num ;
 	private String name ;
 	private ManagedDataExample mde ;
