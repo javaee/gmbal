@@ -58,8 +58,6 @@ import java.util.Dictionary ;
 import java.math.BigDecimal ;
 import java.math.BigInteger ;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.ObjectName ;
 
 import javax.management.ReflectionException;
