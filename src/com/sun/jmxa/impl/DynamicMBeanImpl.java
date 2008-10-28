@@ -103,4 +103,8 @@ class DynamicMBeanImpl extends NotificationBroadcasterSupport implements Dynamic
     public MBeanNotificationInfo[] getNotificationInfo() {
         return ATTRIBUTE_CHANGE_NOTIFICATION_INFO ;
     }
+    
+    DynamicMBeanSkeleton skeleton() {
+        return skel ;
+    }
 }

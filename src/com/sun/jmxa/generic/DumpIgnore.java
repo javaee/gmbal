@@ -33,50 +33,19 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
+package com.sun.jmxa.generic;
 
-package com.sun.jmxa.impl ;
+import java.lang.annotation.Documented ;
+import java.lang.annotation.Target ;
+import java.lang.annotation.ElementType ;
+import java.lang.annotation.Retention ;
+import java.lang.annotation.RetentionPolicy ;
 
-import java.lang.reflect.Type ;
-
-import java.lang.reflect.AnnotatedElement ;
-
-import com.sun.jmxa.ManagedObjectManager ;
-import com.sun.jmxa.generic.Pair ;
-import com.sun.jmxa.InheritedAttribute ;
-
-import java.lang.annotation.Annotation;
-import java.util.List;
-
-public interface ManagedObjectManagerInternal extends ManagedObjectManager {
-    /** Construct or lookup the TypeConverter for the given type.
-     * 
-     * @param type The type for which we need a TypeConverter.
-     * @return The type converter.
-     */
-    TypeConverter getTypeConverter( Type type ) ;
-    
-    String getDescription( AnnotatedElement element ) ;
-    
-    <T extends Annotation> T getAnnotation( AnnotatedElement element,
-        Class<T> type ) ;
-
-    /** Find the superclass or superinterface of cls (which may be cls itself) 
-     * that has the given annotationClass as an annotation.  If the annotated 
-     * Class has an IncludeSubclass annotation, add those classes into the 
-     * ClassAnalyzer for the annotated class.
-     * @param cls The class for which we need a ClassAnalyzer.
-     * @param annotationClass The annotation that must be present on cls or
-     * a superclass or superinterface.
-     * @return A Pair of the parent class of cls, and the ClassAnalyzer.
-     */
-    Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( Class<?> cls,
-        Class<? extends Annotation> annotationClass ) ;
-    
-    /** Get the inherited attributes from the ClassAnalyzer.
-     * @param ca The ClassAnalyzer to check for InheritedAttribute(s).
-     * @return The inherited attributes.
-     */
-    List<InheritedAttribute> getInheritedAttributes( ClassAnalyzer ca ) ;
-    
-    boolean debug() ;
+/** This annotation is applied to a field to indicate that it should
+ * not be displayed by ObjectUtility.*ToString.
+ */
+@Documented 
+@Target({ElementType.FIELD, ElementType.TYPE}) 
+@Retention(RetentionPolicy.RUNTIME)
+public @interface DumpIgnore {
 }

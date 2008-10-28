@@ -500,8 +500,10 @@ public class JmxaTest extends TestCase {
     public static final String MDE_DESCRIPTION = "Description of ManagedDataExample" ;
     public static final String MDE_ATTR_DESC_NAME = "Description of ManagedDataExample name attribute" ;
     public static final String MDE_ATTR_DESC_DATE = "Description of ManagedDataExample date attribute" ;
+    public static final String MDE_ATTR_DESC_GET_STRING = "Description of ManagedDataExample string attribute" ;
     public static final String MDE_ATTR_ID_NAME = "name" ;
     public static final String MDE_ATTR_ID_DATE = "currentDate" ;
+    public static final String MDE_ATTR_ID_GET_STRING = "string" ;
 
     @ManagedData
     @Description( MDE_DESCRIPTION )
@@ -525,6 +527,12 @@ public class JmxaTest extends TestCase {
 	public Date date() {
 	    return date ;
 	}
+
+        @ManagedAttribute
+        @Description( MDE_ATTR_DESC_GET_STRING ) 
+        public String getString() {
+            return name ;
+        }
 
         @Override
 	public boolean equals( Object obj ) {
@@ -613,7 +621,9 @@ public class JmxaTest extends TestCase {
 	final ManagedObjectManager mom = ManagedObjectManagerFactory.create( domain ) ;
 
 	try {
+            mom.setDebug( true ) ;
 	    mom.register( moe, propName + "=" + onum ) ;
+            System.out.println( mom.dumpSkeleton( moe ) ) ;
 
 	    ObjectName moeName = mom.getObjectName( moe ) ;
 	    assertEquals( domain, moeName.getDomain() ) ;
@@ -634,6 +644,7 @@ public class JmxaTest extends TestCase {
 	    CompositeData compData = (CompositeData)obj ;
 	    assertEquals( moe.getMde().name(), compData.get( MDE_ATTR_ID_NAME ) ) ;
 	    assertEquals( moe.getMde().date(), compData.get( MDE_ATTR_ID_DATE ) ) ;
+            assertEquals( moe.getMde().getString(), compData.get( MDE_ATTR_ID_GET_STRING ) ) ;
 
 	    // Validate operations
 	} catch (Exception exc) {
@@ -668,9 +679,10 @@ public class JmxaTest extends TestCase {
 	assertEquals( SimpleType.STRING, ctype.getType( MDE_ATTR_ID_NAME ) ) ;
 	assertEquals( SimpleType.DATE, ctype.getType( MDE_ATTR_ID_DATE ) ) ;
 
-	Set keys = new HashSet() ;
+	Set<String> keys = new HashSet() ;
 	keys.add( MDE_ATTR_ID_NAME ) ;
 	keys.add( MDE_ATTR_ID_DATE ) ;
+        keys.add( MDE_ATTR_ID_GET_STRING ) ;
 	assertEquals( keys, ctype.keySet() ) ;
 
 	assertFalse( tc.isIdentity() ) ;

@@ -40,9 +40,6 @@ import java.util.ResourceBundle ;
 import java.util.Map ;
 import java.util.HashMap ;
 import java.util.WeakHashMap ;
-import java.util.Properties ;
-import java.util.Hashtable ;
-import java.util.Enumeration ;
 import java.util.List ;
 import java.util.ArrayList ;
 
@@ -59,21 +56,23 @@ import javax.management.InstanceNotFoundException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName ;
 import javax.management.NotificationEmitter;
 
 import com.sun.jmxa.generic.Pair ;
 import com.sun.jmxa.generic.Algorithms ;
 
-import com.sun.jmxa.ManagedObjectManager ;
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.Description ;
 import com.sun.jmxa.IncludeSubclass ;
 import com.sun.jmxa.InheritedAttribute ;
 import com.sun.jmxa.InheritedAttributes ;
+import com.sun.jmxa.generic.DprintUtil;
+import com.sun.jmxa.generic.ObjectUtility;
 import com.sun.jmxa.generic.Predicate;
 import com.sun.jmxa.generic.UnaryFunction;
-import javax.management.ReflectionException;
+import java.util.Arrays;
 
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final String domain ;
@@ -81,295 +80,303 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private MBeanServer server ; 
     private final Map<Object,ObjectName> objectMap ;
     private final Map<ObjectName,Object> objectNameMap ;
+    private final Map<Object,DynamicMBeanImpl> objectMBeanMap ;
     private final Map<Class<?>,DynamicMBeanSkeleton> skeletonMap ;
     private final Map<Type,TypeConverter> typeConverterMap ;
     private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
+    private final List<String> defaultObjectNameProps ;
+    private DprintUtil dputil = null ;
 
     private static final TypeConverter recursiveTypeMarker = 
         new TypeConverterImpl.TypeConverterPlaceHolderImpl() ;
 
     public void close() throws IOException {
-        for (Map.Entry<Object,ObjectName> entry : objectMap.entrySet()) {
-            unregister( entry.getValue() ) ;
+        if (debug()) {
+            dputil.enter( "close" ) ;
         }
         
-        objectMap.clear() ;
-        objectNameMap.clear() ;
-        skeletonMap.clear() ;
-        typeConverterMap.clear() ;
-        server = null ;
-        resourceBundle = null ;
+        try {
+            for (Map.Entry<Object,ObjectName> entry : objectMap.entrySet()) {
+                unregister( entry.getValue() ) ;
+            }
+
+            objectMap.clear() ;
+            objectNameMap.clear() ;
+            objectMBeanMap.clear() ;
+            skeletonMap.clear() ;
+            typeConverterMap.clear() ;
+            server = null ;
+            resourceBundle = null ;
+            defaultObjectNameProps.clear() ;
+        } finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
     
     public synchronized DynamicMBeanSkeleton getSkeleton( Class<?> cls ) {
-	DynamicMBeanSkeleton result = skeletonMap.get( cls ) ;	
+        if (debug()) {
+            dputil.enter( "getSkeleton", cls ) ;
+        }
+        
+        try {
+            DynamicMBeanSkeleton result = skeletonMap.get( cls ) ;
 
-	if (result == null) {
-            Pair<Class<?>,ClassAnalyzer> pair = getClassAnalyzer( 
-                cls, ManagedObject.class ) ;
-            Class<?> annotatedClass = pair.first() ;
-            ClassAnalyzer ca = pair.second() ;
-
-            result = skeletonMap.get( annotatedClass ) ;
-            
             if (result == null) {
-                result = new DynamicMBeanSkeleton( annotatedClass, ca, this ) ;
+                if (debug()) {
+                    dputil.dprint( "creating new Skeleton" ) ;
+                }
+                
+                Pair<Class<?>,ClassAnalyzer> pair = getClassAnalyzer( 
+                    cls, ManagedObject.class ) ;
+                Class<?> annotatedClass = pair.first() ;
+                ClassAnalyzer ca = pair.second() ;
+
+                result = skeletonMap.get( annotatedClass ) ;
+
+                if (result == null) {
+                    result = new DynamicMBeanSkeleton( annotatedClass, ca, this ) ;
+                }
+
+                skeletonMap.put( cls, result ) ;
             }
-
-	    skeletonMap.put( cls, result ) ;
-	}
-
-	return result ;
+            
+            if (debug()) {
+                dputil.dprint( "Skeleton=" + dumpSkeleton( result ) ) ;
+            }
+            
+            return result ;
+        } finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
 
     public synchronized TypeConverter getTypeConverter( Type type ) {
-	TypeConverter result = typeConverterMap.get( type ) ;	
-	if (result == null) {
-            // Store a TypeConverter impl that throws an exception when acessed.
-            // Used to detect recursive types.
-            typeConverterMap.put( type, recursiveTypeMarker ) ;
+        if (debug()) {
+            dputil.enter( "getTypeConverter", type ) ;
+        }
+        
+        try {
+            TypeConverter result = typeConverterMap.get( type ) ;	
+            if (result == null) {
+                if (debug()) {
+                    dputil.dprint( "Creating new TypeConverter" ) ;
+                }
+            
+                // Store a TypeConverter impl that throws an exception when acessed.
+                // Used to detect recursive types.
+                typeConverterMap.put( type, recursiveTypeMarker ) ;
 
-	    result = TypeConverterImpl.makeTypeConverter( type, this ) ;
+                result = TypeConverterImpl.makeTypeConverter( type, this ) ;
 
-            // Replace recursion marker with the constructed implementation
-	    typeConverterMap.put( type, result ) ;
-	}
-	return result ;
+                // Replace recursion marker with the constructed implementation
+                typeConverterMap.put( type, result ) ;
+            }
+            return result ;
+        } finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
 
-    public ManagedObjectManagerImpl( String domain ) {
+    public ManagedObjectManagerImpl( String domain, List<String> defProps ) {
 	this.domain = domain ;
 	server = ManagementFactory.getPlatformMBeanServer() ;
 	objectMap = new HashMap<Object,ObjectName>() ;
 	objectNameMap = new HashMap<ObjectName,Object>() ;
+        objectMBeanMap = new HashMap<Object,DynamicMBeanImpl>() ;
 	skeletonMap = new WeakHashMap<Class<?>,DynamicMBeanSkeleton>() ;
 	typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
         addedAnnotations = 
             new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
-    }
-
-    /** Create another ManagedObjectManager that delegates to this one, but adds some
-     * fixed properties to each ObjectName on the register call.
-     * Each element in props must be in the "name=value" form.
-     * @return The ManagedObjectManager delegate
-     * @param mom The ManagedObjectManager to which the result delegates
-     * @param extraProps The properties to be added to each object registration
-     */
-    public static ManagedObjectManager makeDelegate( 
-        final ManagedObjectManagerInternal mom, 
-	final Map<String,String> extraProps ) {
-
-	return new ManagedObjectManagerInternal() {
-            public NotificationEmitter register( Object obj, String... props ) {
-                final Map<String,String> map = 
-                    new HashMap<String,String>( extraProps ) ;
-                addToMap( map, props ) ;
-                return register( obj, map ) ;
-            }
-
-            public NotificationEmitter register( final Object obj, 
-                final Properties props ) {
-
-                final Map<String,String> map = 
-                    new HashMap<String,String>( extraProps ) ;
-                addToMap( map, props ) ;
-                return register( obj, map ) ;
-            }
-
-	    public synchronized NotificationEmitter register( final Object obj, 
-                final Map<String,String> props )  {
-
-                final Map<String,String> map = 
-                    new HashMap<String,String>( extraProps ) ;
-                map.putAll( props ) ;
-		return mom.register( obj, map ) ;
-	    }
-
-	    public void unregister( Object obj ) {
-		mom.unregister( obj ) ;
-	    }
-
-	    public ObjectName getObjectName( Object obj ) {
-		return mom.getObjectName( obj ) ;
-	    }
-
-	    public String getDomain() {
-		return mom.getDomain() ;
-	    }
-
-	    public Object getObject( ObjectName oname ) {
-		return mom.getObject( oname ) ;
-	    }
-
-	    public TypeConverter getTypeConverter( Type type ) {
-		return mom.getTypeConverter( type ) ;
-	    }
-
-	    public void setMBeanServer( MBeanServer server ) {
-		mom.setMBeanServer( server ) ;
-	    }
-
-	    public MBeanServer getMBeanServer() {
-		return mom.getMBeanServer() ;
-	    }
-
-            public void setResourceBundle( ResourceBundle rb ) {
-                mom.setResourceBundle( rb ) ;
-            }
-
-            public ResourceBundle getResourceBundle() {
-                return mom.getResourceBundle() ;
-            }
-            
-            public String getDescription( AnnotatedElement element ) {
-                return mom.getDescription( element ) ;
-            }
-            
-            public void close() throws IOException {
-                mom.close() ;
-            }
-            
-            public void addAnnotation( AnnotatedElement element,
-                Annotation annotation ) {
-                mom.addAnnotation( element, annotation ) ;
-            }
-            
-            public <T extends Annotation> T getAnnotation( 
-                final AnnotatedElement element,
-                final Class<T> type ) {
-                
-                return mom.getAnnotation( element, type ) ;
-            }
-            
-            public Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
-                final Class<?> cls, 
-                final Class<? extends Annotation> annotationClass ) {
-                
-                return mom.getClassAnalyzer( cls, annotationClass ) ;
-            }
-            
-            public List<InheritedAttribute> getInheritedAttributes( 
-                ClassAnalyzer ca ) {
-                return mom.getInheritedAttributes( ca ) ;
-            }
-	} ;
-    }
-
-    public static void addToMap( Map<String,String> base, Properties props ) {
-        @SuppressWarnings("unchecked")
-        Enumeration<String> enumeration = 
-            (Enumeration<String>)(props.propertyNames()) ;
-        while (enumeration.hasMoreElements()) {
-            String key = enumeration.nextElement() ;
-            String value = props.getProperty( key ) ;
-            base.put( key, value ) ;
-        }
-    }
-
-    public static void addToMap( Map<String,String> base, String... props ) {
-	for (String str : props) {
-	    int eqIndex = str.indexOf( "=" ) ;
-	    if (eqIndex < 1) {
-                // XXX I18N
-		throw new IllegalArgumentException( 
-		    "All properties must contain an = "
-                    + "after the (non-empty) property name" ) ;
-            }
-	    String name = str.substring( 0, eqIndex ) ;
-	    String value = str.substring( eqIndex+1 ) ;
-	    base.put( name, value ) ;
-	}
+        defaultObjectNameProps = new ArrayList<String>( defProps ) ;
     }
 
     public NotificationEmitter register( Object obj, String... props ) {
         Map<String,String> map = new HashMap<String,String>() ;
-        addToMap( map, props ) ;
-	return register( obj, map ) ;
+	return register( obj, Arrays.asList( props ) ) ;
     }
 
-    public NotificationEmitter register( final Object obj, 
-	final Properties props ) {
-
-        Map<String,String> map = new HashMap<String,String>() ;
-        addToMap( map, props ) ;
-	return register( obj, map ) ;
-    }
-
-    @SuppressWarnings("unchecked")
-    public synchronized NotificationEmitter register( final Object obj, 
-	final Map<String,String> props ) {
-
-	final Class<?> cls = obj.getClass() ;
-	final DynamicMBeanSkeleton skel = getSkeleton( cls ) ;
-	final String type = skel.getType() ;
-	final DynamicMBeanImpl mbean = new DynamicMBeanImpl( skel, obj ) ;
+    private ObjectName makeObjectName( final Object obj, 
+        final DynamicMBeanSkeleton skel, 
+        final List<String> props ) throws MalformedObjectNameException {
         
-        final Map<String,String> fullProps ;
-        try {
-            fullProps = skel.getObjectNameProperties(obj);
-        } catch (ReflectionException ex) {
-            throw new IllegalArgumentException( 
-                "Could not get ObjectNameKey values", ex ) ;
+        if (debug()) {
+            dputil.enter( "makeObjectName" ) ;
         }
         
-        fullProps.putAll( props ) ;
-	fullProps.put( "type", type ) ;
+        // Construct the key/value pairs for the ObjectName
+        // ObjectName syntax:
+        // domain:key=value,...
+        // where domain is any string not containing * ? or :
+        // where key is any string not containing : = ? * " or ,
+        // where value has been processed by ObjectName.quote
+        // Confusingly, the spec for ObjectName says that order does not
+        // matter, but order greatly affects the behavior of jconsole.
+        // However, it appears that order is presered if new ObjectName(String)
+        // is used: the toString() method should provide all properties in
+        // the same order.
+        try {
+            List<String> oknProps = skel.getObjectNameProperties(obj) ;
+            if (debug()) {
+                dputil.dprint( "oknProps=" + oknProps ) ;
+            }
+            
+            List<String> fullProps = new ArrayList<String>() ;
+            StringBuilder objname = new StringBuilder() ;
+            objname.append( domain ) ;
+            objname.append( ':' ) ;
 
-        final Hashtable onameProps = new Hashtable( (Map)fullProps ) ;
+            objname.append( "type=" ) ;
+            objname.append( skel.getType() ) ;
 
-	ObjectName oname ;
+            for (String str : defaultObjectNameProps) {
+                objname.append( ',' ) ;
+                objname.append( str ) ;
+            }
+
+            for (String str : props) {
+                objname.append( ',' ) ;
+                objname.append( str ) ;
+            }        
+
+            for (String str : oknProps ) {
+                objname.append( ',' ) ;
+                objname.append( str ) ;
+            }
+
+            if (debug()) {
+                dputil.dprint( "objname=" + objname ) ;
+            }
+            
+            return new ObjectName( objname.toString() ) ;
+        } finally {
+            dputil.exit() ;
+        }
+    }
+   
+    @SuppressWarnings("unchecked")
+    public synchronized NotificationEmitter register( final Object obj, 
+	final List<String> props ) {
+
+        if (debug()) {
+            dputil.enter( "register", "obj=", obj, "props=", props ) ;
+        }
+        
+        // Construct the MBean
 	try {
-	    oname = new ObjectName( domain, onameProps ) ;
+            final Class<?> cls = obj.getClass() ;
+            final DynamicMBeanSkeleton skel = getSkeleton( cls ) ;
+            final DynamicMBeanImpl mbean = new DynamicMBeanImpl( skel, obj ) ;
+
+            final ObjectName oname = makeObjectName( obj, skel, props ) ;
 
             if (objectMap.containsKey( obj )) {
+                if (debug()) {
+                    dputil.dprint( "Object is already registered" ) ;
+                }
+                
                 // XXX I18N
                 throw new IllegalArgumentException(
                     "Object " + obj + " has already been registered" ) ;
             }
-            
+
             if (objectNameMap.containsKey( oname )) {
+                if (debug()) {
+                    dputil.dprint( "ObjectName has already been registered" ) ;
+                }
+                
                 throw new IllegalArgumentException(
                     // XXX I18N
                     "An Object has already been registered with ObjectName "
                     + oname ) ;
             }
-
+        
             server.registerMBean( mbean, oname ) ;
             
 	    objectNameMap.put( oname, obj ) ;
 	    objectMap.put( obj, oname ) ;
+            objectMBeanMap.put( obj, mbean ) ;
 
             return mbean ;
 	} catch (JMException exc) {
 	    throw new IllegalArgumentException( exc ) ;
-	}
+	} finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
 
     public synchronized void unregister( Object obj ) {
-	ObjectName oname = objectMap.get( obj ) ;
-	if (oname != null) {
-            try {
-                server.unregisterMBean(oname);
-            } catch (InstanceNotFoundException ex) {
-                throw new IllegalArgumentException( 
-                    "Could not unregister " + obj, ex ) ;
-            } catch (MBeanRegistrationException ex) {
-                throw new IllegalArgumentException( 
-                    "Could not unregister " + obj, ex ) ;
-	    } finally {
-		// Make sure obj is removed even if unregisterMBean fails
-		objectMap.remove( obj ) ;
-		objectNameMap.remove( oname ) ;
-	    }
-	}
+        if (debug()) {
+            dputil.enter( "unregister", "obj=", obj ) ;
+        }
+        
+        try {
+            ObjectName oname = objectMap.get( obj ) ;
+            if (oname != null) {
+                try {
+                    server.unregisterMBean(oname);
+                } catch (InstanceNotFoundException ex) {
+                    throw new IllegalArgumentException( 
+                        "Could not unregister " + obj, ex ) ;
+                } catch (MBeanRegistrationException ex) {
+                    throw new IllegalArgumentException( 
+                        "Could not unregister " + obj, ex ) ;
+                } finally {
+                    // Make sure obj is removed even if unregisterMBean fails
+                    objectMap.remove( obj ) ;
+                    objectNameMap.remove( oname ) ;
+                    objectMBeanMap.remove( obj ) ;
+                }
+            } else if (debug()) {
+                dputil.dprint( obj + " not found" ) ;
+            }
+        } finally {
+            dputil.exit() ;
+        }
     }
 
     public synchronized ObjectName getObjectName( Object obj ) {
-	return objectMap.get( obj ) ;
+        if (debug()) {
+            dputil.enter( "getObjectName", obj ) ;
+        }
+        
+        try {
+            ObjectName result = objectMap.get( obj ) ;
+            if (debug()) {
+                dputil.dprint( "result is " + result ) ;
+            }
+            return result ;
+        } finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
 
     public synchronized Object getObject( ObjectName oname ) {
-	return objectNameMap.get( oname ) ;
+        if (debug()) {
+            dputil.enter( "getObject", oname ) ;
+        }
+        
+        try {
+            Object result = objectNameMap.get( oname ) ;
+            if (debug()) {
+                dputil.dprint( "result is " + result ) ;
+            }
+                
+            return result ;
+	} finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
 
     public synchronized String getDomain() {
@@ -413,109 +420,197 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public void addAnnotation( AnnotatedElement element,
         Annotation annotation ) {
         
-        Map<Class, Annotation> map = addedAnnotations.get( element ) ;
-        if (map == null) {
-            map = new HashMap<Class, Annotation>() ;
-            addedAnnotations.put( element, map ) ;
+        if (debug()) {
+            dputil.enter( "addAnnotation", "element = ", element,
+                "annotation = ", annotation ) ;
         }
         
-        Annotation  ann = map.get( annotation.getClass() ) ;
-        if (ann != null) {
-            throw new IllegalArgumentException( "Cannot add annotation " 
-                + " to element " + element 
-                + ": an Annotation of that type is already present" ) ;
+        try {
+            Map<Class, Annotation> map = addedAnnotations.get( element ) ;
+            if (map == null) {
+                if (debug()) {
+                    dputil.dprint( "Creating new Map<Class,Annotation>" ) ;
+                }
+                
+                map = new HashMap<Class, Annotation>() ;
+                addedAnnotations.put( element, map ) ;
+            }
+
+            Annotation  ann = map.get( annotation.getClass() ) ;
+            if (ann != null) {
+                if (debug()) {
+                    dputil.dprint( "Duplicate annotation") ;
+                }
+                
+                throw new IllegalArgumentException( "Cannot add annotation " 
+                    + " to element " + element 
+                    + ": an Annotation of type " 
+                    + annotation.getClass().getName() 
+                    + " is already present" ) ;
+            }
+
+            map.put( annotation.getClass(), annotation ) ;
+        } finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
         }
-        
-        map.put( annotation.getClass(), annotation ) ;
     }
        
     @SuppressWarnings({"unchecked"})
     public <T extends Annotation> T getAnnotation( AnnotatedElement element,
         Class<T> type ) {
         
-        T result = element.getAnnotation( type ) ;
-        if (result == null) {
-            Map<Class, Annotation> map = addedAnnotations.get( element );
-            if (map != null) {
-                result = (T)map.get( type ) ;
-            } 
+        if (debug()) {
+            dputil.enter( "getAnnotation", "element = ", element,
+                "type = ", type.getName() ) ;
         }
         
-        return result ;
+        try {
+            T result = element.getAnnotation( type ) ;
+            if (result == null) {
+                if (debug()) {
+                    dputil.dprint( "getting annotation from addedAnnotations map" ) ;
+                }
+
+                Map<Class, Annotation> map = addedAnnotations.get( element );
+                if (map != null) {
+                    result = (T)map.get( type ) ;
+                } 
+            }
+
+            if (debug()) {
+                dputil.dprint( "result = " + result ) ;
+            }
+            
+            return result ;
+        } finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
     
     public Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
         final Class<?> cls, 
         final Class<? extends Annotation> annotationClass ) {
 
-        ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
-        /* This is the versions that expects EXACTLY ONE annotation
-        Class<?> annotatedClass = Algorithms.getOne( 
-            ca.findClasses( ca.forAnnotation( annotationClass ) ),
-            "No " + annotationClass.getName() + " annotation found",
-            "More than one " + annotationClass.getName() 
-            + " annotation found" ) ;
-        */
-        
-        final Class<?> annotatedClass = Algorithms.getFirst( 
-            ca.findClasses( ca.forAnnotation( this, annotationClass ) ),
-            "No " + annotationClass.getName() + " annotation found" ) ;
-        
-        final List<Class<?>> classes = new ArrayList<Class<?>>() ;
-        classes.add( annotatedClass ) ;
-	final IncludeSubclass incsub = annotatedClass.getAnnotation( 
-            IncludeSubclass.class ) ;
-	if (incsub != null) {
-            for (Class<?> klass : incsub.cls()) {
-                classes.add( klass ) ;
-            }
-	}
-
-        if (classes.size() > 1) {
-            ca = new ClassAnalyzer( classes ) ;
+        if (debug()) {
+            dputil.enter( "getClassAnalyzer", "cls = ", cls,
+                "annotationClass = ", annotationClass ) ;
         }
         
-        return new Pair<Class<?>,ClassAnalyzer>( annotatedClass, ca ) ;
+        try {
+            ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
+
+            final Class<?> annotatedClass = Algorithms.getFirst( 
+                ca.findClasses( ca.forAnnotation( this, annotationClass ) ),
+                "No " + annotationClass.getName() + " annotation found" ) ;
+
+            if (debug()) {
+                dputil.dprint( "annotatedClass = " + annotatedClass ) ;
+            }
+    
+            final List<Class<?>> classes = new ArrayList<Class<?>>() ;
+            classes.add( annotatedClass ) ;
+            final IncludeSubclass incsub = annotatedClass.getAnnotation( 
+                IncludeSubclass.class ) ;
+            if (incsub != null) {
+                for (Class<?> klass : incsub.cls()) {
+                    classes.add( klass ) ;
+                    if (debug()) {
+                        dputil.dprint( "included subclass: " + klass ) ;
+                    }
+                }
+            }
+
+            if (classes.size() > 1) {
+                if (debug()) {
+                    dputil.dprint( 
+                        "Getting new ClassAnalyzer for included subclasses" ) ;
+                }
+                ca = new ClassAnalyzer( classes ) ;
+            }
+
+            return new Pair<Class<?>,ClassAnalyzer>( annotatedClass, ca ) ;
+        } finally {
+            if (debug()) {
+                dputil.exit() ;
+            }
+        }
     }
     
     public List<InheritedAttribute> getInheritedAttributes( 
         final ClassAnalyzer ca ) {        
         
-        final Predicate<AnnotatedElement> pred = Algorithms.or( 
-            ca.forAnnotation( this, InheritedAttribute.class ),
-            ca.forAnnotation( this, InheritedAttributes.class ) ) ;
-            
-        // Construct list of classes annotated with InheritedAttribute or
-        // InheritedAttributes.
-        final List<Class<?>> iaClasses = ca.findClasses( pred ) ;
+        if (debug()) {
+            dputil.enter( "getInheritedAttributes", "ca=", ca ) ;
+        }
         
-        List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
-            new UnaryFunction<Class<?>,List<InheritedAttribute>>() {
-                public List<InheritedAttribute> evaluate( Class<?> cls ) {
-                    final InheritedAttribute ia = getAnnotation(cls,
-                        InheritedAttribute.class);
-                    final InheritedAttributes ias = getAnnotation(cls,
-                        InheritedAttributes.class);
-                    if ((ia != null) && (ias != null)) {
-                        throw new IllegalArgumentException( "class " + cls
-                            + " contains both the InheritedAttribute and " 
-                            + " the InheritedAttributes annotations" ) ;
-                    }
+        try {
+            final Predicate<AnnotatedElement> pred = Algorithms.or( 
+                ca.forAnnotation( this, InheritedAttribute.class ),
+                ca.forAnnotation( this, InheritedAttributes.class ) ) ;
 
-                    final List<InheritedAttribute> result = 
-                        new ArrayList<InheritedAttribute>() ;
-                    
-                    if (ia != null) {
-                        result.add( ia ) ;
-                    } else if (ias != null) {
-                        result.addAll( Algorithms.asList( ias.attributes() )) ;
+            // Construct list of classes annotated with InheritedAttribute or
+            // InheritedAttributes.
+            final List<Class<?>> iaClasses = ca.findClasses( pred ) ;
+
+            List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
+                new UnaryFunction<Class<?>,List<InheritedAttribute>>() {
+                    public List<InheritedAttribute> evaluate( Class<?> cls ) {
+                        final InheritedAttribute ia = getAnnotation(cls,
+                            InheritedAttribute.class);
+                        final InheritedAttributes ias = getAnnotation(cls,
+                            InheritedAttributes.class);
+                        if ((ia != null) && (ias != null)) {
+                            throw new IllegalArgumentException( "class " + cls
+                                + " contains both the InheritedAttribute and " 
+                                + " the InheritedAttributes annotations" ) ;
+                        }
+
+                        final List<InheritedAttribute> result = 
+                            new ArrayList<InheritedAttribute>() ;
+
+                        if (ia != null) {
+                            result.add( ia ) ;
+                        } else if (ias != null) {
+                            result.addAll( Arrays.asList( ias.attributes() )) ;
+                        }
+
+                        return result ;
                     }
-                    
-                    return result ;
-                }
-        } ) ;
-        
-        return isList ;
+            } ) ;
+
+            return isList ;
+        } finally {
+            if (debug())
+                dputil.exit() ;
+        }
+    }
+    
+    public void setDebug( boolean flag ) {
+        if (flag) {
+            dputil = new DprintUtil( this ) ;
+        } else {
+            dputil = null ;
+        }
+    }
+    
+    public String dumpSkeleton( Object obj ) {
+        DynamicMBeanImpl impl = objectMBeanMap.get( obj ) ;
+        if (impl == null) {
+            return obj + " is not currently registered with mom " + this ;
+        } else {
+            DynamicMBeanSkeleton skel = impl.skeleton() ;
+            String skelString = ObjectUtility.defaultObjectToString( skel ) ;
+            return "Skeleton for MBean for object " + obj + ":\n"
+                + skelString ;
+        }
+    }
+    
+    public boolean debug() {
+        return dputil != null ;
     }
 }
 

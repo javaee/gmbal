@@ -36,15 +36,14 @@
 
 package com.sun.jmxa ;
 
-import java.util.Properties ;
 import java.util.ResourceBundle ;
-import java.util.Map ;
 
 import java.io.Closeable ;
 
 import java.lang.reflect.AnnotatedElement ;
 import java.lang.annotation.Annotation ;
 
+import java.util.List;
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
 import javax.management.NotificationEmitter ;
@@ -65,6 +64,14 @@ public interface ManagedObjectManager extends Closeable {
      * and register it with domain getDomain() and the key/value pairs
      * given by props in the form key=value.  The MBeanServer from 
      * setMBeanServer (or its default) is used.
+     * <p>
+     * The ObjectName is constructed with name/value pairs in the following order:
+     * <ol>
+     * <lit>The type
+     * <lit>Defaults in the ManagedObjectManager
+     * <lit>Arguments passed into register
+     * <lit>Any name/value pairs derived from ObjectNameKey annotations
+     * </ol>
      * @param obj The object used to construct an OpenMbean that is registered
      * with the MBeanServer.
      * @param props The additional properties to use in constructing the 
@@ -88,20 +95,7 @@ public interface ManagedObjectManager extends Closeable {
      * @return The NotificationEmitter that can be used to register 
      * NotificationListeners against the registered MBean.  Only
      * AttributeChangeNotifications are supported.     */
-    NotificationEmitter register( Object obj, Properties props )  ;
-
-    /** Same as register( Object, String...) except that key/value
-     * pairs are given as properties.
-     * @param obj The object used to construct an OpenMbean that is registered
-     * with the MBeanServer.
-     * @param props The additional properties to use in constructing the 
-     * ObjectNameKey for the registered MBean.  May be null, in which case
-     * the ObjectNameKey annotations are used to construct the 
-     * ObjectNameKey.
-     * @return The NotificationEmitter that can be used to register 
-     * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.     */
-    NotificationEmitter register( Object obj, Map<String,String> props ) ;
+    NotificationEmitter register( Object obj, List<String> props )  ;
 
     /** Unregister the Open MBean corresponding to obj from the
      * mbean server.
@@ -167,4 +161,18 @@ public interface ManagedObjectManager extends Closeable {
      * @param annotation The annotation we wish to add to the element.
      */
     void addAnnotation( AnnotatedElement element, Annotation annotation ) ;
+        
+    /** Print debug output to System.out.
+     * 
+     * @param flag true to enable debug, false to disable
+     */
+    void setDebug( boolean flag ) ;
+    
+    /** Dump the skeleton used in the implementation of the MBean for obj.
+     * Obj must be currently registered.
+     * 
+     * @param obj The registered object whose skeleton should be displayed.
+     * @return The string representation of the skeleton.
+     */
+    String dumpSkeleton( Object obj ) ;
 }

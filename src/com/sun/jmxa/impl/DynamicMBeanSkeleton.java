@@ -49,8 +49,6 @@ import java.util.concurrent.atomic.AtomicLong ;
 import java.lang.reflect.Method ;
 import java.lang.reflect.Type ;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.Attribute ;
 import javax.management.AttributeList ;
 import javax.management.MBeanException ;
@@ -80,6 +78,8 @@ import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ParameterNames ;
 
 import com.sun.jmxa.generic.Pair ;
+import com.sun.jmxa.generic.DumpToString ;
+
 import java.lang.reflect.InvocationTargetException;
 
 public class DynamicMBeanSkeleton {
@@ -89,8 +89,10 @@ public class DynamicMBeanSkeleton {
         extends BinaryFunction<Object,List<Object>,Object> {} ;
 
     private final String type ;
+    @DumpToString
     private final AtomicLong sequenceNumber ;
     private final MBeanInfo mbInfo ;
+    @DumpToString
     private final ManagedObjectManagerInternal mom ;
     private final Map<String,AttributeDescriptor> setters ;
     private final Map<String,AttributeDescriptor> getters ;
@@ -455,22 +457,26 @@ public class DynamicMBeanSkeleton {
 	return op.evaluate( obj, Arrays.asList( params ) ) ;
     }
     
-    public Map<String,String> getObjectNameProperties( final Object obj ) 
-        throws ReflectionException {
+    public List<String> getObjectNameProperties( final Object obj ) {
         
-        final Map<String,String> result = new HashMap<String,String>() ;
-        for (Map.Entry<String,AttributeDescriptor> entry : 
-            objectNameKeys.entrySet()) {
-            
-            final String key = entry.getKey() ;
-            final AttributeDescriptor ad = entry.getValue() ;
-            // XXX Should this use a type converter?  If not, check that 
-            // type is reasonable.
-            final String value = ad.get( obj ).toString() ;
-            result.put( key, value ) ;
+        try {
+            final List<String> result = new ArrayList<String>();
+            for (Map.Entry<String, AttributeDescriptor> entry : 
+                objectNameKeys.entrySet()) {
+                
+                final String key = entry.getKey();
+                final AttributeDescriptor ad = entry.getValue();
+                // XXX Should this use a type converter?  If not, check that 
+                // type is reasonable.
+                final String value = ad.get(obj).toString();
+                result.add(key + "=" + value);
+            }
+            return result;
+        } catch (ReflectionException reflectionException) {
+            throw new RuntimeException( reflectionException ) ;
         }
-        return result ;
     }
+    
     public MBeanInfo getMBeanInfo() {
 	return mbInfo ;
     }

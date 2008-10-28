@@ -77,6 +77,7 @@ import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ManagedData ;
 import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.InheritedAttribute ;
+import com.sun.jmxa.generic.DumpToString;
 import java.lang.reflect.InvocationTargetException;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 

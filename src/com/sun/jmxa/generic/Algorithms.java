@@ -38,18 +38,31 @@ package com.sun.jmxa.generic ;
 import java.util.List ;
 import java.util.Map ;
 import java.util.ArrayList ;
+import java.util.HashMap;
 
 public final class Algorithms {
     private Algorithms() {}
     
-    public static <T> List<T> asList( T[] arg ) {
+    public static <T> List<T> list( T... arg ) {
         List<T> result = new ArrayList<T>() ;
-        for (T elem : arg) {
-            result.add( elem ) ;
+        for (T obj : arg) {
+            result.add( obj ) ;
         }
         return result ;
     }
+
+    public static <S,T> Pair<S,T> pair( S first, T second ) {
+        return new Pair<S,T>( first, second ) ;
+    }
     
+    public static <K,V> Map<K,V> map( Pair<K,V>... pairs ) {
+        Map<K,V> result = new HashMap<K,V>() ;
+        for (Pair<K,V> pair : pairs ) {
+            result.put( pair.first(), pair.second() ) ;
+        }
+        return result ;
+    }
+        
     public static <A,R> UnaryFunction<A,R> mapToFunction( final Map<A,R> map ) {
 	return new UnaryFunction<A,R>() {
 	    public R evaluate( A arg ) {
