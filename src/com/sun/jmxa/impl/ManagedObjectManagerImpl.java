@@ -68,11 +68,16 @@ import com.sun.jmxa.Description ;
 import com.sun.jmxa.IncludeSubclass ;
 import com.sun.jmxa.InheritedAttribute ;
 import com.sun.jmxa.InheritedAttributes ;
+import com.sun.jmxa.ManagedObjectManager;
 import com.sun.jmxa.generic.DprintUtil;
+import com.sun.jmxa.generic.DumpIgnore;
 import com.sun.jmxa.generic.ObjectUtility;
 import com.sun.jmxa.generic.Predicate;
 import com.sun.jmxa.generic.UnaryFunction;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final String domain ;
@@ -85,13 +90,38 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final Map<Type,TypeConverter> typeConverterMap ;
     private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
     private final List<String> defaultObjectNameProps ;
+    @DumpIgnore
     private DprintUtil dputil = null ;
+    private ManagedObjectManager.RegistrationDebugLevel regDebugLevel = 
+        ManagedObjectManager.RegistrationDebugLevel.NONE ;
+    private boolean runDebugFlag = false ;
+    private final Set<String> typePrefixes = new HashSet<String>() ;
+
+    @Override
+    public String toString( ) {
+        return "ManagedObjectManagerImpl[domain=" + domain 
+            + ",defaultObjectNameProps=" + defaultObjectNameProps + "]" ;
+    }
+    
+    public ManagedObjectManagerImpl( String domain, List<String> defProps ) {
+	this.domain = domain ;
+        resourceBundle = null ;
+	server = ManagementFactory.getPlatformMBeanServer() ;
+	objectMap = new IdentityHashMap<Object,ObjectName>() ;
+	objectNameMap = new HashMap<ObjectName,Object>() ;
+        objectMBeanMap = new IdentityHashMap<Object,DynamicMBeanImpl>() ;
+	skeletonMap = new WeakHashMap<Class<?>,DynamicMBeanSkeleton>() ;
+	typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
+        addedAnnotations = 
+            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
+        defaultObjectNameProps = new ArrayList<String>( defProps ) ;
+    }
 
     private static final TypeConverter recursiveTypeMarker = 
         new TypeConverterImpl.TypeConverterPlaceHolderImpl() ;
 
     public void close() throws IOException {
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "close" ) ;
         }
         
@@ -105,27 +135,30 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             objectMBeanMap.clear() ;
             skeletonMap.clear() ;
             typeConverterMap.clear() ;
+            addedAnnotations.clear() ;
             server = null ;
             resourceBundle = null ;
             defaultObjectNameProps.clear() ;
         } finally {
-            if (debug()) {
+            if (registrationDebug()) {
                 dputil.exit() ;
             }
         }
     }
     
     public synchronized DynamicMBeanSkeleton getSkeleton( Class<?> cls ) {
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "getSkeleton", cls ) ;
         }
         
         try {
             DynamicMBeanSkeleton result = skeletonMap.get( cls ) ;
 
+            boolean newSkeleton = false ;
             if (result == null) {
-                if (debug()) {
-                    dputil.dprint( "creating new Skeleton" ) ;
+                newSkeleton = true ;
+                if (registrationDebug()) {
+                    dputil.info( "creating new Skeleton" ) ;
                 }
                 
                 Pair<Class<?>,ClassAnalyzer> pair = getClassAnalyzer( 
@@ -142,28 +175,32 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 skeletonMap.put( cls, result ) ;
             }
             
-            if (debug()) {
-                dputil.dprint( "Skeleton=" + dumpSkeleton( result ) ) ;
+            if (registrationFineDebug() || (registrationDebug() && newSkeleton)) {
+                dputil.info( "Skeleton=" 
+                    + ObjectUtility.defaultObjectToString( result ) ) ;
             }
             
             return result ;
         } finally {
-            if (debug()) {
+            if (registrationDebug()) {
                 dputil.exit() ;
             }
         }
     }
 
     public synchronized TypeConverter getTypeConverter( Type type ) {
-        if (debug()) {
+        if (registrationFineDebug()) {
             dputil.enter( "getTypeConverter", type ) ;
         }
         
+        TypeConverter result = null;
+        
         try {
-            TypeConverter result = typeConverterMap.get( type ) ;	
+            boolean newTypeConverter = false ;
+            result = typeConverterMap.get( type ) ;	
             if (result == null) {
-                if (debug()) {
-                    dputil.dprint( "Creating new TypeConverter" ) ;
+                if (registrationFineDebug()) {
+                    dputil.info( "Creating new TypeConverter" ) ;
                 }
             
                 // Store a TypeConverter impl that throws an exception when acessed.
@@ -174,26 +211,24 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
                 // Replace recursion marker with the constructed implementation
                 typeConverterMap.put( type, result ) ;
+                newTypeConverter = true ;
             }
-            return result ;
+            
+            if (registrationFineDebug() || 
+                (registrationDebug() && newTypeConverter)) {
+                
+                if (registrationFineDebug()) {
+                    dputil.info( "result=" 
+                        + ObjectUtility.defaultObjectToString( result ) ) ;
+                }
+            }
         } finally {
-            if (debug()) {
-                dputil.exit() ;
+            if (registrationFineDebug()) {
+                dputil.exit( result ) ;
             }
         }
-    }
-
-    public ManagedObjectManagerImpl( String domain, List<String> defProps ) {
-	this.domain = domain ;
-	server = ManagementFactory.getPlatformMBeanServer() ;
-	objectMap = new HashMap<Object,ObjectName>() ;
-	objectNameMap = new HashMap<ObjectName,Object>() ;
-        objectMBeanMap = new HashMap<Object,DynamicMBeanImpl>() ;
-	skeletonMap = new WeakHashMap<Class<?>,DynamicMBeanSkeleton>() ;
-	typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
-        addedAnnotations = 
-            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
-        defaultObjectNameProps = new ArrayList<String>( defProps ) ;
+        
+        return result ;
     }
 
     public NotificationEmitter register( Object obj, String... props ) {
@@ -201,11 +236,21 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	return register( obj, Arrays.asList( props ) ) ;
     }
 
+    private String stripType( String arg ) {
+        for (String str : typePrefixes ) {
+            if (arg.startsWith( str ) ) {
+                return arg.substring( str.length() + 1 ) ;
+            }
+        }
+        
+        return arg ;
+    }
+    
     private ObjectName makeObjectName( final Object obj, 
         final DynamicMBeanSkeleton skel, 
         final List<String> props ) throws MalformedObjectNameException {
         
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "makeObjectName" ) ;
         }
         
@@ -221,9 +266,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         // is used: the toString() method should provide all properties in
         // the same order.
         try {
-            List<String> oknProps = skel.getObjectNameProperties(obj) ;
-            if (debug()) {
-                dputil.dprint( "oknProps=" + oknProps ) ;
+            List<String> oknProps ;
+            try {
+                oknProps = skel.getObjectNameProperties(obj) ;
+            } catch (Exception exc) {
+                oknProps = null ;
+            }
+            
+            if (registrationDebug()) {
+                dputil.info( "oknProps=" + oknProps ) ;
             }
             
             List<String> fullProps = new ArrayList<String>() ;
@@ -232,7 +283,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             objname.append( ':' ) ;
 
             objname.append( "type=" ) ;
-            objname.append( skel.getType() ) ;
+            objname.append( stripType( skel.getType() ) ) ;
 
             for (String str : defaultObjectNameProps) {
                 objname.append( ',' ) ;
@@ -249,13 +300,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 objname.append( str ) ;
             }
 
-            if (debug()) {
-                dputil.dprint( "objname=" + objname ) ;
+            if (registrationDebug()) {
+                dputil.info( "objname=" + objname ) ;
             }
             
             return new ObjectName( objname.toString() ) ;
         } finally {
-            dputil.exit() ;
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
         }
     }
    
@@ -263,7 +316,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized NotificationEmitter register( final Object obj, 
 	final List<String> props ) {
 
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "register", "obj=", obj, "props=", props ) ;
         }
         
@@ -276,8 +329,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             final ObjectName oname = makeObjectName( obj, skel, props ) ;
 
             if (objectMap.containsKey( obj )) {
-                if (debug()) {
-                    dputil.dprint( "Object is already registered" ) ;
+                if (registrationDebug()) {
+                    dputil.info( "Object is already registered" ) ;
                 }
                 
                 // XXX I18N
@@ -286,8 +339,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
 
             if (objectNameMap.containsKey( oname )) {
-                if (debug()) {
-                    dputil.dprint( "ObjectName has already been registered" ) ;
+                if (registrationDebug()) {
+                    dputil.info( "ObjectName has already been registered" ) ;
                 }
                 
                 throw new IllegalArgumentException(
@@ -306,14 +359,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	} catch (JMException exc) {
 	    throw new IllegalArgumentException( exc ) ;
 	} finally {
-            if (debug()) {
+            if (registrationDebug()) {
                 dputil.exit() ;
             }
         }
     }
 
     public synchronized void unregister( Object obj ) {
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "unregister", "obj=", obj ) ;
         }
         
@@ -334,46 +387,48 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                     objectNameMap.remove( oname ) ;
                     objectMBeanMap.remove( obj ) ;
                 }
-            } else if (debug()) {
-                dputil.dprint( obj + " not found" ) ;
+            } else if (registrationDebug()) {
+                dputil.info( obj + " not found" ) ;
             }
         } finally {
-            dputil.exit() ;
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
         }
     }
 
     public synchronized ObjectName getObjectName( Object obj ) {
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "getObjectName", obj ) ;
         }
         
         try {
             ObjectName result = objectMap.get( obj ) ;
-            if (debug()) {
-                dputil.dprint( "result is " + result ) ;
+            if (registrationDebug()) {
+                dputil.info( "result is " + result ) ;
             }
             return result ;
         } finally {
-            if (debug()) {
+            if (registrationDebug()) {
                 dputil.exit() ;
             }
         }
     }
 
     public synchronized Object getObject( ObjectName oname ) {
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "getObject", oname ) ;
         }
         
         try {
             Object result = objectNameMap.get( oname ) ;
-            if (debug()) {
-                dputil.dprint( "result is " + result ) ;
+            if (registrationDebug()) {
+                dputil.info( "result is " + result ) ;
             }
                 
             return result ;
 	} finally {
-            if (debug()) {
+            if (registrationDebug()) {
                 dputil.exit() ;
             }
         }
@@ -420,7 +475,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public void addAnnotation( AnnotatedElement element,
         Annotation annotation ) {
         
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "addAnnotation", "element = ", element,
                 "annotation = ", annotation ) ;
         }
@@ -428,8 +483,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         try {
             Map<Class, Annotation> map = addedAnnotations.get( element ) ;
             if (map == null) {
-                if (debug()) {
-                    dputil.dprint( "Creating new Map<Class,Annotation>" ) ;
+                if (registrationDebug()) {
+                    dputil.info( "Creating new Map<Class,Annotation>" ) ;
                 }
                 
                 map = new HashMap<Class, Annotation>() ;
@@ -438,8 +493,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             Annotation  ann = map.get( annotation.getClass() ) ;
             if (ann != null) {
-                if (debug()) {
-                    dputil.dprint( "Duplicate annotation") ;
+                if (registrationDebug()) {
+                    dputil.info( "Duplicate annotation") ;
                 }
                 
                 throw new IllegalArgumentException( "Cannot add annotation " 
@@ -451,7 +506,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             map.put( annotation.getClass(), annotation ) ;
         } finally {
-            if (debug()) {
+            if (registrationDebug()) {
                 dputil.exit() ;
             }
         }
@@ -461,16 +516,17 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public <T extends Annotation> T getAnnotation( AnnotatedElement element,
         Class<T> type ) {
         
-        if (debug()) {
-            dputil.enter( "getAnnotation", "element = ", element,
-                "type = ", type.getName() ) ;
+        if (registrationFineDebug()) {
+            dputil.enter( "getAnnotation", "element=", element,
+                "type=", type.getName() ) ;
         }
         
         try {
             T result = element.getAnnotation( type ) ;
             if (result == null) {
-                if (debug()) {
-                    dputil.dprint( "getting annotation from addedAnnotations map" ) ;
+                if (registrationFineDebug()) {
+                    dputil.info( 
+                        "No annotation on element: trying addedAnnotations map" ) ;
                 }
 
                 Map<Class, Annotation> map = addedAnnotations.get( element );
@@ -479,13 +535,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 } 
             }
 
-            if (debug()) {
-                dputil.dprint( "result = " + result ) ;
+            if (registrationFineDebug()) {
+                dputil.info( "result = " + result ) ;
             }
             
             return result ;
         } finally {
-            if (debug()) {
+            if (registrationFineDebug()) {
                 dputil.exit() ;
             }
         }
@@ -495,7 +551,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         final Class<?> cls, 
         final Class<? extends Annotation> annotationClass ) {
 
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "getClassAnalyzer", "cls = ", cls,
                 "annotationClass = ", annotationClass ) ;
         }
@@ -507,8 +563,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 ca.findClasses( ca.forAnnotation( this, annotationClass ) ),
                 "No " + annotationClass.getName() + " annotation found" ) ;
 
-            if (debug()) {
-                dputil.dprint( "annotatedClass = " + annotatedClass ) ;
+            if (registrationDebug()) {
+                dputil.info( "annotatedClass = " + annotatedClass ) ;
             }
     
             final List<Class<?>> classes = new ArrayList<Class<?>>() ;
@@ -518,15 +574,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             if (incsub != null) {
                 for (Class<?> klass : incsub.cls()) {
                     classes.add( klass ) ;
-                    if (debug()) {
-                        dputil.dprint( "included subclass: " + klass ) ;
+                    if (registrationDebug()) {
+                        dputil.info( "included subclass: " + klass ) ;
                     }
                 }
             }
 
             if (classes.size() > 1) {
-                if (debug()) {
-                    dputil.dprint( 
+                if (registrationDebug()) {
+                    dputil.info( 
                         "Getting new ClassAnalyzer for included subclasses" ) ;
                 }
                 ca = new ClassAnalyzer( classes ) ;
@@ -534,7 +590,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             return new Pair<Class<?>,ClassAnalyzer>( annotatedClass, ca ) ;
         } finally {
-            if (debug()) {
+            if (registrationDebug()) {
                 dputil.exit() ;
             }
         }
@@ -543,7 +599,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public List<InheritedAttribute> getInheritedAttributes( 
         final ClassAnalyzer ca ) {        
         
-        if (debug()) {
+        if (registrationDebug()) {
             dputil.enter( "getInheritedAttributes", "ca=", ca ) ;
         }
         
@@ -584,17 +640,24 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             return isList ;
         } finally {
-            if (debug())
+            if (registrationDebug())
                 dputil.exit() ;
         }
     }
     
-    public void setDebug( boolean flag ) {
-        if (flag) {
+    public void setRegistrationDebug( 
+        ManagedObjectManager.RegistrationDebugLevel level ) {
+        
+        regDebugLevel = level ;
+        if (level != ManagedObjectManager.RegistrationDebugLevel.NONE ) {
             dputil = new DprintUtil( this ) ;
         } else {
             dputil = null ;
         }
+    }
+    
+    public void setRuntimeDebug( boolean flag ) {
+        runDebugFlag = flag ;
     }
     
     public String dumpSkeleton( Object obj ) {
@@ -609,8 +672,20 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public boolean debug() {
-        return dputil != null ;
+    public boolean registrationDebug() {
+        return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.NORMAL 
+            || regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
+    }
+    
+    public boolean registrationFineDebug() {
+        return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
+    }
+    
+    public boolean runtimeDebug() {
+        return runDebugFlag ;
+    }
+    
+    public void addTypePrefix( String arg ) {
+        typePrefixes.add( arg ) ;
     }
 }
-

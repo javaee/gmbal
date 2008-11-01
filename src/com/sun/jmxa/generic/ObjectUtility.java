@@ -88,6 +88,10 @@ public final class ObjectUtility {
     interface ObjectPrinter {
 	void print( IdentityHashMap printed, ObjectWriter buff, 
 	    java.lang.Object obj ) ;
+        
+        // Returns true if this printer should ALWAYS print, even if
+        // the object has been visited before.
+        boolean alwaysPrint() ;
     }
 
     private static class ClassMap {
@@ -129,6 +133,18 @@ public final class ObjectUtility {
             
             handleObject( printed, buff, obj ) ;
         }
+        
+        public boolean alwaysPrint() { return false ; }
+    } ;
+    
+    private ObjectPrinter arrayPrinter = new ObjectPrinter() {
+	public void print( IdentityHashMap printed, ObjectWriter buff, 
+	    java.lang.Object obj ) {
+            
+            handleArray( printed, buff, obj ) ;
+        }
+        
+        public boolean alwaysPrint() { return false ; }
     } ;
 
     private static ObjectPrinter propertiesPrinter = new ObjectPrinter() {
@@ -151,6 +167,8 @@ public final class ObjectUtility {
 		buff.endElement() ;
 	    }
 	}
+        
+        public boolean alwaysPrint() { return true ; }
     } ;
 
     private ObjectPrinter collectionPrinter = new ObjectPrinter() {
@@ -170,6 +188,8 @@ public final class ObjectUtility {
 		buff.endElement() ;
 	    }
 	}
+
+        public boolean alwaysPrint() { return false ; }
     } ;
 
     private ObjectPrinter mapPrinter = new ObjectPrinter() {
@@ -191,6 +211,8 @@ public final class ObjectUtility {
 		buff.endElement() ;
 	    }
 	}
+        
+        public boolean alwaysPrint() { return false ; }        
     } ;
 
     private static ObjectPrinter toStringPrinter = new ObjectPrinter() {
@@ -199,6 +221,8 @@ public final class ObjectUtility {
 
             buff.append( obj.toString() ) ;
         }
+
+        public boolean alwaysPrint() { return true ; }
     } ;
     
     // Order matters here: subclasses must appear before superclasses!
@@ -296,6 +320,16 @@ public final class ObjectUtility {
 //  Implementation
 //===========================================================================
 
+    ObjectPrinter classify( Class cls ) {
+        if (cls.isEnum()) {
+            return toStringPrinter ;
+        } else if (cls.isArray()) {
+            return arrayPrinter ;
+        } else {
+            return classMap.get( cls ) ;
+        }
+    }
+    
     @SuppressWarnings("unchecked")
     private void objectToStringHelper( IdentityHashMap printed, 
 	ObjectWriter result, java.lang.Object obj)
@@ -305,17 +339,17 @@ public final class ObjectUtility {
 	    result.endElement() ;
 	} else {
 	    Class cls = obj.getClass() ;
+            ObjectPrinter opr = classify( cls ) ;
 	    result.startObject( obj ) ;
             try {
-                if (printed.keySet().contains( obj )) {
-                    result.append( "*VISITED*" ) ;
+                if (opr.alwaysPrint()) {
+                    opr.print( printed, result, obj ) ;                    
                 } else {
-                    printed.put( obj, null ) ;
-
-                    if (cls.isArray()) {
-                        handleArray( printed, result, obj ) ;
+                    if (printed.keySet().contains( obj )) {
+                        result.append( "*VISITED*" ) ;
                     } else {
-                        classMap.get( cls ).print( printed, result, obj ) ;
+                        printed.put( obj, null ) ;
+                        opr.print( printed, result, obj ) ;
                     }
                 }
             } finally {
@@ -370,7 +404,10 @@ public final class ObjectUtility {
 	    for (int ctr=0; ctr<fields.length; ctr++ ) {
 		final Field fld = fields[ctr] ;
 		int modifiers = fld.getModifiers() ;
-
+                if (fld.isAnnotationPresent(DumpIgnore.class)) {
+                    continue ;
+                }
+                
 		// Do not display field if it is static, since these fields
 		// are always the same for every instances.  This could
 		// be made configurable, but I don't think it is 
@@ -396,9 +433,7 @@ public final class ObjectUtility {
 
 			java.lang.Object value = fld.get( obj ) ;
                         if (fld.isAnnotationPresent(DumpToString.class)) {
-                            toStringPrinter.print( printed, result, value );
-                        } else if (fld.isAnnotationPresent(DumpIgnore.class )) {
-                            // NOP: ignore this field
+                            toStringPrinter.print( printed, result, value ); 
                         } else {
                             objectToStringHelper( printed, result, value ) ;
                         }

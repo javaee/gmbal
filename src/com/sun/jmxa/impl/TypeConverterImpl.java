@@ -462,7 +462,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
 	return new TypeConverterImpl( cls, SimpleType.STRING ) {
 	    public Object toManagedEntity( Object obj ) {
-		return obj.toString() ;
+                if (obj == null) {
+                    return "*NULL*" ;
+                } else {
+                    return obj.toString() ;
+                }
 	    }
 
             @Override
@@ -596,8 +600,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     if (minfo.isApplicable( obj )) {
                         Object value ;
                         try {
-                            value = minfo.get(obj);
-                        } catch (ReflectionException ex) {
+                            value = minfo.get(obj, mom.runtimeDebug() );
+                        } catch (Exception ex) {
                             throw new IllegalArgumentException(
                                 "Could not get managed data for " + minfo, ex );
                         }
@@ -939,6 +943,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
      */
     public boolean isIdentity() {
         return false ;
+    }
+    
+    public String toString() {
+        return "TypeConverter[dataType=" + dataType 
+            + ",managedType=" + managedType + "]" ;
     }
 }
 

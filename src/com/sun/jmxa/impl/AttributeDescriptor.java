@@ -50,7 +50,11 @@ import javax.management.ReflectionException ;
 import com.sun.jmxa.generic.Algorithms ;
 
 import com.sun.jmxa.ManagedAttribute ;
+import com.sun.jmxa.generic.DprintUtil;
+import com.sun.jmxa.generic.DumpIgnore;
+import com.sun.jmxa.generic.DumpToString;
 import com.sun.jmxa.generic.Predicate;
+import javax.management.MBeanException;
     
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
@@ -60,7 +64,10 @@ public class AttributeDescriptor {
     private String _description ;
     private AttributeType _atype ;
     private Type _type ;
+    @DumpToString
     private TypeConverter _tc ;
+    @DumpIgnore
+    private DprintUtil dputil = new DprintUtil( this ) ;
 
     public final Method method() { return _method ; }
 
@@ -156,35 +163,72 @@ public class AttributeDescriptor {
         }
     }
 
-    public Object get( Object obj ) throws ReflectionException {
-        checkType( AttributeType.GETTER ) ;
-        try {
-            return _tc.toManagedEntity(_method.invoke(obj));
-        } catch (IllegalAccessException ex) {
-            throw new RuntimeException( "Error in get for attribute " + _id, 
-                ex ) ;
-        } catch (IllegalArgumentException ex) {
-            throw new RuntimeException( "Error in get for attribute " + _id, 
-                ex ) ;
-        } catch (InvocationTargetException ex) {
-            throw new RuntimeException( "Error in get for attribute " + _id, 
-                ex ) ;
+    private void makeMBeanException( Exception exc ) throws ReflectionException,
+        MBeanException {
+        if ((exc instanceof IllegalAccessException) || 
+            (exc instanceof IllegalArgumentException)) {
+            throw new ReflectionException( exc, 
+                "Exception while invoking method " + _method 
+                    + " on class " + _method.getDeclaringClass().getName() ) ;
+        } else {
+            Exception ex = exc ;
+            if (exc instanceof InvocationTargetException) {
+                Throwable wrappedException = exc.getCause() ;
+                if (wrappedException instanceof Exception) {
+                    ex = (Exception)wrappedException ;
+                }
+            }
+                
+            throw new MBeanException( ex,
+                "Exception while invoking method " + _method 
+                    + " on class " + _method.getDeclaringClass().getName() ) ;  
         }
     }
+    
+    public Object get( Object obj, 
+        boolean debug ) throws MBeanException, ReflectionException {
+        
+        if (debug) {
+            dputil.enter( "get", "obj=", obj ) ;
+        }
+        
+        checkType( AttributeType.GETTER ) ;
+                
+        Object result = null;
+        
+        try {
+            result = _tc.toManagedEntity(_method.invoke(obj));
+        } catch (Exception exc) {
+            if (debug) {
+                dputil.exception( "Error in get", exc ) ;
+            }
+            
+           makeMBeanException( exc ) ;
+        } finally {
+            if (debug) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    }
 
-    public void set( Object target, Object value ) throws ReflectionException {
+    public void set( Object target, Object value, 
+        boolean debug ) throws MBeanException, ReflectionException {
+        
         checkType( AttributeType.SETTER ) ;
+        
+        if (debug) {
+            dputil.enter( "set", "target=", target, "value=", value ) ;
+        }
+        
         try {
             _method.invoke(target, _tc.fromManagedEntity(value));
-        } catch (IllegalAccessException ex) {
-            throw new IllegalArgumentException( "Error in set for attribute " 
-                + _id, ex ) ;
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException( "Error in set for attribute " 
-                + _id, ex ) ;
-        } catch (InvocationTargetException ex) {
-            throw new IllegalArgumentException( "Error in set for attribute " 
-                + _id, ex ) ;
+        } catch (Exception ex) {
+            dputil.exception( "Exception in set ", ex ) ;
+            makeMBeanException( ex ) ;
+        } finally {
+            dputil.exit() ;
         }
     }
 

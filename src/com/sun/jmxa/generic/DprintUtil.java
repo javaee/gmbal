@@ -27,9 +27,9 @@ public class DprintUtil {
     private static String compressClassName( String name )
     {
 	// Note that this must end in . in order to be renamed correctly.
-	String prefix = "com.sun.corba.se." ;
+	String prefix = "com.sun.jmxa." ;
 	if (name.startsWith( prefix ) ) {
-	    return "(ORB)." + name.substring( prefix.length() ) ;
+	    return "(JMXA)." + name.substring( prefix.length() ) ;
 	} else
 	    return name ;
     }
@@ -62,13 +62,13 @@ public class DprintUtil {
 	return "SelectReaderThread[" + tokens[2] + ":" + tokens[3] + "]" ;
     }
  
-    public static synchronized void dprint(java.lang.Object obj, String msg) {
+    private static synchronized void dprint(java.lang.Object obj, String msg) {
 	System.out.println(
 	    compressClassName( obj.getClass().getName() ) + "("  +
 	    getThreadName( Thread.currentThread() ) + "): " + msg);
     }
     
-    public void dprint( String msg ) {
+    private void dprint( String msg ) {
         dprint( client, msg ) ;
     }
 
@@ -106,6 +106,11 @@ public class DprintUtil {
         String mname = currentMethod.get().peek() ;
         String str = makeString( args ) ;
         dprint( "." + mname + "::" + str ) ;
+    }
+    
+    public void exception( String msg, Throwable exc ) {
+        info( "Exception: ", msg, exc ) ;
+        exc.printStackTrace() ;
     }
 
     public void exit() {

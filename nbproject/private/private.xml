@@ -2,8 +2,16 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/1"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/1">
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/ManagedObjectManager.java</file>
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/ManagedObjectManagerFactory.java</file>
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/generic/Algorithms.java</file>
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/generic/DprintUtil.java</file>
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/generic/ObjectUtility.java</file>
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/generic/ObjectWriter.java</file>
         <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/impl/DynamicMBeanSkeleton.java</file>
         <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/impl/ManagedObjectManagerImpl.java</file>
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/src/com/sun/jmxa/impl/ManagedObjectManagerInternal.java</file>
         <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/test/com/sun/jmxa/JmxaTest.java</file>
+        <file>file:/space/home/ken/NetBeansProjects/JMXAnnotations/test/com/sun/jmxa/OpenMBeanTools.java</file>
     </open-files>
 </project-private>

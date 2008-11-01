@@ -44,6 +44,7 @@ import com.sun.jmxa.ManagedObjectManager ;
 import com.sun.jmxa.generic.Pair ;
 import com.sun.jmxa.InheritedAttribute ;
 
+import com.sun.jmxa.generic.DprintUtil;
 import java.lang.annotation.Annotation;
 import java.util.List;
 
@@ -78,5 +79,9 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
      */
     List<InheritedAttribute> getInheritedAttributes( ClassAnalyzer ca ) ;
     
-    boolean debug() ;
+    boolean registrationDebug() ;
+    
+    boolean registrationFineDebug() ;
+    
+    boolean runtimeDebug() ;
 }

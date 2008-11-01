@@ -162,11 +162,25 @@ public interface ManagedObjectManager extends Closeable {
      */
     void addAnnotation( AnnotatedElement element, Annotation annotation ) ;
         
+    /** DebugLevel used to control how much debug info is printed for 
+     * registration of objects.
+     */
+    public enum RegistrationDebugLevel { NONE, NORMAL, FINE } ;
+    
     /** Print debug output to System.out.
      * 
-     * @param flag true to enable debug, false to disable
+     * @param level NONE is no debugging at all, NORMAL traces high-level
+     * construction of skeletons and type converters, and dumps results of new
+     * skeletons and type converters, FINE traces everything in great detail.
      */
-    void setDebug( boolean flag ) ;
+    void setRegistrationDebug( RegistrationDebugLevel level ) ;
+    
+    /** Enable printing of debug output for runtime MBean operations
+     * to System.out.
+     * 
+     * @param flag true to enable runtime debug, false to disable.
+     */
+    void setRuntimeDebug( boolean flag ) ;
     
     /** Dump the skeleton used in the implementation of the MBean for obj.
      * Obj must be currently registered.
@@ -175,4 +189,11 @@ public interface ManagedObjectManager extends Closeable {
      * @return The string representation of the skeleton.
      */
     String dumpSkeleton( Object obj ) ;
+    
+    /** Add a type prefix to strip from type names, to shorten the names for
+     * a better presentation.
+     *
+     * @param str Class package name to strip from type name
+     */
+    void addTypePrefix( String str ) ;
 }
