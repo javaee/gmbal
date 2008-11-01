@@ -50,7 +50,9 @@ import javax.management.NotificationEmitter ;
 
 /** An interface used to managed Open MBeans created from annotated
  * objects.  This is mostly a facade over MBeanServer.
- * 
+ */
+
+/*
  * XXX Do we need to support an @Notification annotation as in JSR 255?
  * XXX Do we need dependency injection (@Resource)?
  * XXX Test attribute change notification.
@@ -67,10 +69,10 @@ public interface ManagedObjectManager extends Closeable {
      * <p>
      * The ObjectName is constructed with name/value pairs in the following order:
      * <ol>
-     * <lit>The type
-     * <lit>Defaults in the ManagedObjectManager
-     * <lit>Arguments passed into register
-     * <lit>Any name/value pairs derived from ObjectNameKey annotations
+     * <li>The type
+     * <li>Defaults in the ManagedObjectManager
+     * <li>Arguments passed into register
+     * <li>Any name/value pairs derived from ObjectNameKey annotations
      * </ol>
      * @param obj The object used to construct an OpenMbean that is registered
      * with the MBeanServer.
