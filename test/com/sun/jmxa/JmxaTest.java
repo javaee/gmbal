@@ -621,7 +621,8 @@ public class JmxaTest extends TestCase {
 	final ManagedObjectManager mom = ManagedObjectManagerFactory.create( domain ) ;
 
 	try {
-            mom.setDebug( true ) ;
+            mom.setRegistrationDebug( 
+                ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
 	    mom.register( moe, propName + "=" + onum ) ;
             System.out.println( mom.dumpSkeleton( moe ) ) ;
 

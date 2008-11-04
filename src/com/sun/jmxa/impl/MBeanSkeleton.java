@@ -77,6 +77,7 @@ import com.sun.jmxa.ManagedOperation ;
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ParameterNames ;
 
+import com.sun.jmxa.generic.Algorithms;
 import com.sun.jmxa.generic.DprintUtil;
 import com.sun.jmxa.generic.DumpIgnore;
 import com.sun.jmxa.generic.Pair ;
@@ -84,10 +85,10 @@ import com.sun.jmxa.generic.DumpToString ;
 
 import java.lang.reflect.InvocationTargetException;
 
-public class DynamicMBeanSkeleton {
+public class MBeanSkeleton {
     // Object evaluate( Object, List<Object> ) 
     // (or Result evaluate( Target, ArgList ))
-    public interface Operation 
+    public interface Operation
         extends BinaryFunction<Object,List<Object>,Object> {} ;
 
     private final String type ;
@@ -100,7 +101,7 @@ public class DynamicMBeanSkeleton {
     private final DprintUtil dputil ;
     private final Map<String,AttributeDescriptor> setters ;
     private final Map<String,AttributeDescriptor> getters ;
-    private final Map<String,AttributeDescriptor> objectNameKeys ;
+    private AttributeDescriptor nameAttributeDescriptor ;
     private final Map<String,Map<List<String>,Operation>> operations ;
     private final List<OpenMBeanAttributeInfo> mbeanAttributeInfoList ; 
     private final List<OpenMBeanOperationInfo> mbeanOperationInfoList ; 
@@ -270,20 +271,36 @@ public class DynamicMBeanSkeleton {
         }
         
         try {
-            final List<Method> onkMethods = ca.findMethods(
+            final List<Method> annotatedMethods = ca.findMethods(
                 ca.forAnnotation( mom, ObjectNameKey.class )) ;
-
-            if (mom.registrationFineDebug()) {
-                dputil.info( "onkMethods=", onkMethods ) ;
+            
+            if (annotatedMethods.size() == 0) {
+                return ;
             }
             
-            for (Method m : onkMethods ){
-                ObjectNameKey onk = m.getAnnotation( ObjectNameKey.class ) ;
-                String id = onk.value() ;
-                AttributeDescriptor ad = new AttributeDescriptor( mom, m,
-                    id, "" ) ;
-                putIfNotPresent( objectNameKeys, ad.id(), ad ) ;
+            // If there are two methods with @ObjectNameKey in the same
+            // class, we have an error.
+            Method annotatedMethod = annotatedMethods.get(0) ;
+            if (annotatedMethods.size() > 1) {
+                Method second = annotatedMethods.get(1) ;
+                
+                if (annotatedMethod.getDeclaringClass().equals(
+                    second.getDeclaringClass())) {
+                    
+                    throw new IllegalArgumentException( "Methods " 
+                        + annotatedMethod + " and " + second 
+                        + "are both annotated with @ObjectKeyName in class "
+                        + annotatedMethod.getDeclaringClass().getName() ) ;
+                }
+            } 
+
+            if (mom.registrationFineDebug()) {
+                dputil.info( "annotatedMethod=", annotatedMethod ) ;
             }
+            
+            // XXX Need an I18N description
+            nameAttributeDescriptor = new AttributeDescriptor( mom, 
+                annotatedMethod, "name", "Name of this ManagedObject" ) ;            
         } finally {
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
@@ -441,7 +458,7 @@ public class DynamicMBeanSkeleton {
         }
     }
 
-    public DynamicMBeanSkeleton( final Class<?> annotatedClass, 
+    public MBeanSkeleton( final Class<?> annotatedClass, 
         final ClassAnalyzer ca, final ManagedObjectManagerInternal mom ) {
 
         dputil = new DprintUtil( this ) ;
@@ -459,7 +476,6 @@ public class DynamicMBeanSkeleton {
         sequenceNumber = new AtomicLong() ;
 	setters = new HashMap<String,AttributeDescriptor>() ;
 	getters = new HashMap<String,AttributeDescriptor>() ; 
-        objectNameKeys = new HashMap<String,AttributeDescriptor>() ;
 	operations = new HashMap<String,Map<List<String>,Operation>>() ;
 	mbeanAttributeInfoList = new ArrayList<OpenMBeanAttributeInfo>() ;
 	mbeanOperationInfoList = new ArrayList<OpenMBeanOperationInfo>() ;
@@ -703,47 +719,33 @@ public class DynamicMBeanSkeleton {
         return result ;
     }
     
-    public List<String> getObjectNameProperties( final Object obj ) throws
+    public String getNameValue( final Object obj ) throws
         MBeanException, ReflectionException {
         
         if (mom.runtimeDebug()) {
-            dputil.enter( "getObjectNameProperties", "obj=", obj ) ;
+            dputil.enter( "getNameValue", "obj=", obj ) ;
         }
         
-        try {
-            final List<String> result = new ArrayList<String>();
-            for (Map.Entry<String, AttributeDescriptor> entry : 
-                objectNameKeys.entrySet()) {
-
-                final String key = entry.getKey();
-                final AttributeDescriptor ad = entry.getValue();
-                
+        String value = null ;
+        try { 
+            if (nameAttributeDescriptor == null) {
                 if (mom.runtimeDebug()) {
-                    // XXX Should this use a type converter?  If not, check that 
-                    // type is reasonable.
-                    dputil.info( "key=", key, "ad=", ad ) ;
+                    dputil.info( "nameAttributeDescriptor is null" ) ;
                 }
-                
-                String value = null ;
-                try {
-                    value = ad.get(obj, mom.runtimeDebug()).toString();
-                } catch (Exception exc) {
-                    if (mom.runtimeDebug()) {
-                        dputil.exception( "Error in getting value", exc ) ;
-                    }
-                }
-                
-                if (value != null) {
-                    result.add(key + "=" + value);
-                }
+            } else {
+                value = nameAttributeDescriptor.get(obj, mom.runtimeDebug()).toString();
             }
-                
-            return result;
+        } catch (Exception exc) {
+            if (mom.runtimeDebug()) {
+                dputil.exception( "Error in getting value", exc ) ;
+            }
         } finally {
             if (mom.runtimeDebug()) {
-                dputil.exit() ;
+                dputil.exit( value ) ;
             }
         }
+        
+        return value ;
     }
     
     public MBeanInfo getMBeanInfo() {

@@ -36,20 +36,27 @@
 
 package com.sun.jmxa ;
 
-import java.util.Map ;
-import java.util.HashMap ;
-import java.util.Properties ;
-
 import java.lang.reflect.Method ;
 
 import com.sun.jmxa.impl.ManagedObjectManagerImpl ;
-import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
-import java.util.Arrays;
-import java.util.List;
 
 /** Factory used to create ManagedObjectManager instances.
  */
 public final class ManagedObjectManagerFactory {
+    /** Used to define the mode of operation of the ManagedObjectManager.
+     * This has the following implications:
+     * <ol>
+     * <li>The string used for the type in the ObjectName is "type" in
+     * standalone mode, and "j2eeType" in J2EE mode.
+     * <li>The type value (reduced according to the type prefixes 
+     * {@see ManagedObjectManager.addTypePrefix) has "X-" prepended to it
+     * for J2EE mode.  This is not done for STANDALONE mode.
+     * </ol>
+     * These conventions come from JSR77 and GlassFish AMX.
+     * 
+     */
+    public enum Mode { J2EE, STANDALONE } ;
+    
     private ManagedObjectManagerFactory() {}
 
     /** Convenience method for getting access to a method through reflection.
@@ -73,31 +80,49 @@ public final class ManagedObjectManagerFactory {
     
     /** Create a new ManagedObjectManager.  All objectnames created will share
      * the domain value passed on this call.
+     * @param mode 
      * @param domain The domain to use for all ObjectNames created when
      * MBeans are registered.
-     * @param props name/value pairs ("name=value") to be prepended to each 
-     * ObjectName created on registration.
+     * @param rootParentName The comma-separated list of name=value pairs
+     * that represents the parent of the root.  The parent is outside of
+     * the control of this ManagedObjectManager.  This means that the root is
+     * a child of this parent, as represented by the rootParentName.  This 
+     * may be an empty string if the root has no parent.
+     * @param rootObject The root managed object to be used as the root of
+     * all MBeans created by this ManagedObjectManager.
+     * @param rootName The name to be used for the root object.
      * @return A new ManagedObjectManager.
      */
-    public static ManagedObjectManager create( final String domain, 
-        String... props ) {
+    public static ManagedObjectManager create( final Mode mode, 
+        final String domain, final String rootParentName,
+        final Object rootObject, final String rootName ) {
 	
-        return new ManagedObjectManagerImpl( domain,
-            Arrays.asList( props ) ) ;
+        return new ManagedObjectManagerImpl( mode, domain,
+            rootParentName, rootObject, rootName ) ;
     }
     
-    /** Create a new ManagedObjectManager.  All objectnames created will share
-     * the domain value passed on this call.
+    /** Alternative form of the create method to be used when the
+     * rootName is not needed explicitly.  If the root name is available
+     * from an @ObjectNameKey annotation, it is used; otherwise the
+     * type is used as the name, since the root is a singleton.
+     * 
+     * @param mode 
      * @param domain The domain to use for all ObjectNames created when
      * MBeans are registered.
-     * @param props name/value pairs ("name=value") to be prepended to each 
-     * ObjectName created on registration.
-     * @return A new ManagedObjectManager.
+     * @param rootParentName The comma-separated list of name=value pairs
+     * that represents the parent of the root.  The parent is outside of
+     * the control of this ManagedObjectManager.  This means that the root is
+     * a child of this parent, as represented by the rootParentName.
+     * @param rootObject The root managed object to be used as the root of
+     * all MBeans created by this ManagedObjectManager.
+     * @return The ManagedObjectManager.
      */
-    public static ManagedObjectManager create( final String domain, 
-        List<String> props ) {
+    public static ManagedObjectManager create( final Mode mode, 
+        final String domain, final String rootParentName,
+        final Object rootObject ) {
 	
-        return new ManagedObjectManagerImpl( domain, props ) ;
+        return new ManagedObjectManagerImpl( mode, domain,
+            rootParentName, rootObject, null ) ;
     }
 }
 

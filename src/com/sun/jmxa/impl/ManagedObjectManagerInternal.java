@@ -57,7 +57,7 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     TypeConverter getTypeConverter( Type type ) ;
     
     String getDescription( AnnotatedElement element ) ;
-    
+        
     <T extends Annotation> T getAnnotation( AnnotatedElement element,
         Class<T> type ) ;
 
@@ -78,6 +78,8 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
      * @return The inherited attributes.
      */
     List<InheritedAttribute> getInheritedAttributes( ClassAnalyzer ca ) ;
+    
+    MBeanImpl constructMBean( Object obj, String name ) ;
     
     boolean registrationDebug() ;
     

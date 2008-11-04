@@ -43,7 +43,6 @@ import java.io.Closeable ;
 import java.lang.reflect.AnnotatedElement ;
 import java.lang.annotation.Annotation ;
 
-import java.util.List;
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
 import javax.management.NotificationEmitter ;
@@ -60,44 +59,50 @@ import javax.management.NotificationEmitter ;
  * XXX Should we automate handling of recursive types using @Key/@Map?
  * XXX Do we need to support @Descriptor from JSR 255?
  * XXX Do we want simplified exception wrapper scheme for I18N of exceptions?
+ * XXX Do we support both AMX style and non-AMX style registration?  Prefer not to.
  */
 public interface ManagedObjectManager extends Closeable {
     /** Construct an Open Mean for obj according to its annotations,
-     * and register it with domain getDomain() and the key/value pairs
-     * given by props in the form key=value.  The MBeanServer from 
-     * setMBeanServer (or its default) is used.
+     * and register it with domain getDomain() and the appropriate
+     * ObjectName.  The MBeanServer from setMBeanServer (or its default) is used.
+     * Here parent is considered to contain obj, and this containment is
+     * represented by the construction of the ObjectName.
      * <p>
      * The ObjectName is constructed with name/value pairs in the following order:
      * <ol>
-     * <li>The type
-     * <li>Defaults in the ManagedObjectManager
-     * <li>Arguments passed into register
-     * <li>Any name/value pairs derived from ObjectNameKey annotations
+     * <li>The rest of the parent (that is, everything in the parent except
+     * for the type and name values)
+     * <li>The value "[typevalue]=[namevalue]" where typevalue is the value of
+     * the type pair in the parent, and namevalue is the value of the name
+     * pair of the parent (if any; parent may be null).
+     * <li>"[typeword]=[type]", where typeword is either "type" or "j2eeType",
+     * and type is derived from the @ManagedObject annotation of obj (note that 
+     * the class of obj, or one of its superclasses or superinterfaces, must
+     * be annotated with @ManagedObject or an error results).
+     * <li>"name=[name]", 
      * </ol>
-     * @param obj The object used to construct an OpenMbean that is registered
-     * with the MBeanServer.
-     * @param props The additional properties to use in constructing the 
-     * ObjectNameKey for the registered MBean.  May be null, in which case
-     * the ObjectNameKey annotations are used to construct the 
-     * ObjectNameKey.
+     * @param parent The parent object that contains obj.
+     * @param obj The managed object we are registering.
+     * @param name The name to use for registering this object.
+     * 
      * @return The NotificationEmitter that can be used to register 
      * NotificationListeners against the registered MBean.  Only
      * AttributeChangeNotifications are supported.
      */
-    NotificationEmitter register( Object obj, String... props ) ;
+    NotificationEmitter register( Object parent, Object obj, String name ) ;
 
-    /** Same as register( Object, String...) except that key/value
-     * pairs are given as properties.
-     * @param obj The object used to construct an OpenMbean that is registered
-     * with the MBeanServer.
-     * @param props The additional properties to use in constructing the 
-     * ObjectNameKey for the registered MBean.  May be null, in which case
-     * the ObjectNameKey annotations are used to construct the 
-     * ObjectNameKey.
+    /** Same as register( Object, Object, String ), but here the name
+     * is derived from an @ObjectKeyName annotation.
+     * 
+     * @param parent The parent object that contains obj.
+     * @param obj The managed object we are registering.
+     * 
      * @return The NotificationEmitter that can be used to register 
      * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.     */
-    NotificationEmitter register( Object obj, List<String> props )  ;
+     * AttributeChangeNotifications are supported.
+     */
+    NotificationEmitter register( Object parent, Object obj ) ;
+    
 
     /** Unregister the Open MBean corresponding to obj from the
      * mbean server.
@@ -118,7 +123,14 @@ public interface ManagedObjectManager extends Closeable {
      * @return The Object passed to the register call.
      */
     Object getObject( ObjectName oname ) ;
-
+    
+    /** Add a type prefix to strip from type names, to shorten the names for
+     * a better presentation to the user.
+     *
+     * @param str Class package name to strip from type name
+     */
+    void addTypePrefix( String str ) ;
+    
     /** Return the domain name that was used when this ManagedObjectManager
      * was created.
      * @return Get the domain name for this ManagedObjectManager.
@@ -191,11 +203,5 @@ public interface ManagedObjectManager extends Closeable {
      * @return The string representation of the skeleton.
      */
     String dumpSkeleton( Object obj ) ;
-    
-    /** Add a type prefix to strip from type names, to shorten the names for
-     * a better presentation.
-     *
-     * @param str Class package name to strip from type name
-     */
-    void addTypePrefix( String str ) ;
+
 }
