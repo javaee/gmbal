@@ -36,6 +36,7 @@
 
 package com.sun.jmxa.impl ;
 
+import com.sun.jmxa.generic.ClassAnalyzer;
 import java.lang.reflect.Array ;
 import java.lang.reflect.Constructor ;
 import java.lang.reflect.Method ;
@@ -78,6 +79,7 @@ import com.sun.jmxa.ManagedData ;
 import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.InheritedAttribute ;
 import com.sun.jmxa.generic.DumpToString;
+import com.sun.jmxa.generic.FacetAccessor;
 import java.lang.reflect.InvocationTargetException;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
@@ -539,7 +541,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	// Construct tables Map<String,Method> for getters (no setters in 
         // CompositeData, since CompositeData is immutable).
 	final List<Method> attributes = ca.findMethods( 
-            ca.forAnnotation( mom, ManagedAttribute.class ) ) ;
+            mom.forAnnotation( ManagedAttribute.class ) ) ;
 	for (Method m : attributes) {
 	    AttributeDescriptor ainfo = new AttributeDescriptor( mom, m ) ;
 
@@ -600,7 +602,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     if (minfo.isApplicable( obj )) {
                         Object value ;
                         try {
-                            value = minfo.get(obj, mom.runtimeDebug() );
+                            FacetAccessor fa = mom.getFacetAccessor( obj ) ;
+                            value = minfo.get( fa, mom.runtimeDebug() );
                         } catch (Exception ex) {
                             throw new IllegalArgumentException(
                                 "Could not get managed data for " + minfo, ex );

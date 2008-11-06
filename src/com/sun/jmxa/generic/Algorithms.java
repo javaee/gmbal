@@ -38,6 +38,7 @@ package com.sun.jmxa.generic ;
 import java.util.List ;
 import java.util.Map ;
 import java.util.ArrayList ;
+import java.util.Collection;
 import java.util.HashMap;
 
 public final class Algorithms {
@@ -71,7 +72,8 @@ public final class Algorithms {
 	} ;
     }
 
-    public static <A,R> void map( final List<A> arg, final List<R> result,
+    public static <A,R> void map( final Collection<A> arg, 
+        final Collection<R> result,
 	final UnaryFunction<A,R> func ) {
 
 	for (A a : arg) {
@@ -82,7 +84,20 @@ public final class Algorithms {
 	}
     }
 
-    public static <A,R> List<R> map( final List<A> arg, final UnaryFunction<A,R> func ) {
+    public static <K,A,R> Map<K,R> map( final Map<K,A> arg,
+        final UnaryFunction<A,R> func ) {
+        
+        Map<K,R> result = new HashMap<K,R>() ;
+        for (Map.Entry<K,A> entry : arg.entrySet()) {
+            result.put( entry.getKey(), 
+                func.evaluate( entry.getValue())) ;
+        }
+        
+        return result ;
+    }
+    
+    public static <A,R> List<R> map( final List<A> arg, 
+        final UnaryFunction<A,R> func ) {
 
 	final List<R> result = new ArrayList<R>() ;
 	map( arg, result, func ) ;
@@ -195,17 +210,29 @@ public final class Algorithms {
         } ) ;     
     }
         
-    public static <T> T getOne( List<T> list, String zeroMsg, String manyMsg ) {
-        if (list.size() == 0)
-            throw new IllegalArgumentException( zeroMsg ) ;
-        if (list.size() > 0)
-            throw new IllegalArgumentException( manyMsg ) ;
-        return list.get(0) ;
+    public static <T> T getOne( Collection<T> list, String zeroMsg, 
+        String manyMsg ) {
+        T result = null ;
+        for (T element : list) {
+            if (result == null) {
+                result = element ;
+            } else {
+                throw new IllegalArgumentException( manyMsg ) ;                
+            }
+        }
+
+        if (result == null) {
+            throw new IllegalArgumentException( zeroMsg) ;
+        } else {
+            return result ;
+        }
     }
 
-    public static <T> T getFirst( List<T> list, String zeroMsg ) {
-        if (list.size() == 0)
-            throw new IllegalArgumentException( zeroMsg ) ;
-        return list.get(0) ;
+    public static <T> T getFirst( Collection<T> list, String zeroMsg ) {
+        for (T element : list) {
+            return element ;
+        }
+
+        throw new IllegalArgumentException( zeroMsg ) ;
     }
 }

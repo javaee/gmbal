@@ -34,7 +34,7 @@
  * holder.
  */
 
-package com.sun.jmxa.impl ;
+package com.sun.jmxa.generic ;
 
 import java.util.Collections ;
 import java.util.List ;
@@ -121,21 +121,6 @@ public class ClassAnalyzer {
 	this( new Graph<Class<?>>( classes, finder ) ) ;
     }
 
-    public Predicate<AnnotatedElement> forAnnotation( 
-        final ManagedObjectManagerInternal mom,
-        final Class<? extends Annotation> annotation ) {
-        
-        return new Predicate<AnnotatedElement>() {
-            public boolean evaluate( AnnotatedElement elem ) {
-                if (mom == null) {
-                    return elem.getAnnotation(annotation) != null ; 
-                } else {
-                    return mom.getAnnotation( elem, annotation ) != null ;
-                }
-            }
-        } ;
-    }
-
     public List<Class<?>> findClasses( Predicate pred ) {
 	final List<Class<?>> result = new ArrayList<Class<?>>() ;
 	for (Class<?> c : classInheritance) {
@@ -161,7 +146,17 @@ public class ClassAnalyzer {
 
 	return result ;
     }
+    
+    public Predicate<AnnotatedElement> forAnnotation( 
+        final Class<? extends Annotation> annotation ) {
 
+        return new Predicate<AnnotatedElement>() {
+            public boolean evaluate( AnnotatedElement elem ) {
+                return elem.getAnnotation( annotation ) != null ;
+            }
+        } ;
+    }
+    
     @Override
     public synchronized String toString() {
         if (contents == null) {

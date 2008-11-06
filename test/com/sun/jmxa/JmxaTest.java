@@ -36,6 +36,7 @@
 
 package com.sun.jmxa ;
 
+import java.io.IOException;
 import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
@@ -58,6 +59,8 @@ import java.util.Date ;
 import java.math.BigInteger ;
 import java.math.BigDecimal ;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.MalformedObjectNameException ;
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
@@ -73,7 +76,7 @@ import com.sun.jmxa.generic.Algorithms ;
 
 import com.sun.jmxa.impl.TypeConverter ;
 import com.sun.jmxa.impl.AttributeDescriptor ;
-import com.sun.jmxa.impl.ClassAnalyzer ;
+import com.sun.jmxa.generic.ClassAnalyzer ;
 import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
 
 import junit.framework.Test;
@@ -337,8 +340,7 @@ public class JmxaTest extends TestCase {
 
     public void testGetAnnotatedMethods() {
         ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-        List<Method> methods = ca.findMethods( ca.forAnnotation( null, 
-            Test2.class ) ) ;
+        List<Method> methods = ca.findMethods( ca.forAnnotation( Test2.class ) ) ;
 	Set<Method> methodSet = new HashSet<Method>( methods ) ;
 
 	Method[] expectedMethods = { 
@@ -359,8 +361,7 @@ public class JmxaTest extends TestCase {
         expectedResult.add( AA.class ) ;
 
         ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-        List<Class<?>> classes = ca.findClasses( ca.forAnnotation( null, 
-            Test3.class ) ) ;
+        List<Class<?>> classes = ca.findClasses( ca.forAnnotation( Test3.class ) ) ;
 
 	assertEquals( classes, expectedResult ) ;
     }
@@ -377,37 +378,47 @@ public class JmxaTest extends TestCase {
 	Method m ;
         ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
 	ManagedObjectManagerInternal mom = 
-            (ManagedObjectManagerInternal)ManagedObjectManagerFactory.create( "ORBTest" ) ;
+            (ManagedObjectManagerInternal)ManagedObjectManagerFactory
+                .createStandalone( 
+                    "ORBTest", "", null ) ;
+                        
+        try {
+            AttributeDescriptor ad ;
 
-        AttributeDescriptor ad ;
+            ad = AttributeDescriptor.findAttribute( mom, ca, "fooA", "null description", 
+                AttributeDescriptor.AttributeType.GETTER ) ;
+            assertEquals( getter_fooA, ad.method() ) ;
 
-        ad = AttributeDescriptor.findAttribute( mom, ca, "fooA", "null description", 
-            AttributeDescriptor.AttributeType.GETTER ) ;
-	assertEquals( getter_fooA, ad.method() ) ;
-        
-        ad = AttributeDescriptor.findAttribute( mom, ca, "fooA", "null description", 
-            AttributeDescriptor.AttributeType.SETTER ) ;
-	assertEquals( setter_fooA, ad.method() ) ;
+            ad = AttributeDescriptor.findAttribute( mom, ca, "fooA", "null description", 
+                AttributeDescriptor.AttributeType.SETTER ) ;
+            assertEquals( setter_fooA, ad.method() ) ;
 
-        ad = AttributeDescriptor.findAttribute( mom, ca, "barA", "null description", 
-            AttributeDescriptor.AttributeType.GETTER ) ;
-	assertEquals( getter_barA, ad.method() ) ;
+            ad = AttributeDescriptor.findAttribute( mom, ca, "barA", "null description", 
+                AttributeDescriptor.AttributeType.GETTER ) ;
+            assertEquals( getter_barA, ad.method() ) ;
 
-        ad = AttributeDescriptor.findAttribute( mom, ca, "barA", "null description", 
-            AttributeDescriptor.AttributeType.SETTER ) ;
-	assertEquals( setter_barA, ad.method() ) ;
+            ad = AttributeDescriptor.findAttribute( mom, ca, "barA", "null description", 
+                AttributeDescriptor.AttributeType.SETTER ) ;
+            assertEquals( setter_barA, ad.method() ) ;
 
-        ad = AttributeDescriptor.findAttribute( mom, ca, "something", "null description", 
-            AttributeDescriptor.AttributeType.GETTER ) ;
-	assertEquals( getter_something, ad.method() ) ;
+            ad = AttributeDescriptor.findAttribute( mom, ca, "something", "null description", 
+                AttributeDescriptor.AttributeType.GETTER ) ;
+            assertEquals( getter_something, ad.method() ) ;
 
-        ad = AttributeDescriptor.findAttribute( mom, ca, "fooC", "null description", 
-            AttributeDescriptor.AttributeType.GETTER ) ;
-	assertEquals( getter_fooC, ad.method() ) ;
+            ad = AttributeDescriptor.findAttribute( mom, ca, "fooC", "null description", 
+                AttributeDescriptor.AttributeType.GETTER ) ;
+            assertEquals( getter_fooC, ad.method() ) ;
 
-        ad = AttributeDescriptor.findAttribute( mom, ca, "fooD", "null description", 
-            AttributeDescriptor.AttributeType.SETTER ) ;
-	assertEquals( setter_fooD, ad.method() ) ;
+            ad = AttributeDescriptor.findAttribute( mom, ca, "fooD", "null description", 
+                AttributeDescriptor.AttributeType.SETTER ) ;
+            assertEquals( setter_fooD, ad.method() ) ;
+        } finally {
+            try {
+                mom.close();
+            } catch (IOException ex) {
+                // Don't care
+            }
+        }
     }
 
     //==============================================================================================
@@ -475,26 +486,35 @@ public class JmxaTest extends TestCase {
 
     public void testPrimitiveTypeConverter() {
 	ManagedObjectManagerInternal mom = 
-            (ManagedObjectManagerInternal)ManagedObjectManagerFactory.create( "ORBTest" ) ;
+            (ManagedObjectManagerInternal)ManagedObjectManagerFactory
+                .createStandalone( 
+                    "ORBTest", "", null ) ;
+        try {
+            for (Object[] data : primitiveTCTestData) {
+                Class cls = (Class)data[0] ;
+                SimpleType st = (SimpleType)data[1] ;
+                Object value = data[2] ;
 
-	for (Object[] data : primitiveTCTestData) {
-	    Class cls = (Class)data[0] ;
-	    SimpleType st = (SimpleType)data[1] ;
-	    Object value = data[2] ;
+                TypeConverter tc = mom.getTypeConverter( cls ) ;
 
-	    TypeConverter tc = mom.getTypeConverter( cls ) ;
+                assertTrue( tc.getDataType() == cls ) ;
+                assertTrue( tc.getManagedType() == st ) ;
+                assertTrue( tc.isIdentity() ) ;
 
-	    assertTrue( tc.getDataType() == cls ) ;
-	    assertTrue( tc.getManagedType() == st ) ;
-	    assertTrue( tc.isIdentity() ) ;
+                Object managed = tc.toManagedEntity( value ) ;
+                Object value2 = tc.fromManagedEntity( managed ) ;
+                assertEquals( value, value2 ) ;
 
-	    Object managed = tc.toManagedEntity( value ) ;
-	    Object value2 = tc.fromManagedEntity( managed ) ;
-	    assertEquals( value, value2 ) ;
-
-	    Object managed2 = tc.toManagedEntity( value2 ) ;
-	    assertEquals( managed, managed2 ) ;
-	}
+                Object managed2 = tc.toManagedEntity( value2 ) ;
+                assertEquals( managed, managed2 ) ;
+            }
+        } finally {
+            try {
+                mom.close();
+            } catch (IOException ex) {
+                // don't care
+            }
+        }
     }
 
     public static final String MDE_DESCRIPTION = "Description of ManagedDataExample" ;
@@ -611,26 +631,32 @@ public class JmxaTest extends TestCase {
 
     @SuppressWarnings({"unchecked"})
     public void testManagedObjectExample() {
+        final ManagedObjectManagerFactory.Mode mode = 
+            ManagedObjectManagerFactory.Mode.STANDALONE ;
 	final String domain = "ORBTest" ;
+        final String rootParentName = "" ;
 	final int num = 12 ;
 	final String name = "Liskov" ;
-	final ManagedObjectExample moe = new ManagedObjectExample( num, name ) ;
+	final ManagedObjectExample rootObject = 
+            new ManagedObjectExample( num, name ) ;
+        final String rootName = "" ;
 	final String propName = "ObjectNumber" ;
 	final int onum = 1 ;
 
-	final ManagedObjectManager mom = ManagedObjectManagerFactory.create( domain ) ;
+	final ManagedObjectManager mom = ManagedObjectManagerFactory.create( 
+            mode, domain, rootParentName, rootObject, rootName ) ;
 
 	try {
             mom.setRegistrationDebug( 
                 ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
-	    mom.register( moe, propName + "=" + onum ) ;
-            System.out.println( mom.dumpSkeleton( moe ) ) ;
+	    // mom.register( moe, propName + "=" + onum ) ;
+            System.out.println( mom.dumpSkeleton( rootObject ) ) ;
 
-	    ObjectName moeName = mom.getObjectName( moe ) ;
+	    ObjectName moeName = mom.getObjectName( rootObject ) ;
 	    assertEquals( domain, moeName.getDomain() ) ;
 	    
 	    Hashtable expectedProperties = new Hashtable() ;
-	    expectedProperties.put( propName, "" + onum ) ;
+	    expectedProperties.put( "name", ManagedObjectExample.class.getName() ) ;
 	    expectedProperties.put( "type", ManagedObjectExample.class.getName() ) ;
 	    
 	    assertEquals( expectedProperties, moeName.getKeyPropertyList() ) ;
@@ -638,14 +664,18 @@ public class JmxaTest extends TestCase {
 	    MBeanServer mbs = mom.getMBeanServer() ;
 
 	    // Validate attributes
-	    assertEquals( mbs.getAttribute( moeName, "num" ), Integer.valueOf( num ) ) ;
+	    assertEquals( mbs.getAttribute( moeName, "num" ), 
+                Integer.valueOf( num ) ) ;
 	    assertEquals( mbs.getAttribute( moeName, "name" ), name ) ;
 	    Object obj = mbs.getAttribute( moeName, "mde" ) ;
 	    assertTrue( obj instanceof CompositeData ) ;
 	    CompositeData compData = (CompositeData)obj ;
-	    assertEquals( moe.getMde().name(), compData.get( MDE_ATTR_ID_NAME ) ) ;
-	    assertEquals( moe.getMde().date(), compData.get( MDE_ATTR_ID_DATE ) ) ;
-            assertEquals( moe.getMde().getString(), compData.get( MDE_ATTR_ID_GET_STRING ) ) ;
+	    assertEquals( rootObject.getMde().name(), compData.get(
+                MDE_ATTR_ID_NAME ) ) ;
+	    assertEquals( rootObject.getMde().date(), compData.get( 
+                MDE_ATTR_ID_DATE ) ) ;
+            assertEquals( rootObject.getMde().getString(), compData.get( 
+                MDE_ATTR_ID_GET_STRING ) ) ;
 
 	    // Validate operations
 	} catch (Exception exc) {
@@ -653,7 +683,7 @@ public class JmxaTest extends TestCase {
 	    fail( "Caught exception on register " + exc ) ;
 	} finally {
 	    try {
-		mom.unregister( moe ) ;
+		mom.unregister( rootObject ) ;
 	    } catch (Exception exc) {
 		exc.printStackTrace() ;
 		fail( "Caught exception on unregister " + exc ) ;
@@ -666,37 +696,47 @@ public class JmxaTest extends TestCase {
     @SuppressWarnings("unchecked")
     public void testManagedDataTypeConverter() {
 	ManagedObjectManagerInternal mom = 
-            (ManagedObjectManagerInternal)ManagedObjectManagerFactory.create( "ORBTest" ) ;
+            (ManagedObjectManagerInternal)ManagedObjectManagerFactory
+                .createStandalone( 
+                    "ORBTest", "", null ) ;
     
-	TypeConverter tc = mom.getTypeConverter( ManagedDataExample.class ) ;
-	assertTrue( tc.getDataType() == ManagedDataExample.class ) ;
+        try {
+            TypeConverter tc = mom.getTypeConverter( ManagedDataExample.class ) ;
+            assertTrue( tc.getDataType() == ManagedDataExample.class ) ;
 
-	OpenType otype = tc.getManagedType() ;
-	assertTrue( otype instanceof CompositeType ) ;
-	CompositeType ctype = (CompositeType)otype ;
-	assertEquals( MDE_DESCRIPTION, ctype.getDescription() ) ;
-	assertEquals( MDE_ATTR_DESC_NAME, ctype.getDescription( MDE_ATTR_ID_NAME ) ) ;
-	assertEquals( MDE_ATTR_DESC_DATE, ctype.getDescription( MDE_ATTR_ID_DATE ) ) ;
-	assertEquals( SimpleType.STRING, ctype.getType( MDE_ATTR_ID_NAME ) ) ;
-	assertEquals( SimpleType.DATE, ctype.getType( MDE_ATTR_ID_DATE ) ) ;
+            OpenType otype = tc.getManagedType() ;
+            assertTrue( otype instanceof CompositeType ) ;
+            CompositeType ctype = (CompositeType)otype ;
+            assertEquals( MDE_DESCRIPTION, ctype.getDescription() ) ;
+            assertEquals( MDE_ATTR_DESC_NAME, ctype.getDescription( MDE_ATTR_ID_NAME ) ) ;
+            assertEquals( MDE_ATTR_DESC_DATE, ctype.getDescription( MDE_ATTR_ID_DATE ) ) ;
+            assertEquals( SimpleType.STRING, ctype.getType( MDE_ATTR_ID_NAME ) ) ;
+            assertEquals( SimpleType.DATE, ctype.getType( MDE_ATTR_ID_DATE ) ) ;
 
-	Set<String> keys = new HashSet() ;
-	keys.add( MDE_ATTR_ID_NAME ) ;
-	keys.add( MDE_ATTR_ID_DATE ) ;
-        keys.add( MDE_ATTR_ID_GET_STRING ) ;
-	assertEquals( keys, ctype.keySet() ) ;
+            Set<String> keys = new HashSet() ;
+            keys.add( MDE_ATTR_ID_NAME ) ;
+            keys.add( MDE_ATTR_ID_DATE ) ;
+            keys.add( MDE_ATTR_ID_GET_STRING ) ;
+            assertEquals( keys, ctype.keySet() ) ;
 
-	assertFalse( tc.isIdentity() ) ;
+            assertFalse( tc.isIdentity() ) ;
 
-	ManagedDataExample value = new ManagedDataExample( "test" ) ;
+            ManagedDataExample value = new ManagedDataExample( "test" ) ;
 
-	Object managed = tc.toManagedEntity( value ) ;
+            Object managed = tc.toManagedEntity( value ) ;
 
-	assertTrue( managed instanceof CompositeData ) ;
-	CompositeData compData = (CompositeData)managed ;
-	assertEquals( compData.getCompositeType(), ctype ) ;
-	assertEquals( value.name(), (String)compData.get( MDE_ATTR_ID_NAME ) ) ;
-	assertEquals( value.date(), (Date)compData.get( MDE_ATTR_ID_DATE ) ) ;
+            assertTrue( managed instanceof CompositeData ) ;
+            CompositeData compData = (CompositeData)managed ;
+            assertEquals( compData.getCompositeType(), ctype ) ;
+            assertEquals( value.name(), (String)compData.get( MDE_ATTR_ID_NAME ) ) ;
+            assertEquals( value.date(), (Date)compData.get( MDE_ATTR_ID_DATE ) ) ;
+        } finally {
+            try {
+                mom.close();
+            } catch (IOException ex) {
+                // Don't care
+            }
+        }
     }
 
     public static Test suite() {

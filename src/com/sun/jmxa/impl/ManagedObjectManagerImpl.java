@@ -36,6 +36,7 @@
 
 package com.sun.jmxa.impl ;
 
+import com.sun.jmxa.generic.ClassAnalyzer;
 import java.util.ResourceBundle ;
 import java.util.Map ;
 import java.util.HashMap ;
@@ -75,6 +76,7 @@ import com.sun.jmxa.generic.DumpIgnore;
 import com.sun.jmxa.generic.ObjectUtility;
 import com.sun.jmxa.generic.Predicate;
 import com.sun.jmxa.generic.UnaryFunction;
+import com.sun.jmxa.generic.FacetAccessor ;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -102,6 +104,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return "ManagedObjectManagerImpl[domain=" + domain + "]" ;
     }
     
+    @ManagedObject
+    @Description( "Dummy class used when no root is specified" ) 
+    private static class Root {
+        // No methods: will simply implement an AMX container
+    }
+    
     public ManagedObjectManagerImpl( 
         final ManagedObjectManagerFactory.Mode mode,
         final String domain, 
@@ -116,12 +124,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             "type" ;
         
 	server = ManagementFactory.getPlatformMBeanServer() ;
-        tree = new MBeanTree( this, domain, rootParentName, typeString,
-            rootObject, rootName ) ;
+        Object actualRoot = rootObject ;
+        if (actualRoot == null) {
+            actualRoot = new Root() ;
+        }
+        
 	skeletonMap = new WeakHashMap<Class<?>,MBeanSkeleton>() ;
 	typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
         addedAnnotations = 
             new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
+        
+        tree = new MBeanTree( this, domain, rootParentName, typeString,
+            actualRoot, rootName ) ;
     }
 
     private static final TypeConverter recursiveTypeMarker = 
@@ -241,7 +255,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return arg ;
     }
     
-    public MBeanImpl constructMBean( Object obj, String name ) {
+    public synchronized MBeanImpl constructMBean( Object obj, String name ) {
         
         MBeanImpl result = null ;
         
@@ -260,23 +274,29 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 dputil.info( "Stripped type =", type ) ;
             }
 
+            result = new MBeanImpl( skel, obj, server, type ) ;
+            
             String objName = name ;
             if (objName == null) {
-                objName = skel.getNameValue( obj ) ;
+                objName = skel.getNameValue( result ) ;
                 if (objName == null) {
                     objName = skel.getType() ;
                 }
             }  
-            
+           
             if (registrationDebug()) {
                 dputil.info( "Name value =", objName ) ;
             }
-
-            result = new MBeanImpl( skel, obj, server, type, objName ) ;
+            
+            result.name( objName ) ;
         } catch (JMException exc) {
-            dputil.exception( "Problem in fetching value of name", exc) ;
+            if (registrationDebug()) {
+                dputil.exception( "Problem in fetching value of name", exc) ;
+            }
         } finally {
-            dputil.exit() ;
+            if (registrationDebug()) {
+                dputil.exit( result ) ;
+            }
         }
         
         return result ;
@@ -320,6 +340,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
         try {
             tree.unregister( obj ) ;
+        } catch (JMException exc) {
+            throw new IllegalStateException( exc ) ;
         } finally {
             if (registrationDebug()) {
                 dputil.exit() ;
@@ -360,7 +382,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
         return result ;
     }
-
+    
+    public synchronized FacetAccessor getFacetAccessor( Object obj ) {
+        return tree.getFacetAccessor( obj ) ;
+    }
+    
     public synchronized String getDomain() {
 	return domain ;
     }
@@ -399,7 +425,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     
-    public void addAnnotation( AnnotatedElement element,
+    public synchronized void addAnnotation( AnnotatedElement element,
         Annotation annotation ) {
         
         if (registrationDebug()) {
@@ -440,7 +466,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
        
     @SuppressWarnings({"unchecked"})
-    public <T extends Annotation> T getAnnotation( AnnotatedElement element,
+    public synchronized <T extends Annotation> T getAnnotation( AnnotatedElement element,
         Class<T> type ) {
         
         if (registrationFineDebug()) {
@@ -474,7 +500,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
+    public synchronized Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
         final Class<?> cls, 
         final Class<? extends Annotation> annotationClass ) {
 
@@ -487,7 +513,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
 
             final Class<?> annotatedClass = Algorithms.getFirst( 
-                ca.findClasses( ca.forAnnotation( this, annotationClass ) ),
+                ca.findClasses( forAnnotation( annotationClass ) ),
                 "No " + annotationClass.getName() + " annotation found" ) ;
 
             if (registrationDebug()) {
@@ -523,7 +549,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public List<InheritedAttribute> getInheritedAttributes( 
+    public synchronized List<InheritedAttribute> getInheritedAttributes( 
         final ClassAnalyzer ca ) {        
         
         if (registrationDebug()) {
@@ -532,8 +558,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
         try {
             final Predicate<AnnotatedElement> pred = Algorithms.or( 
-                ca.forAnnotation( this, InheritedAttribute.class ),
-                ca.forAnnotation( this, InheritedAttributes.class ) ) ;
+                forAnnotation( InheritedAttribute.class ),
+                forAnnotation( InheritedAttributes.class ) ) ;
 
             // Construct list of classes annotated with InheritedAttribute or
             // InheritedAttributes.
@@ -572,7 +598,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public void setRegistrationDebug( 
+    public synchronized void setRegistrationDebug( 
         ManagedObjectManager.RegistrationDebugLevel level ) {
         
         regDebugLevel = level ;
@@ -587,7 +613,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         runDebugFlag = flag ;
     }
     
-    public String dumpSkeleton( Object obj ) {
+    public synchronized String dumpSkeleton( Object obj ) {
         MBeanImpl impl = tree.getMBeanImpl( obj ) ;
         if (impl == null) {
             return obj + " is not currently registered with mom " + this ;
@@ -614,5 +640,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
     public void addTypePrefix( String arg ) {
         typePrefixes.add( arg ) ;
+    }
+    
+    public Predicate<AnnotatedElement> forAnnotation( 
+        final Class<? extends Annotation> annotation ) {
+
+        return new Predicate<AnnotatedElement>() {
+            public boolean evaluate( AnnotatedElement elem ) {
+                return getAnnotation( elem, annotation ) != null ;
+            }
+        } ;
     }
 }

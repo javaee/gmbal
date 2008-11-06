@@ -36,6 +36,7 @@
 
 package com.sun.jmxa.impl ;
 
+import com.sun.jmxa.generic.ClassAnalyzer;
 import java.lang.reflect.Type ;
 
 import java.lang.reflect.AnnotatedElement ;
@@ -45,6 +46,8 @@ import com.sun.jmxa.generic.Pair ;
 import com.sun.jmxa.InheritedAttribute ;
 
 import com.sun.jmxa.generic.DprintUtil;
+import com.sun.jmxa.generic.FacetAccessor;
+import com.sun.jmxa.generic.Predicate;
 import java.lang.annotation.Annotation;
 import java.util.List;
 
@@ -78,6 +81,11 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
      * @return The inherited attributes.
      */
     List<InheritedAttribute> getInheritedAttributes( ClassAnalyzer ca ) ;
+    
+    Predicate<AnnotatedElement> forAnnotation( 
+        final Class<? extends Annotation> annotation ) ;
+    
+    FacetAccessor getFacetAccessor( Object obj ) ;
     
     MBeanImpl constructMBean( Object obj, String name ) ;
     

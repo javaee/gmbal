@@ -36,6 +36,7 @@
 
 package com.sun.jmxa.impl ;
 
+import com.sun.jmxa.generic.ClassAnalyzer;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List ;
 
@@ -53,6 +54,7 @@ import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.generic.DprintUtil;
 import com.sun.jmxa.generic.DumpIgnore;
 import com.sun.jmxa.generic.DumpToString;
+import com.sun.jmxa.generic.FacetAccessor;
 import com.sun.jmxa.generic.Predicate;
 import javax.management.MBeanException;
     
@@ -185,11 +187,11 @@ public class AttributeDescriptor {
         }
     }
     
-    public Object get( Object obj, 
+    public Object get( FacetAccessor fa,
         boolean debug ) throws MBeanException, ReflectionException {
         
         if (debug) {
-            dputil.enter( "get", "obj=", obj ) ;
+            dputil.enter( "get", "fa=", fa ) ;
         }
         
         checkType( AttributeType.GETTER ) ;
@@ -197,7 +199,7 @@ public class AttributeDescriptor {
         Object result = null;
         
         try {
-            result = _tc.toManagedEntity(_method.invoke(obj));
+            result = _tc.toManagedEntity(fa.invoke(_method));
         } catch (Exception exc) {
             if (debug) {
                 dputil.exception( "Error in get", exc ) ;
@@ -213,7 +215,7 @@ public class AttributeDescriptor {
         return result ;
     }
 
-    public void set( Object target, Object value, 
+    public void set( FacetAccessor target, Object value, 
         boolean debug ) throws MBeanException, ReflectionException {
         
         checkType( AttributeType.SETTER ) ;
@@ -223,7 +225,7 @@ public class AttributeDescriptor {
         }
         
         try {
-            _method.invoke(target, _tc.fromManagedEntity(value));
+            target.invoke(_method, _tc.fromManagedEntity(value));
         } catch (Exception ex) {
             dputil.exception( "Exception in set ", ex ) ;
             makeMBeanException( ex ) ;

@@ -37,11 +37,11 @@
 package com.sun.jmxa.impl;
 
 import com.sun.jmxa.generic.DprintUtil;
+import com.sun.jmxa.generic.FacetAccessor;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.InstanceAlreadyExistsException;
+import javax.management.InstanceNotFoundException;
 import javax.management.JMException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MalformedObjectNameException;
@@ -64,6 +64,23 @@ public class MBeanTree {
                                 // type name/value pair?
     private ManagedObjectManagerInternal mom ;
     private DprintUtil dputil ;
+    
+    private void addToObjectMaps( MBeanImpl mbean ) {
+        ObjectName oname = mbean.objectName() ;
+        for (Object obj : mbean.facets() ) {
+            objectMap.put( obj, mbean ) ;
+        }
+        objectNameMap.put( oname, mbean ) ;
+    }
+    
+    private void removeFromObjectMaps( MBeanImpl mbean ) {
+        ObjectName oname = mbean.objectName() ;
+        for (Object obj : mbean.facets() ) {
+            objectMap.remove( obj ) ;
+        }
+        
+        objectNameMap.remove( oname ) ;
+    }
     
     public MBeanTree( final ManagedObjectManagerInternal mom,
         final String domain, 
@@ -93,8 +110,7 @@ public class MBeanTree {
         }
         rootMB.objectName( oname ) ;
         
-        objectMap.put( root, rootMB ) ;
-        objectNameMap.put( oname, root ) ;
+        addToObjectMaps( rootMB ) ;
         
         try {
             rootMB.register();
@@ -102,6 +118,12 @@ public class MBeanTree {
             throw new IllegalArgumentException( "Could not register root", 
                 ex ) ;
         }
+        
+        rootEntity = rootMB ;
+    }
+
+    public synchronized FacetAccessor getFacetAccessor(Object obj) {
+        return objectMap.get( obj ) ;
     }
     
     private boolean notEmpty( String str ) {
@@ -120,12 +142,14 @@ public class MBeanTree {
             + " is not part of this EntityTree" ) ;
     }
     
-    public ObjectName objectName( MBeanImpl parent,
+    public synchronized ObjectName objectName( MBeanImpl parent,
         String type, String name ) 
         throws MalformedObjectNameException {
         
         // XXX Should we cache the ObjectName in the entity itself?
-        checkCorrectRoot( parent ) ;
+        if (parent != null) {
+            checkCorrectRoot( parent ) ;
+        }
         
         StringBuilder result = new StringBuilder() ;
         result.append( domain ) ;
@@ -146,6 +170,7 @@ public class MBeanTree {
         result.append( typeString ) ;
         result.append( "=" ) ;
         result.append( type ) ;
+        result.append( ',') ;
         
         result.append( "name" ) ;
         result.append( "=" ) ;
@@ -154,7 +179,7 @@ public class MBeanTree {
         return new ObjectName( result.toString() ) ; 
     }
     
-    public NotificationEmitter register( 
+    public synchronized NotificationEmitter register( 
         final Object parent, 
         final Object obj, 
         final MBeanImpl mb ) throws InstanceAlreadyExistsException, 
@@ -196,8 +221,7 @@ public class MBeanTree {
                 mb.name() ) ;
             mb.objectName( oname ) ;
         
-            objectMap.put( obj, mb ) ;
-	    objectNameMap.put( oname, obj ) ;
+            addToObjectMaps( mb ) ;
 
             parentEntity.addChild( mb ) ; 
 
@@ -211,25 +235,40 @@ public class MBeanTree {
         }
     }
     
-    public void unregister( Object obj ) {
+    public synchronized void unregister( Object obj ) 
+        throws InstanceNotFoundException, MBeanRegistrationException {
+        
+        MBeanImpl mb = objectMap.get( obj ) ;
+        for (Map<String,MBeanImpl> nameToMBean : mb.children().values() ) {
+            for (MBeanImpl child : nameToMBean.values() ) {
+                unregister( child.target()) ;
+            }
+        }
+
+        removeFromObjectMaps( mb ) ;
+        mb.unregister() ;
+        
+        if (mb.parent() != null) {
+            mb.parent().removeChild( mb ) ;
+        }
     }
     
-    public ObjectName getObjectName( Object obj ) {
+    public synchronized ObjectName getObjectName( Object obj ) {
         MBeanImpl result = objectMap.get(obj);
         return result.objectName() ;
     }
     
-    public Object getObject( ObjectName oname ) {
+    public synchronized Object getObject( ObjectName oname ) {
         return objectNameMap.get( oname ) ;
     }
     
-    public MBeanImpl getMBeanImpl( Object obj ) {
+    public synchronized MBeanImpl getMBeanImpl( Object obj ) {
         return objectMap.get( obj ) ;
     }
-    public void clear(){
+    public synchronized void clear(){
         for (MBeanImpl entity : objectMap.values()) {
             try {
-                entity.deregister();
+                entity.unregister();
             } catch (JMException ex) {
                 // XXX log this, but we are cleaning up, so
                 // no other action.

@@ -36,6 +36,10 @@
 
 package com.sun.jmxa.impl ;
 
+import com.sun.jmxa.generic.FacetAccessor;
+import com.sun.jmxa.generic.FacetAccessorImpl;
+import java.lang.reflect.Method;
+import java.util.Collection;
 import javax.management.Attribute ;
 import javax.management.AttributeList ;
 import javax.management.InstanceAlreadyExistsException;
@@ -56,9 +60,11 @@ import javax.management.ObjectName;
 import java.util.Map ;
 import java.util.HashMap ;
 
-public class MBeanImpl extends NotificationBroadcasterSupport implements DynamicMBean {
-    private MBeanSkeleton skel ;
-    private String type ;
+public class MBeanImpl extends NotificationBroadcasterSupport 
+    implements FacetAccessor, DynamicMBean {
+    
+    private final MBeanSkeleton skel ;
+    private final String type ;
     private String name ;
     private ObjectName oname ;
     private MBeanImpl parent ;
@@ -69,19 +75,37 @@ public class MBeanImpl extends NotificationBroadcasterSupport implements Dynamic
     
     public MBeanImpl( final MBeanSkeleton skel, 
         final Object obj, final MBeanServer server,
-        final String type, final String name ) {
+        final String type ) {
 
 	this.skel = skel ;
         this.type = type ;
-        this.name = name ;
+        this.name = null ;
         this.oname = null ;
         this.parent = null ;
         this.children = new HashMap<String,Map<String,MBeanImpl>>() ;
 	this.target = obj ;
+        addFacet( obj ) ;
+        // XXX add appropriate AMX facet
+        // if (isContainer) <-- How do we determine this?
+        //      addFacet( new ContainerImpl( this ) ) ;
+        // else
+        //      addFacet( new AMXImpl( this ) ) ;
+        //
+        // Possibilities:
+        // Dynamic: start as AMXImpl, add child, then change to container.
+        // Requires regenerating the MBean and re-registering it, plus could
+        // be really confusing for the use.
+        // Static: need to know whether registered object should be leaf or 
+        // container.  How to do this?  Static is probably a better approach.
+        //
+        // XXX How do we make sure that construction of MBean skel and
+        // facet registration stay in sync?  The code is currently separated into
+        // two places (here and call to new MBeanSkeleton( skel, skel )).
+        // This will also be important for dealing with multiple upper bounds.
         this.server = server ;
     }
         
-    public boolean equals( Object obj ) {
+    public synchronized boolean equals( Object obj ) {
         if (this == obj) {
             return true ;
         }
@@ -97,7 +121,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport implements Dynamic
             type.equals( other.type ) ;
     }
     
-    public int hashCode() {
+    public synchronized int hashCode() {
         return name.hashCode() ^ type.hashCode() ^ parent.hashCode() ;
     }
  
@@ -115,10 +139,18 @@ public class MBeanImpl extends NotificationBroadcasterSupport implements Dynamic
         return type ;
     }
     
-    public String name() {
+    public Object target() {
+        return target ;
+    }
+    
+    public synchronized String name() {
         return name ;
     }
 
+    public synchronized void name( String str ) {
+        name = str ;
+    }
+    
     public synchronized ObjectName objectName() {
         return oname ;
     }
@@ -185,13 +217,13 @@ public class MBeanImpl extends NotificationBroadcasterSupport implements Dynamic
         return sb.toString() ;
     }
  
-    public void register() throws InstanceAlreadyExistsException, 
+    public synchronized void register() throws InstanceAlreadyExistsException, 
         MBeanRegistrationException, NotCompliantMBeanException {
         
         server.registerMBean( this, oname ) ;
     }
     
-    public void deregister() throws InstanceNotFoundException, 
+    public synchronized void unregister() throws InstanceNotFoundException, 
         MBeanRegistrationException {
         
         server.unregisterMBean( oname );
@@ -202,27 +234,27 @@ public class MBeanImpl extends NotificationBroadcasterSupport implements Dynamic
     public Object getAttribute(String attribute) 
         throws AttributeNotFoundException, MBeanException, ReflectionException {
 
-	return skel.getAttribute( target, attribute ) ;
+	return skel.getAttribute( this, attribute ) ;
     }
     
     public void setAttribute(Attribute attribute) throws AttributeNotFoundException,
 	InvalidAttributeValueException, MBeanException, ReflectionException  {
 
-	skel.setAttribute( this, target, attribute ) ;
+	skel.setAttribute( this, this, attribute ) ;
     }
         
     public AttributeList getAttributes(String[] attributes) {
-	return skel.getAttributes( target, attributes ) ;
+	return skel.getAttributes( this, attributes ) ;
     }
         
     public AttributeList setAttributes(AttributeList attributes) {
-	return skel.setAttributes( this, target, attributes ) ;
+	return skel.setAttributes( this, this, attributes ) ;
     }
     
     public Object invoke(String actionName, Object params[], String signature[])
 	throws MBeanException, ReflectionException  {
 
-	return skel.invoke( target, actionName, params, signature ) ;
+	return skel.invoke( this, actionName, params, signature ) ;
     }
     
     private static final MBeanNotificationInfo[] 
@@ -234,10 +266,38 @@ public class MBeanImpl extends NotificationBroadcasterSupport implements Dynamic
     
     @Override
     public MBeanNotificationInfo[] getNotificationInfo() {
-        return ATTRIBUTE_CHANGE_NOTIFICATION_INFO ;
+        return ATTRIBUTE_CHANGE_NOTIFICATION_INFO.clone() ;
     }
 
     public MBeanInfo getMBeanInfo() {
         return skel.getMBeanInfo();
+    }
+    
+    /**********************************************************************
+     * Code for dynamic inheritance support: use invoke with reflection to
+     * call dynamically inherited classes.
+     */
+    
+    private FacetAccessor facetAccessorDelegate = 
+        new FacetAccessorImpl( this ) ;
+    
+    public <T> T facet(Class<T> cls) {
+        return facetAccessorDelegate.facet( cls ) ;
+    }
+
+    public <T> void addFacet(T obj) {
+        facetAccessorDelegate.addFacet( obj ) ;
+    }
+
+    public void removeFacet( Class<?> cls ) {
+        facetAccessorDelegate.removeFacet( cls ) ;
+    }
+
+    public Object invoke(Method method, Object... args) {
+        return facetAccessorDelegate.invoke( method, args ) ;
+    }
+
+    public Collection<Object> facets() {
+        return facetAccessorDelegate.facets() ;
     }
 }

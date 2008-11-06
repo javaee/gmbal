@@ -124,5 +124,13 @@ public final class ManagedObjectManagerFactory {
         return new ManagedObjectManagerImpl( mode, domain,
             rootParentName, rootObject, null ) ;
     }
+    
+    public static ManagedObjectManager createStandalone(
+        final String domain, final String rootParentName,
+        final Object rootObject ) {
+    
+        return create( Mode.STANDALONE, domain, rootParentName,
+            rootObject ) ;
+    }
 }
 
