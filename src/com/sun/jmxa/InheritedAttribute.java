@@ -60,15 +60,18 @@ import java.lang.annotation.RetentionPolicy ;
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface InheritedAttribute {
-    /** The description of the attribute.  Should be a key to a resource
+    /** The description of the attribute.  Can be a key to a resource
      * bundle for I18N support. Note that this needs a description, otherwise
-     * the InheritedAttributes annotation won't work.  We'll use the Description
-     * annotation for the other cases.
+     * the InheritedAttributes annotation won't work.  The Description
+     * annotation is used in all other cases.  The description cannot be 
+     * empty.
+     * @return The description.
      */
-    String description() default "" ;
+    String description() ;
 
     /** The name of the attribute,  This class must inherit a method whose name
      * corresponds to this id in one of the standard ways.
+     * @return The ID.
      */
     String id() default "" ;
 

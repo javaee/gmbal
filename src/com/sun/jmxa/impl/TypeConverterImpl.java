@@ -39,7 +39,6 @@ package com.sun.jmxa.impl ;
 import com.sun.jmxa.generic.ClassAnalyzer;
 import java.lang.reflect.Array ;
 import java.lang.reflect.Constructor ;
-import java.lang.reflect.Method ;
 import java.lang.reflect.Type ;
 import java.lang.reflect.ParameterizedType ;
 import java.lang.reflect.TypeVariable ;
@@ -61,7 +60,6 @@ import java.math.BigInteger ;
 
 import javax.management.ObjectName ;
 
-import javax.management.ReflectionException;
 import javax.management.openmbean.ArrayType ;
 import javax.management.openmbean.OpenType ;
 import javax.management.openmbean.OpenDataException ;
@@ -73,14 +71,13 @@ import javax.management.openmbean.CompositeDataSupport ;
 import javax.management.openmbean.TabularData ;
 import javax.management.openmbean.TabularDataSupport ;
 
-
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ManagedData ;
-import com.sun.jmxa.ManagedAttribute ;
-import com.sun.jmxa.InheritedAttribute ;
-import com.sun.jmxa.generic.DumpToString;
 import com.sun.jmxa.generic.FacetAccessor;
+import com.sun.jmxa.generic.Pair;
+
 import java.lang.reflect.InvocationTargetException;
+import javax.management.JMException;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
  * ObjectName, TabularData, or CompositeData.
@@ -295,9 +292,10 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} 
 	
 	if (type instanceof TypeVariable) {
-	    throw new IllegalArgumentException( "TypeVariable " + type 
-                + " not supported" ) ;
-	} 
+	    //throw new IllegalArgumentException( "TypeVariable " + type 
+              //  + " not supported" ) ;
+            return handleAsString( Object.class ) ;
+        } 
 	
 	if (type instanceof WildcardType) {
             // Just treat this the same as its bound type
@@ -305,24 +303,28 @@ public abstract class TypeConverterImpl implements TypeConverter {
             final Type[] upperBounds = wt.getUpperBounds() ;
             final Type[] lowerBounds = wt.getLowerBounds() ;
             if (lowerBounds.length > 0) {
-                throw new IllegalArgumentException( "WildcardType " + type 
-                    + " with lower bounds is not supported" ) ;
+                //throw new IllegalArgumentException( "WildcardType " + type 
+                  //  + " with lower bounds is not supported" ) ;
+                return handleAsString( Object.class ) ;
             }
             if (upperBounds.length == 0) {
-                throw new IllegalArgumentException( "WildcardType " + type 
-                    + " with no bounds is not supported" ) ;
+                // throw new IllegalArgumentException( "WildcardType " + type 
+                   // + " with no bounds is not supported" ) ;
+                return handleAsString( Object.class ) ;
             }
             if (upperBounds.length > 1) {
-                throw new IllegalArgumentException( "WildcardType " + type 
-                    + " with multiple upper bounds is not supported" ) ;
+                // throw new IllegalArgumentException( "WildcardType " + type 
+                   // + " with multiple upper bounds is not supported" ) ;
+                return handleAsString( Object.class ) ;
             }
             
             return makeTypeConverter( upperBounds[0], mom ) ;
 	} else {
 	    // this should not happen
-	    throw new IllegalArgumentException( "Unknown kind of Type " 
-                + type ) ;
-	}
+	    // throw new IllegalArgumentException( "Unknown kind of Type " 
+               // + type ) ;
+            return handleAsString( Object.class ) ;
+        }
     }
     
     private static TypeConverter handleClass( final Class<?> cls, 
@@ -517,52 +519,26 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} ;
     }
     
-    private static List<AttributeDescriptor> analyzeManagedData( 
+    private static Collection<AttributeDescriptor> analyzeManagedData( 
         final Class<?> cls, final ManagedObjectManagerInternal mom ) {
        
         final ClassAnalyzer ca = mom.getClassAnalyzer( cls, 
             ManagedData.class ).second() ;
 	
-	final List<AttributeDescriptor> ainfos = 
-            new ArrayList<AttributeDescriptor>() ;
-	final List<InheritedAttribute> ias = mom.getInheritedAttributes( ca ) ;
-	if (ias != null) {
-	    for (InheritedAttribute attr : ias) {
-                AttributeDescriptor ainfo = AttributeDescriptor.findAttribute( 
-                    mom, ca, attr.id(), attr.description(), 
-                    AttributeDescriptor.AttributeType.GETTER ) ;
-
-		ainfos.add( ainfo ) ;
-	    }
-	}
-	
-	// Scan for all methods annotated with @ManagedAttribute, including 
-        // inherited methods.
-	// Construct tables Map<String,Method> for getters (no setters in 
-        // CompositeData, since CompositeData is immutable).
-	final List<Method> attributes = ca.findMethods( 
-            mom.forAnnotation( ManagedAttribute.class ) ) ;
-	for (Method m : attributes) {
-	    AttributeDescriptor ainfo = new AttributeDescriptor( mom, m ) ;
-
-	    if (ainfo.atype() == AttributeDescriptor.AttributeType.GETTER) {
-		ainfos.add( ainfo ) ;
-	    } else {
-		throw new IllegalArgumentException( "Method " + m 
-		    + " is an illegal setter in a @ManagedData class" ) ;
-	    }
-	}
-
-	return ainfos ;
+        final Pair<Map<String,AttributeDescriptor>,
+            Map<String,AttributeDescriptor>> ainfos =
+                mom.getAttributes( ca ) ;
+        
+	return ainfos.first().values() ;
     }
 
     private static CompositeType makeCompositeType( final Class cls, 
         final ManagedObjectManagerInternal mom, final ManagedData md, 
-        List<AttributeDescriptor> minfos ) {
+        Collection<AttributeDescriptor> minfos ) {
 
 	String name = md.name() ;
 	if (name.equals( "" )) {
-	    name = cls.getName() ;
+	    name = mom.getStrippedName( cls ) ;
         }
 
 	final String mdDescription = mom.getDescription( cls ) ;
@@ -591,7 +567,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static TypeConverter handleManagedData( final Class cls, 
 	final ManagedObjectManagerInternal mom, final ManagedData md ) {
 
-	final List<AttributeDescriptor> minfos = analyzeManagedData(
+	final Collection<AttributeDescriptor> minfos = analyzeManagedData(
 	    cls, mom ) ;
         final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
 
@@ -600,13 +576,13 @@ public abstract class TypeConverterImpl implements TypeConverter {
 		Map<String,Object> data = new HashMap<String,Object>() ;
 		for (AttributeDescriptor minfo : minfos ) {
                     if (minfo.isApplicable( obj )) {
-                        Object value ;
+                        FacetAccessor fa = mom.getFacetAccessor( obj ) ;
+                        Object value;
                         try {
-                            FacetAccessor fa = mom.getFacetAccessor( obj ) ;
-                            value = minfo.get( fa, mom.runtimeDebug() );
-                        } catch (Exception ex) {
-                            throw new IllegalArgumentException(
-                                "Could not get managed data for " + minfo, ex );
+                            value = minfo.get(fa, mom.runtimeDebug());
+                        } catch (JMException ex) {
+                            throw new IllegalArgumentException( 
+                                "Exception in getting attribute " + minfo, ex ) ;
                         }
                         
                         data.put( minfo.id(), value ) ;

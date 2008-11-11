@@ -374,6 +374,7 @@ public class JmxaTest extends TestCase {
     private static Method getter_fooC = getMethod( CC.class, "getFooC" ) ;
     private static Method setter_fooD = getMethod( DD.class, "setFooD", int.class ) ;
 
+    /*
     public void testIsSetterIsGetter() {
 	Method m ;
         ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
@@ -420,7 +421,8 @@ public class JmxaTest extends TestCase {
             }
         }
     }
-
+    */
+    
     //==============================================================================================
     // Tests for TypeConverter class
     //==============================================================================================
@@ -487,7 +489,7 @@ public class JmxaTest extends TestCase {
     public void testPrimitiveTypeConverter() {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
-                .createStandalone( 
+                .create( 
                     "ORBTest", "", null ) ;
         try {
             for (Object[] data : primitiveTCTestData) {
@@ -631,20 +633,17 @@ public class JmxaTest extends TestCase {
 
     @SuppressWarnings({"unchecked"})
     public void testManagedObjectExample() {
-        final ManagedObjectManagerFactory.Mode mode = 
-            ManagedObjectManagerFactory.Mode.STANDALONE ;
 	final String domain = "ORBTest" ;
         final String rootParentName = "" ;
 	final int num = 12 ;
 	final String name = "Liskov" ;
 	final ManagedObjectExample rootObject = 
             new ManagedObjectExample( num, name ) ;
-        final String rootName = "" ;
 	final String propName = "ObjectNumber" ;
 	final int onum = 1 ;
 
 	final ManagedObjectManager mom = ManagedObjectManagerFactory.create( 
-            mode, domain, rootParentName, rootObject, rootName ) ;
+            domain, rootParentName, rootObject ) ;
 
 	try {
             mom.setRegistrationDebug( 
@@ -697,8 +696,7 @@ public class JmxaTest extends TestCase {
     public void testManagedDataTypeConverter() {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
-                .createStandalone( 
-                    "ORBTest", "", null ) ;
+                .create( "ORBTest", "", null ) ;
     
         try {
             TypeConverter tc = mom.getTypeConverter( ManagedDataExample.class ) ;

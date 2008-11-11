@@ -131,12 +131,14 @@ public class MBeanTree {
     }
     
     private void checkCorrectRoot( MBeanImpl entity ) {
-        MBeanImpl parent = entity.parent() ;
-        while (parent != null) {
-            if (parent == rootEntity) {
+        MBeanImpl current = entity ;
+        do {
+            if (current == rootEntity) {
                 return ;
             }
-        }
+            
+            current = current.parent() ;
+        } while (current != null) ;
         
         throw new IllegalArgumentException( "Entity " + entity 
             + " is not part of this EntityTree" ) ;
@@ -207,14 +209,19 @@ public class MBeanTree {
                 throw new IllegalArgumentException( msg ) ;
             }
             
-            MBeanImpl parentEntity = objectMap.get( parent ) ;
-            if (parentEntity == null) {
-                String msg = "parent object " + parent + " not found" ;
-                if (mom.registrationDebug()) {
-                    dputil.info( msg ) ;
+            MBeanImpl parentEntity ;
+            if (parent == null) {
+                parentEntity = rootEntity ;
+            } else {
+                parentEntity = objectMap.get( parent ) ;
+                if (parentEntity == null) {
+                    String msg = "parent object " + parent + " not found" ;
+                    if (mom.registrationDebug()) {
+                        dputil.info( msg ) ;
+                    }
+
+                    throw new IllegalArgumentException( msg ) ;
                 }
-                
-                throw new IllegalArgumentException( msg ) ;
             }
             
             ObjectName oname = objectName( parentEntity, mb.type(), 

@@ -40,6 +40,7 @@ import com.sun.jmxa.generic.FacetAccessor;
 import com.sun.jmxa.generic.FacetAccessorImpl;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.Collections;
 import javax.management.Attribute ;
 import javax.management.AttributeList ;
 import javax.management.InstanceAlreadyExistsException;
@@ -116,9 +117,9 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         
         MBeanImpl other = (MBeanImpl)obj ;
         
-        return parent == other.parent &&
-            name.equals( other.name ) &&
-            type.equals( other.type ) ;
+        return parent == other.parent() &&
+            name.equals( other.name() ) &&
+            type.equals( other.type() ) ;
     }
     
     public synchronized int hashCode() {
@@ -159,11 +160,11 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         this.oname = oname ;
     }
 
-    public MBeanImpl parent() {
+    public synchronized MBeanImpl parent() {
         return parent ;
     }
    
-    public void parent( MBeanImpl entity ) {
+    public synchronized void parent( MBeanImpl entity ) {
         if (parent == null) {
             parent = entity ;
         } else {
@@ -173,11 +174,22 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         }
     }
 
-    Map<String,Map<String,MBeanImpl>> children() {
-        return children ;
+    public synchronized Map<String,Map<String,MBeanImpl>> children() {
+        // Make a copy to avoid problems with concurrent modification.
+        Map<String,Map<String,MBeanImpl>> result = new 
+            HashMap<String,Map<String,MBeanImpl>>() ;
+        for (Map.Entry<String,Map<String,MBeanImpl>> entry 
+            : children.entrySet()) {
+            
+            result.put( entry.getKey(), 
+                Collections.unmodifiableMap( 
+                    new HashMap<String,MBeanImpl>( entry.getValue() ) ) ) ;
+        }
+           
+        return Collections.unmodifiableMap( result ) ;
     }
    
-    void addChild( MBeanImpl child ) {
+    public synchronized void addChild( MBeanImpl child ) {
         child.parent( this ) ;
         Map<String,MBeanImpl> map = children.get( child.type() ) ;
         if (map == null) {
@@ -188,7 +200,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         map.put( child.name(), child) ;
     }
    
-    void removeChild( MBeanImpl child ) {
+    public synchronized void removeChild( MBeanImpl child ) {
         Map<String,MBeanImpl> map = children.get( child.type() ) ;
         if (map != null) {
             map.remove( child.name() ) ;
@@ -200,7 +212,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
  
     private void restNameHelper( StringBuilder sb, MBeanImpl mb ) {
         if (mb != null) {
-            restNameHelper( sb, mb.parent ) ;
+            restNameHelper( sb, mb.parent() ) ;
             if (sb.length() > 0) {
                 sb.append( ',' ) ;
             }
@@ -211,7 +223,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         } 
     }
 
-    public String restName() {
+    public synchronized String restName() {
         StringBuilder sb = new StringBuilder( 60 ) ;
         restNameHelper( sb, this ) ;
         return sb.toString() ;

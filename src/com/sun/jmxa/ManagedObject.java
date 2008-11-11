@@ -55,8 +55,4 @@ public @interface ManagedObject {
      * creating ObjectNames for mbeans with this annotation.
      */
     String type() default "" ;
-
-    /** The name of this open MBean.  Defaults to the class name.
-     */
-    String name() default "" ;
 }

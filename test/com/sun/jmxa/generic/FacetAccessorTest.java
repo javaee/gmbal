@@ -26,15 +26,15 @@ public class FacetAccessorTest extends TestCase {
         int sub( int arg1, int arg2 ) ;
     }
     
-    private static Method Aoperation ;
+    private static Method a_operation ;
     private static Method add ;
-    private static Method Boperation ;
+    private static Method b_operation ;
     private static Method sub ;
     
     static {
         try {
-            Aoperation = A.class.getDeclaredMethod( "operation", int.class ) ;
-            Boperation = B.class.getDeclaredMethod( "operation", int.class ) ;
+            a_operation = A.class.getDeclaredMethod( "operation", int.class ) ;
+            b_operation = B.class.getDeclaredMethod( "operation", int.class ) ;
             add = A.class.getDeclaredMethod( "add", int.class, int.class ) ;
             sub = B.class.getDeclaredMethod( "sub", int.class, int.class ) ;
         } catch (Exception exc) {
@@ -135,14 +135,14 @@ public class FacetAccessorTest extends TestCase {
         B b = new BImpl( 10 ) ;
         fa.addFacet( b ) ;
         
-        assertEquals( fa.invoke( Aoperation, 2 ), 4 ) ;
+        assertEquals( fa.invoke( a_operation, 2  ), 4 ) ;
         assertEquals( fa.invoke( add, 21, 17 ), 38 ) ;
-        assertEquals( fa.invoke( Boperation, 2 ), 20 ) ;
+        assertEquals( fa.invoke( b_operation, 2 ), 20 ) ;
         assertEquals( fa.invoke( sub, 21, 17 ), 4 ) ;
         
         b = new BImpl( 100 ) ;
         fa.addFacet( b ) ;
-        assertEquals( fa.invoke( Boperation, 2 ), 200 ) ;
+        assertEquals( fa.invoke( b_operation, 2 ), 200 ) ;
     }
 
 }

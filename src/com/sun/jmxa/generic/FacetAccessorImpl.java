@@ -5,11 +5,14 @@
 
 package com.sun.jmxa.generic;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** 
  *
@@ -67,10 +70,13 @@ public class FacetAccessorImpl implements FacetAccessor {
             throw new IllegalArgumentException( 
                 "No facet available for method " + method ) ;
         }
-                
         try {
             return method.invoke(target, args);
-        } catch (Exception ex) {
+        } catch (IllegalAccessException ex) {
+            throw new RuntimeException( "Exception on invocation", ex ) ;
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException( "Exception on invocation", ex ) ;
+        } catch (InvocationTargetException ex) {
             throw new RuntimeException( "Exception on invocation", ex ) ;
         }
     }

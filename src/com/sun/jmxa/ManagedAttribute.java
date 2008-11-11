@@ -42,7 +42,23 @@ import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
 
 /** This annotation defines an attribute in either CompositeData (ManagedData) or 
- * an open MBean (ManagedObject).   
+ * an open MBean (ManagedObject).  An attribute may be read/write (has a setter
+ * and a getter), read only (only has a getter),
+ * or write only (only has a setter) depending on the declared methods in the class.  
+ * <p> 
+ * A method defines a getter if it returns a non-void type and takes no argument types.
+ * Likewise a method defines a setter if it return void and takes exactly one
+ * argument.  
+ * <p>An id is derived from a method name as follows:
+ * <ol>
+ * <li>If the method is a getter, and has a name of the form getXXX, the derived
+ * id is xXX (note the initial lower case change).
+ * <li>If the method is a getter with a boolean return type, and has a name of 
+ * the form isXXX, the derived id is xXX
+ * <li>If the method is a setter, and has a name of the form setXXX, the
+ * detived id is xXX.
+ * <li>Otherwise the derived ID is the method name.
+ * </il> 
  */
 @Documented 
 @Target(ElementType.METHOD) 

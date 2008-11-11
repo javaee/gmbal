@@ -151,8 +151,9 @@ public class OpenMBeanTools {
                 writer.startObject( "CompositeType" ) ;
 
                 handleElement( writer, "description", ct.getDescription() ) ;
-                for (String key : ct.keySet() ) {
-                    handleNestedType( writer, key, ct.getType(key) ) ;
+                for (Object key : ct.keySet() ) {
+                    handleNestedType( writer, (String)key,
+                        ct.getType((String)key) ) ;
                 }
             } else if (ot instanceof TabularType) {
                 TabularType tt = (TabularType)ot ;
@@ -183,8 +184,9 @@ public class OpenMBeanTools {
                 CompositeData cd = (CompositeData)obj ;
                 writer.startObject( "CompositeData" ) ;
                 handleNestedType( writer, "type", cd.getCompositeType() ) ;
-                for (String key : cd.getCompositeType().keySet()) {
-                    handleNestedValue( writer, key, cd.get(key) ) ;
+                for (Object key : cd.getCompositeType().keySet()) {
+                    handleNestedValue( writer, (String)key, 
+                        cd.get((String)key) ) ;
                 }
             } else if (obj instanceof TabularData) {
                 TabularData td = (TabularData)obj ;
@@ -216,7 +218,7 @@ public class OpenMBeanTools {
     }
     
     public static void main( String[] args ) {
-        List<Object> x = list( 0, "string", list( 3, 4 ) ) ;
+        // List<Object> x = list( 0, "string", list( 3, 4 ) ) ;
 
         OpenType ot = tab( "tab1", "a tab type", 
             comp( "comp1", "a comp type", 

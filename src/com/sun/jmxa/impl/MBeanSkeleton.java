@@ -71,9 +71,7 @@ import javax.management.NotificationBroadcasterSupport ;
 import javax.management.AttributeChangeNotification ;
 
 import com.sun.jmxa.generic.BinaryFunction ;
-import com.sun.jmxa.InheritedAttribute ;
 import com.sun.jmxa.ObjectNameKey ;
-import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.ManagedOperation ;
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ParameterNames ;
@@ -84,7 +82,7 @@ import com.sun.jmxa.generic.Pair ;
 import com.sun.jmxa.generic.DumpToString ;
 
 import com.sun.jmxa.generic.FacetAccessor;
-import java.lang.reflect.InvocationTargetException;
+import javax.management.JMException;
 
 public class MBeanSkeleton {
     // Object evaluate( Object, List<Object> ) 
@@ -221,85 +219,21 @@ public class MBeanSkeleton {
         }
     }
 
-    private void analyzeInheritedAttributes( final Class<?> annotatedClass, 
-        final ClassAnalyzer ca ) {
-	// Check for @InheritedAttribute(s) annotation.  
-        // Find methods for these attributes in superclasses. 
-        
+    private void analyzeAttributes( ClassAnalyzer ca ) {
         if (mom.registrationFineDebug()) {
-            dputil.enter( "analyzeInheritedAttributes", "annotatedClass=", 
-                annotatedClass, "ca=", ca ) ;
+            dputil.enter( "analyzeAttributes", "ca=", ca ) ;
         }
         
         try {
-            final List<InheritedAttribute> iaa = mom.getInheritedAttributes(  ca ) ;
-            for (InheritedAttribute attr : iaa) {
-                AttributeDescriptor setterInfo =
-                    AttributeDescriptor.findAttribute(mom, ca, attr.id(),
-                    attr.description(),
-                    AttributeDescriptor.AttributeType.SETTER);
+            Pair<Map<String,AttributeDescriptor>,
+                Map<String,AttributeDescriptor>> amap =
+                mom.getAttributes( ca ) ;
 
-                AttributeDescriptor getterInfo =
-                    AttributeDescriptor.findAttribute(mom, ca, attr.id(),
-                    attr.description(),
-                    AttributeDescriptor.AttributeType.GETTER);
-
-                processAttribute(getterInfo, setterInfo);
-            } 
-        } finally {
-            if (mom.registrationFineDebug()) {
-                dputil.exit() ;
-            }
-        }
-    }
-
-    private <K,V> void putIfNotPresent( Map<K,V> map,
-        K key, V value ) {
-    
-        if (mom.registrationFineDebug()) {
-            dputil.enter( "putIfNotPresent", "key=", key,
-                "value=", value ) ;
-        }
-        
-        try {
-            if (!map.containsKey( key )) {
-                if (mom.registrationFineDebug()) {
-                    dputil.info( "Adding key, value to map" ) ;
-                }
-                map.put( key, value ) ;
-            } else {
-                if (mom.registrationFineDebug()) {
-                    dputil.info( "Key,value already in map" ) ;
-                }
-            }
-        } finally {
-            if (mom.registrationFineDebug()) {
-                dputil.exit() ;
-            }
-        }
-    }
-
-    private void analyzeAnnotatedAttributes( ClassAnalyzer ca ) {
-        if (mom.registrationFineDebug()) {
-            dputil.enter( "analyzeAnnotatedAttributes", "ca=", ca ) ;
-        }
-        
-        try {
-            final List<Method> attributes = ca.findMethods( 
-                mom.forAnnotation( ManagedAttribute.class ) ) ;
+            getters.putAll( amap.first() ) ;
+            setters.putAll( amap.second() ) ;
             
             if (mom.registrationFineDebug()) {
-                dputil.info( "attributes=", attributes ) ;
-            }
-
-            for (Method m : attributes) {
-                AttributeDescriptor minfo = new AttributeDescriptor( mom, m ) ;
-
-                if (minfo.atype() == AttributeDescriptor.AttributeType.GETTER) {
-                    putIfNotPresent( getters, minfo.id(), minfo ) ;
-                } else {
-                    putIfNotPresent( setters, minfo.id(), minfo ) ;
-                }
+                dputil.info( "attributes=", amap ) ;
             }
 
             final Set<String> setterNames = new HashSet<String>(setters.keySet()) ;
@@ -361,8 +295,8 @@ public class MBeanSkeleton {
             }
             
             // XXX Need an I18N description
-            nameAttributeDescriptor = new AttributeDescriptor( mom, 
-                annotatedMethod, "name", "Name of this ManagedObject" ) ;            
+            nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
+                mom, annotatedMethod, "name", "Name of this ManagedObject" ) ;            
         } finally {
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
@@ -503,7 +437,7 @@ public class MBeanSkeleton {
 
                 // Note that the first occurrence of any method will be the most
                 // derived, so if there is already an entry, don't overwrite it.
-                putIfNotPresent( map, dataTypes, data.first() ) ;
+                mom.putIfNotPresent( map, dataTypes, data.first() ) ;
 
                 mbeanOperationInfoList.add( info ) ;
             }
@@ -524,7 +458,7 @@ public class MBeanSkeleton {
             ManagedObject.class ) ;
         
         if (mo.type().equals("")) {
-	    type = annotatedClass.getName() ;
+	    type = mom.getStrippedName( annotatedClass ) ;
         } else {
             type = mo.type() ;
         }
@@ -536,8 +470,7 @@ public class MBeanSkeleton {
 	mbeanAttributeInfoList = new ArrayList<OpenMBeanAttributeInfo>() ;
 	mbeanOperationInfoList = new ArrayList<OpenMBeanOperationInfo>() ;
 
-        analyzeInheritedAttributes( annotatedClass, ca ) ;
-        analyzeAnnotatedAttributes( ca ) ;
+        analyzeAttributes( ca ) ;
         analyzeOperations( ca ) ;
         analyzeObjectNameKeys( ca ) ;
 
@@ -626,8 +559,8 @@ public class MBeanSkeleton {
                 new AttributeChangeNotification( emitter,
                     sequenceNumber.incrementAndGet(),
                     System.currentTimeMillis(),
-                    "Changed attribute " + type,
-                    type,
+                    "Changed attribute " + name,
+                    name,
                     setter.tc().getManagedType().toString(),
                     oldValue,
                     value ) ;
@@ -658,8 +591,8 @@ public class MBeanSkeleton {
                 
                 try {
                     value = getAttribute(fa, str);
-                } catch (Exception exc) {
-                    exception = exc ;
+                } catch (JMException ex) {
+                    exception = ex ;
                 }
 
                 // If value == null, we had a problem in trying to fetch it,
@@ -702,7 +635,7 @@ public class MBeanSkeleton {
                 Exception exception = null ;
                 try {
                     setAttribute(emitter, fa, attr);
-                } catch (Exception ex) {
+                } catch (JMException ex) {
                     exception = ex ;
                 }
                 
@@ -784,10 +717,6 @@ public class MBeanSkeleton {
             } else {
                 value = nameAttributeDescriptor.get(fa, 
                     mom.runtimeDebug()).toString();
-            }
-        } catch (Exception exc) {
-            if (mom.runtimeDebug()) {
-                dputil.exception( "Error in getting value", exc ) ;
             }
         } finally {
             if (mom.runtimeDebug()) {

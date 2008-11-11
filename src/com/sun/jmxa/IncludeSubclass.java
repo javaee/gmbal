@@ -41,18 +41,21 @@ import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
 
-/** This annotation is applied to a class or interface (which must be annotated with
- * either @ManagedData or @ManagedObject) to indicate that the subclass (which must not
- * carry either the @ManagedData or the @ManagedObject annotation) should have its
- * annotated attributes (and annotated operations, if this is a ManagedObject) included
- * in the corresponding open MBean or CompositeData of the superclass.  Any given instance of
- * this class will have only those attributes and operations available that are defined
- * in both the parent class, and the subclass for the particular type of the instance.
+/** This annotation is applied to a class or interface representing ManagedData
+ * to indicate that the 
+ * listed subclasses should have their attributes included in the corresponding 
+ * CompositeData of the superclass.  Any given instance of this class will have
+ * values for those attributes that are defined in the parent class
+ * or the subclass for the particular type of the instance.
  */
 @Documented 
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface IncludeSubclass {
-    Class[] cls() ;
+    /** List of subclasses that should be analyzed for attributes and operations.
+     *
+     * @return List of classes.
+     */
+    Class[] value() ;
 }
 

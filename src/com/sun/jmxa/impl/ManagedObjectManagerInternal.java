@@ -50,6 +50,7 @@ import com.sun.jmxa.generic.FacetAccessor;
 import com.sun.jmxa.generic.Predicate;
 import java.lang.annotation.Annotation;
 import java.util.List;
+import java.util.Map;
 
 public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     /** Construct or lookup the TypeConverter for the given type.
@@ -81,6 +82,14 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
      * @return The inherited attributes.
      */
     List<InheritedAttribute> getInheritedAttributes( ClassAnalyzer ca ) ;
+    
+    Pair<Map<String,AttributeDescriptor>,Map<String,AttributeDescriptor>>
+        getAttributes( ClassAnalyzer ca ) ;
+    
+    <K,V> void putIfNotPresent( final Map<K,V> map,
+        final K key, final V value ) ;
+        
+    String getStrippedName( Class<?> cls ) ;
     
     Predicate<AnnotatedElement> forAnnotation( 
         final Class<? extends Annotation> annotation ) ;

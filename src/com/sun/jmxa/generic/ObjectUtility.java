@@ -421,25 +421,21 @@ public final class ObjectUtility {
 		    result.startElement() ;
 		    result.append( fld.getName() ) ;
 		    result.append( "=" ) ;
+                    
+                    // Make sure that we can read the field if it is 
+                    // not public
+                    AccessController.doPrivileged( new PrivilegedAction() {
+                        public Object run() {
+                            fld.setAccessible( true ) ;
+                            return null ;
+                        } } ) ;
 
-		    try {
-			// Make sure that we can read the field if it is 
-			// not public
-			AccessController.doPrivileged( new PrivilegedAction() {
-			    public Object run() {
-				fld.setAccessible( true ) ;
-				return null ;
-			    } } ) ;
-
-			java.lang.Object value = fld.get( obj ) ;
-                        if (fld.isAnnotationPresent(DumpToString.class)) {
-                            toStringPrinter.print( printed, result, value ); 
-                        } else {
-                            objectToStringHelper( printed, result, value ) ;
-                        }
-		    } catch (Exception exc2) {
-			result.append( "???" ) ;
-		    }
+                    java.lang.Object value = fld.get( obj ) ;
+                    if (fld.isAnnotationPresent(DumpToString.class)) {
+                        toStringPrinter.print( printed, result, value ); 
+                    } else {
+                        objectToStringHelper( printed, result, value ) ;
+                    }
 
 		    result.endElement() ;
 		}

@@ -53,11 +53,8 @@ import java.lang.annotation.Annotation ;
 
 import java.lang.management.ManagementFactory ;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
-import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName ;
 import javax.management.NotificationEmitter;
 
@@ -69,6 +66,7 @@ import com.sun.jmxa.Description ;
 import com.sun.jmxa.IncludeSubclass ;
 import com.sun.jmxa.InheritedAttribute ;
 import com.sun.jmxa.InheritedAttributes ;
+import com.sun.jmxa.ManagedAttribute;
 import com.sun.jmxa.ManagedObjectManager;
 import com.sun.jmxa.ManagedObjectManagerFactory;
 import com.sun.jmxa.generic.DprintUtil;
@@ -77,11 +75,15 @@ import com.sun.jmxa.generic.ObjectUtility;
 import com.sun.jmxa.generic.Predicate;
 import com.sun.jmxa.generic.UnaryFunction;
 import com.sun.jmxa.generic.FacetAccessor ;
+import com.sun.jmxa.generic.FacetAccessorImpl;
+import com.sun.jmxa.generic.Holder;
+import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Set;
-import java.util.jar.Attributes.Name;
+import java.util.SortedSet;
+import java.util.Set ;
+import java.util.TreeSet;
 
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final String domain ;
@@ -97,7 +99,17 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ManagedObjectManager.RegistrationDebugLevel regDebugLevel = 
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
-    private final Set<String> typePrefixes = new HashSet<String>() ;
+    
+    private Comparator<String> revComp = new Comparator<String>() {
+        public int compare(String o1, String o2) {
+            return - o1.compareTo( o2 ) ;
+        }
+    } ;
+    
+    // Maintain the list of typePrefixes in reversed sorted order, so that
+    // we strip the longest prefix first.
+    private final SortedSet<String> typePrefixes = new TreeSet<String>( 
+        revComp ) ;
 
     @Override
     public String toString( ) {
@@ -111,7 +123,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public ManagedObjectManagerImpl( 
-        final ManagedObjectManagerFactory.Mode mode,
         final String domain, 
         final String rootParentName,
         final Object rootObject,
@@ -119,10 +130,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
 	this.domain = domain ;
         resourceBundle = null ;
-        String typeString = mode==ManagedObjectManagerFactory.Mode.J2EE ?
-            "j2eeType" :
-            "type" ;
-        
+
 	server = ManagementFactory.getPlatformMBeanServer() ;
         Object actualRoot = rootObject ;
         if (actualRoot == null) {
@@ -134,7 +142,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         addedAnnotations = 
             new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
         
-        tree = new MBeanTree( this, domain, rootParentName, typeString,
+        tree = new MBeanTree( this, domain, rootParentName, "type",
             actualRoot, rootName ) ;
     }
 
@@ -245,7 +253,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return result ;
     }
 
-    private String stripType( String arg ) {
+    public String getStrippedName( Class<?> cls ) {
+        String arg = cls.getName() ;
         for (String str : typePrefixes ) {
             if (arg.startsWith( str ) ) {
                 return arg.substring( str.length() + 1 ) ;
@@ -256,7 +265,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized MBeanImpl constructMBean( Object obj, String name ) {
-        
         MBeanImpl result = null ;
         
         if (registrationDebug()) {
@@ -269,7 +277,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             final Class<?> cls = obj.getClass() ;
             final MBeanSkeleton skel = getSkeleton( cls ) ;
 
-            String type = stripType( skel.getType() ) ;
+            String type = skel.getType() ;
             if (registrationDebug()) {
                 dputil.info( "Stripped type =", type ) ;
             }
@@ -280,7 +288,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             if (objName == null) {
                 objName = skel.getNameValue( result ) ;
                 if (objName == null) {
-                    objName = skel.getType() ;
+                    objName = type ;
                 }
             }  
            
@@ -327,12 +335,21 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-   public synchronized NotificationEmitter register( final Object parent,
+    public synchronized NotificationEmitter register( final Object parent,
         final Object obj ) {
 
         return register( parent, obj, null ) ;
     }
 
+    
+    public NotificationEmitter registerAtRoot(Object obj, String name) {
+        return register( null, obj, name ) ;
+    }
+
+    public NotificationEmitter registerAtRoot(Object obj) {
+        return register( null, obj, null ) ;
+    }
+    
     public synchronized void unregister( Object obj ) {
         if (registrationDebug()) {
             dputil.enter( "unregister", "obj=", obj ) ;
@@ -384,8 +401,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized FacetAccessor getFacetAccessor( Object obj ) {
-        return tree.getFacetAccessor( obj ) ;
-    }
+        MBeanImpl mb = tree.getMBeanImpl( obj ) ;
+        if (mb != null) {
+            return tree.getFacetAccessor( obj ) ;
+        } else {
+            return new FacetAccessorImpl( obj ) ;
+        }
+    }   
     
     public synchronized String getDomain() {
 	return domain ;
@@ -399,15 +421,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 	return server ;
     }
 
-    public void setResourceBundle( ResourceBundle rb ) {
+    public synchronized void setResourceBundle( ResourceBundle rb ) {
         this.resourceBundle = rb ;
     }
 
-    public ResourceBundle getResourceBundle() {
+    public synchronized ResourceBundle getResourceBundle() {
         return resourceBundle ;
     }
     
-    public String getDescription( AnnotatedElement element ) {
+    public synchronized String getDescription( AnnotatedElement element ) {
         Description desc = element.getAnnotation( Description.class ) ;
         String result ;
         if (desc == null) {
@@ -525,7 +547,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             final IncludeSubclass incsub = annotatedClass.getAnnotation( 
                 IncludeSubclass.class ) ;
             if (incsub != null) {
-                for (Class<?> klass : incsub.cls()) {
+                for (Class<?> klass : incsub.value()) {
                     classes.add( klass ) ;
                     if (registrationDebug()) {
                         dputil.info( "included subclass: " + klass ) ;
@@ -584,7 +606,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         if (ia != null) {
                             result.add( ia ) ;
                         } else if (ias != null) {
-                            result.addAll( Arrays.asList( ias.attributes() )) ;
+                            result.addAll( Arrays.asList( ias.value() )) ;
                         }
 
                         return result ;
@@ -598,6 +620,123 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
+    private class ADHolder extends Holder<AttributeDescriptor> 
+        implements Predicate<InheritedAttribute> {
+        
+        private final Method method ;
+        
+        public ADHolder(  final Method method ) {
+            this.method = method ;
+        }
+        
+        public boolean evaluate( InheritedAttribute ia ) {
+            AttributeDescriptor ad = AttributeDescriptor.makeFromInherited( 
+                ManagedObjectManagerImpl.this, method,
+                ia.id(), ia.methodName(), ia.description() ) ;
+            boolean result = ad != null ;
+            if (result) {
+                content( ad ) ;
+            }
+            
+            return result ;
+        }
+    }
+    
+    private AttributeDescriptor getAttributeDescriptorIfInherited( 
+        final Method method, final List<InheritedAttribute> ias ) {
+        
+        ADHolder adh = new ADHolder( method ) ;
+        Algorithms.find( ias, adh ) ;
+        return adh.content() ;
+    }
+
+    public <K,V> void putIfNotPresent( final Map<K,V> map,
+        final K key, final V value ) {
+    
+        if (registrationFineDebug()) {
+            dputil.enter( "putIfNotPresent", "key=", key,
+                "value=", value ) ;
+        }
+        
+        try {
+            if (!map.containsKey( key )) {
+                if (registrationFineDebug()) {
+                    dputil.info( "Adding key, value to map" ) ;
+                }
+                map.put( key, value ) ;
+            } else {
+                if (registrationFineDebug()) {
+                    dputil.info( "Key,value already in map" ) ;
+                }
+            }
+        } finally {
+            if (registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    // Returns a pair of maps defining all managed attributes in the ca.  The first map
+    // is all setters, and the second is all getters.  Only the most derived version is present.
+    public synchronized Pair<Map<String,AttributeDescriptor>,
+        Map<String,AttributeDescriptor>>
+        getAttributes( ClassAnalyzer ca ) {
+
+        if (registrationDebug()) {
+            dputil.enter( "getAttributes" ) ;
+        }
+
+        try {
+            final Map<String,AttributeDescriptor> getters = 
+                new HashMap<String,AttributeDescriptor>() ; 
+            final Map<String,AttributeDescriptor> setters = 
+                new HashMap<String,AttributeDescriptor>() ; 
+            final Pair<Map<String,AttributeDescriptor>,
+                Map<String,AttributeDescriptor>> result =  
+                    new Pair<Map<String,AttributeDescriptor>,
+                        Map<String,AttributeDescriptor>>( getters, setters ) ;
+            
+            final List<InheritedAttribute> ias = getInheritedAttributes( ca ) ;
+            
+            ca.findMethods( new Predicate<Method>() {
+                public boolean evaluate( Method method ) {
+                    ManagedAttribute ma = method.getAnnotation( 
+                        ManagedAttribute.class ) ;
+                    AttributeDescriptor ad = null ;
+                    if (ma == null) {
+                        ad = getAttributeDescriptorIfInherited( method, ias ) ;
+                    } else {
+                        Description desc = getAnnotation( method, Description.class ) ;
+                        String description ;
+                        if (desc == null) {
+                            description = "No description available for " + method.getName() ;
+                        } else {
+                            description = desc.value() ;
+                        }
+
+                        ad = AttributeDescriptor.makeFromAnnotated( ManagedObjectManagerImpl.this,
+                            method, ma.id(), description ) ;
+                    }
+                    
+                    if (ad != null) {
+                        if (ad.atype()==AttributeDescriptor.AttributeType.GETTER) {
+                            putIfNotPresent( getters, ad.id(), ad ) ;
+                        } else {
+                            putIfNotPresent( setters, ad.id(), ad ) ;
+                        }
+                    }
+                    
+                    return false ;
+                } } ) ;
+         
+            return result ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
     public synchronized void setRegistrationDebug( 
         ManagedObjectManager.RegistrationDebugLevel level ) {
         
@@ -609,7 +748,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public void setRuntimeDebug( boolean flag ) {
+    public synchronized void setRuntimeDebug( boolean flag ) {
         runDebugFlag = flag ;
     }
     
@@ -625,24 +764,24 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public boolean registrationDebug() {
+    public synchronized boolean registrationDebug() {
         return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.NORMAL 
             || regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
     }
     
-    public boolean registrationFineDebug() {
+    public synchronized boolean registrationFineDebug() {
         return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
     }
     
-    public boolean runtimeDebug() {
+    public synchronized boolean runtimeDebug() {
         return runDebugFlag ;
     }
     
-    public void addTypePrefix( String arg ) {
+    public synchronized void addTypePrefix( String arg ) {
         typePrefixes.add( arg ) ;
     }
     
-    public Predicate<AnnotatedElement> forAnnotation( 
+    public synchronized Predicate<AnnotatedElement> forAnnotation( 
         final Class<? extends Annotation> annotation ) {
 
         return new Predicate<AnnotatedElement>() {
@@ -651,4 +790,5 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
         } ;
     }
+
 }

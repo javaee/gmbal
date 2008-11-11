@@ -50,10 +50,10 @@ import java.lang.annotation.RetentionPolicy ;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Description {
     /** The description to be applied to the annotated element.
-     * This must not be empty.  It can either be the actual string that is inserted
-     * into the info class, or a key into a resource bundle associated with the 
-     * ManagedObjectManager.  If there is no value associated with the key, or no
-     * resource bundle is specified, the value is used directly in the info class.
+     * This value must not be empty.  It can either be the actual string that is inserted
+     * into the MBean info class, or a key into a resource bundle associated with the 
+     * ManagedObjectManager.  If there is no bundle value associated with the key, or no
+     * resource bundle is specified, the value is used directly in the MBean info class.
      */
     String value() ;
 }

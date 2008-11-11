@@ -38,26 +38,18 @@ package com.sun.jmxa ;
 
 import java.lang.reflect.Method ;
 
-import com.sun.jmxa.impl.ManagedObjectManagerImpl ;
+import com.sun.jmxa.util.GenericConstructor ;
 
 /** Factory used to create ManagedObjectManager instances.
  */
 public final class ManagedObjectManagerFactory {
-    /** Used to define the mode of operation of the ManagedObjectManager.
-     * This has the following implications:
-     * <ol>
-     * <li>The string used for the type in the ObjectName is "type" in
-     * standalone mode, and "j2eeType" in J2EE mode.
-     * <li>The type value (reduced according to the type prefixes 
-     * {@see ManagedObjectManager.addTypePrefix) has "X-" prepended to it
-     * for J2EE mode.  This is not done for STANDALONE mode.
-     * </ol>
-     * These conventions come from JSR77 and GlassFish AMX.
-     * 
-     */
-    public enum Mode { J2EE, STANDALONE } ;
-    
     private ManagedObjectManagerFactory() {}
+    
+    private static GenericConstructor<ManagedObjectManager> cons =
+        new GenericConstructor<ManagedObjectManager>( 
+            ManagedObjectManager.class, 
+            "com.sun.jmxa.impl.ManagedObjectManagerImpl",
+                String.class, String.class, Object.class, String.class ) ;
 
     /** Convenience method for getting access to a method through reflection.
      * Same as Class.getDeclaredMethod, but only throws RuntimeExceptions.
@@ -93,12 +85,11 @@ public final class ManagedObjectManagerFactory {
      * @param rootName The name to be used for the root object.
      * @return A new ManagedObjectManager.
      */
-    public static ManagedObjectManager create( final Mode mode, 
+    public static ManagedObjectManager create( 
         final String domain, final String rootParentName,
         final Object rootObject, final String rootName ) {
 	
-        return new ManagedObjectManagerImpl( mode, domain,
-            rootParentName, rootObject, rootName ) ;
+        return cons.create( domain, rootParentName, rootObject, rootName ) ;
     }
     
     /** Alternative form of the create method to be used when the
@@ -117,20 +108,11 @@ public final class ManagedObjectManagerFactory {
      * all MBeans created by this ManagedObjectManager.
      * @return The ManagedObjectManager.
      */
-    public static ManagedObjectManager create( final Mode mode, 
+    public static ManagedObjectManager create( 
         final String domain, final String rootParentName,
         final Object rootObject ) {
 	
-        return new ManagedObjectManagerImpl( mode, domain,
-            rootParentName, rootObject, null ) ;
-    }
-    
-    public static ManagedObjectManager createStandalone(
-        final String domain, final String rootParentName,
-        final Object rootObject ) {
-    
-        return create( Mode.STANDALONE, domain, rootParentName,
-            rootObject ) ;
+        return create( domain, rootParentName, rootObject, null ) ;
     }
 }
 

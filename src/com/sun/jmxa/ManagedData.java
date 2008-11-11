@@ -43,7 +43,10 @@ import java.lang.annotation.RetentionPolicy ;
 
 /** This annotation defines CompositeData.   An interface or class annotated as @ManagedData
  * has a corresponding CompositeData instance constructed according to the @ManagedAttribute 
- * annotations on its methods.
+ * annotations on its methods.  All inherited annotated methods are included.
+ * In the case of conflicts, the most derived method is used (that is the method
+ * declared in the method 
+ * closest to the class annotated as @ManagedData).
  */
 @Documented 
 @Target(ElementType.TYPE) 

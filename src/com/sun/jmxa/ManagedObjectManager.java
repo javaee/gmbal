@@ -103,6 +103,24 @@ public interface ManagedObjectManager extends Closeable {
      */
     NotificationEmitter register( Object parent, Object obj ) ;
     
+    /** Registers the MBean for obj at the root MBean for the ObjectManager,
+     * using the given name.
+     * @param obj The object for which we construct and register an MBean.
+     * @param name The name of the MBean.
+     * @return A NotificationEmitter for this MBean.
+     */
+    NotificationEmitter registerAtRoot( Object obj, String name ) ;
+    
+    /** Same as registerAtRoot( Object, String ), but here the name
+     * is derived from an @ObjectKeyName annotation.
+     * 
+     * @param obj The managed object we are registering.
+     * @return The NotificationEmitter that can be used to register 
+     * NotificationListeners against the registered MBean.  Only
+     * AttributeChangeNotifications are supported.
+     */
+    NotificationEmitter registerAtRoot( Object obj ) ;
+    
 
     /** Unregister the Open MBean corresponding to obj from the
      * mbean server.
