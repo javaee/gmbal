@@ -61,7 +61,10 @@ public class GenericConstructor<T> {
      * no compiled code can depend on the class directly.  However, the
      * generated class probably implements some interface T, represented
      * here by Class<T>.
-     * @throws IllegalArgumentException if cls is not a subclass of type. 
+     * @param type The expected type of a create call.
+     * @param className The name of the class to use for a constructor.
+     * @param signature The signature of the desired constructor.
+     * @throws IllegalArgumentException if cls is not a subclass of type.
      */
     public GenericConstructor( final Class<T> type, final String className, 
         final Class<?>... signature ) {
@@ -71,25 +74,16 @@ public class GenericConstructor<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private synchronized Constructor getConstructor( Object... args ) {
+    private synchronized void getConstructor() {
 	if ((type == null) || (constructor == null)) {
             try {
                 type = (Class<T>)Class.forName( typeName ) ;
                 constructor = type.getDeclaredConstructor(signature);
-            } catch (ClassNotFoundException ex) {
-                // no-op
-            } catch (NoSuchMethodException ex) {
-                // no-op
-            } catch (SecurityException ex) {
-                // no-op
+            } catch (Exception exc) {
+                Logger.getLogger( "com.sun.jmxa.util" ).log( Level.FINE,
+                    "Failure in getConstructor", exc ) ;
             }
 	}
-	return constructor ;
-    }
-    
-    private synchronized Constructor clearAndGetConstructor( Object... args ) {
-	constructor = null ;
-	return getConstructor( args ) ;
     }
 
     /** Create an instance of type T using the constructor that
@@ -98,25 +92,27 @@ public class GenericConstructor<T> {
      * used for the same types of arguments.  If a call fails,
      * a check is made to see if a different constructor could 
      * be used.
+     * @param args
+     * @return 
      */
-    public T create( Object... args ) {
-        constructor = getConstructor() ;
-        if (constructor == null) {
-            return null ;
+    public synchronized T create( Object... args ) {
+        T result = null ;
+        for (int ctr=0; ctr<=1; ctr++) {
+            getConstructor() ;
+            if (constructor == null) {
+                break ;
+            }
+            
+            try {
+                result = resultType.cast( constructor.newInstance( args ) ) ;	
+                break ;
+            } catch (Exception exc) {
+                constructor = null ;
+                Logger.getLogger("com.sun.jmxa.util").
+                    log(Level.FINE, "Error invoking constructor", exc );
+            }
         }
         
-	try {
-            try {
-                return resultType.cast( 
-                    constructor.newInstance( args ) ) ;	
-            } catch (IllegalArgumentException argexc) {
-                return resultType.cast( 
-                    clearAndGetConstructor( args ).newInstance( args ) ) ;
-            }
-        } catch (Exception exc) {
-            Logger.getLogger("com.sun.jmxa.util").
-                log(Level.FINE, "Could not invoke constructor", exc );
-            return null ;
-        }
+        return result ;
     }
 }

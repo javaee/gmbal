@@ -20,10 +20,14 @@ import java.util.Collection;
  * 
  * This is all a workaround for the fact that Java does not
  * support dynamic inheritance, or more than one superclass.  
+ * 
+ * Because this is a template, I have commented out all of the code.
+ * It is not used at runtime or compiletime.
  *
  * @author ken
  */
-public class FacetAccessorDelegateImpl implements FacetAccessor {
+abstract class FacetAccessorDelegateImpl implements FacetAccessor {
+    /*
     private FacetAccessor facetAccessorDelegate ;
     
     public FacetAccessorDelegateImpl( FacetAccessor fa ) {
@@ -49,4 +53,5 @@ public class FacetAccessorDelegateImpl implements FacetAccessor {
     public Collection<Object> facets() {
         return facetAccessorDelegate.facets() ;
     }
+    */
 }

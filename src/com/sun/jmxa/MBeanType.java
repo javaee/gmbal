@@ -26,5 +26,32 @@ public @interface MBeanType {
      */
     String type() default "" ;
     
+    /** Return true if this MBean may contain other MBeans, otherwise false.
+     * 
+     * @return whether or not this MBean is a container.
+     */
     boolean isContainer() default false ;
+    
+    /** True if only one MBean of this type may be created inside the same
+     * parent container.
+     * 
+     * @return
+     */
+    boolean isSingleton() default false ;
+        
+    /** True if all MBean attributes are invariant, that is, have the same
+     * value for the lifetime of the MBean.  This may be used as a hint
+     * to clients that the contents of the MBean can be cached.
+     * 
+     * @return True if all attributes of the MBean are invariant.
+     */
+    boolean mbeanInfoIsInvariant() default true ;
+    
+    /** Value to use in AMX CLI pathnames that include this MBean.
+     * Defaults to same value as type (whether type is obtained explicitly
+     * or implicitly).
+     * 
+     * @return The optional pathName component.
+     */
+    String pathName() default "" ;
 } 
