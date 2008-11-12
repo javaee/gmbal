@@ -737,6 +737,94 @@ public class JmxaTest extends TestCase {
         }
     }
 
+    private static final String ROOT_DOMAIN = "this.test" ;
+    private static final String ROOT_PARENT_NAME = "foo=bar" ;
+    
+    private static final String ROOT_TYPE = "RootType" ;
+    
+    @ManagedObject
+    @MBeanType( type=ROOT_TYPE, isContainer=true )
+    public static class RootObject {
+        private int value ;
+        
+        @ManagedAttribute
+        int num() { return value ; }
+        
+        public RootObject( int num ) {
+            this.value = num ;
+        }
+    }
+    
+    @ManagedObject
+    @MBeanType( type=ROOT_TYPE, isContainer=true )
+    public static class NamedRootObject extends RootObject{
+        String name ;
+        
+        @ObjectNameKey
+        public String getMyName() { return name ; }
+        
+        public NamedRootObject( String name, int num ) {
+            super( num ) ;
+            this.name = name;
+        }
+    }
+        
+    public void testRootMBean1() {
+        final int value = 42 ;
+        final String rootName = "MyRoot" ;
+        final Object rootObject = new RootObject( value ) ;
+        ManagedObjectManager mom = ManagedObjectManagerFactory.create(
+            ROOT_DOMAIN, ROOT_PARENT_NAME, rootObject, rootName ) ;
+        mom.addTypePrefix("com.sun.jmxa");
+        
+        try {
+            ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
+            String expectedName = "this.test:foo=bar,type=RootType,name=MyRoot" ;
+            ObjectName expectedObjectName = null ;
+            try {
+                expectedObjectName = new ObjectName(expectedName);
+            } catch (MalformedObjectNameException ex) {
+                fail( "Could not create ObjectName" ) ;
+            } 
+            
+            assertEquals( expectedObjectName, rootObjectName ) ;
+        } finally {
+            try {
+                mom.close();
+            } catch (IOException ex) {
+                fail( "Exception on close: " + ex ) ;
+            }
+        }
+    }
+    
+    public void testRootMBean2() {
+        final int value = 42 ;
+        final String rootName = "MyRoot" ;
+        final Object rootObject = new NamedRootObject( rootName, value ) ;
+        ManagedObjectManager mom = ManagedObjectManagerFactory.create(
+            ROOT_DOMAIN, ROOT_PARENT_NAME, rootObject ) ;
+        mom.addTypePrefix("com.sun.jmxa");
+        
+        try {
+            ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
+            String expectedName = "this.test:foo=bar,type=RootType,name=MyRoot" ;
+            ObjectName expectedObjectName = null ;
+            try {
+                expectedObjectName = new ObjectName(expectedName);
+            } catch (MalformedObjectNameException ex) {
+                fail( "Could not create ObjectName" ) ;
+            } 
+            
+            assertEquals( expectedObjectName, rootObjectName ) ;
+        } finally {
+            try {
+                mom.close();
+            } catch (IOException ex) {
+                fail( "Exception on close: " + ex ) ;
+            }
+        }
+    }
+    
     public static Test suite() {
         return new TestSuite( JmxaTest.class ) ;
     }

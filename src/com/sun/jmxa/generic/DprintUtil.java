@@ -7,6 +7,8 @@ package com.sun.jmxa.generic;
 
 import java.util.Stack;
 import java.util.StringTokenizer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -14,7 +16,9 @@ import java.util.StringTokenizer;
  */
 public class DprintUtil {
     private Object client ;
+    private String sourceClassName ;
     private ThreadLocal<Stack<String>> currentMethod = new ThreadLocal<Stack<String>>() {
+        @Override
         public Stack<String> initialValue() {
             return new Stack<String>() ;
         }
@@ -22,6 +26,7 @@ public class DprintUtil {
 
     public DprintUtil( Object self ) {
         client = self ;
+        sourceClassName = compressClassName( client.getClass().getName() ) ;      
     }        
     
     private static String compressClassName( String name )
@@ -30,8 +35,9 @@ public class DprintUtil {
 	String prefix = "com.sun.jmxa." ;
 	if (name.startsWith( prefix ) ) {
 	    return "(JMXA)." + name.substring( prefix.length() ) ;
-	} else
-	    return name ;
+	} else {
+            return name;
+        }
     }
     
     // Return a compressed representation of the thread name.  This is particularly
@@ -39,8 +45,9 @@ public class DprintUtil {
     // we need a short unambiguous name for such threads.
     public static String getThreadName( Thread thr ) 
     {
-	if (thr == null)
-	    return "null" ;
+	if (thr == null) {
+            return "null";
+        }
 
 	// This depends on the formatting in SelectReaderThread and CorbaConnectionImpl.
 	// Pattern for SelectReaderThreads:
@@ -49,32 +56,44 @@ public class DprintUtil {
 	String name = thr.getName() ;
 	StringTokenizer st = new StringTokenizer( name ) ;
 	int numTokens = st.countTokens() ;
-	if (numTokens != 5)
-	    return name ;
+	if (numTokens != 5) {
+            return name;
+        }
 
 	String[] tokens = new String[numTokens] ;
-	for (int ctr=0; ctr<numTokens; ctr++ ) 
-	    tokens[ctr] = st.nextToken() ;
+	for (int ctr=0; ctr<numTokens; ctr++ ) {
+            tokens[ctr] = st.nextToken();
+        }
 
-	if( !tokens[0].equals("SelectReaderThread"))
-	    return name ;
+	if( !tokens[0].equals("SelectReaderThread")) {
+            return name;
+        }
 
 	return "SelectReaderThread[" + tokens[2] + ":" + tokens[3] + "]" ;
     }
  
-    private static synchronized void dprint(java.lang.Object obj, String msg) {
-	System.out.println(
-	    compressClassName( obj.getClass().getName() ) + "("  +
-	    getThreadName( Thread.currentThread() ) + "): " + msg);
+    private synchronized void dprint(String msg) {
+        String mname = currentMethod.get().peek() ;
+        String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
+            + msg ;
+        
+        Logger.getLogger( client.getClass().getPackage().getName() ).
+            logp( Level.INFO, fmsg, sourceClassName, mname ) ;
     }
     
-    private void dprint( String msg ) {
-        dprint( client, msg ) ;
+    private synchronized void dprint(String msg, Throwable exc ) {
+        String mname = currentMethod.get().peek() ;
+        String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
+            + msg ;
+        
+        Logger.getLogger( client.getClass().getPackage().getName() ).
+            logp( Level.INFO, fmsg, sourceClassName, mname, exc ) ;
     }
 
     private String makeString( Object... args ) {
-        if (args.length == 0)
-            return "" ;
+        if (args.length == 0) {
+            return "";
+        }
 
         StringBuilder sb = new StringBuilder() ;
         sb.append( '(' ) ;
@@ -109,17 +128,20 @@ public class DprintUtil {
     }
     
     public void exception( String msg, Throwable exc ) {
-        info( "Exception: ", msg, exc ) ;
-        exc.printStackTrace() ;
+        String mname = currentMethod.get().peek() ;
+        String str = makeString( "Exception: ", msg, exc ) ;
+        dprint( "." + mname + "::" + str, exc ) ;
     }
 
     public void exit() {
-        String mname = currentMethod.get().pop() ;
+        String mname = currentMethod.get().peek() ;
         dprint( "." + mname + "<-" ) ;
+        currentMethod.get().pop() ;
     }
 
     public void exit( Object retVal ) {
-        String mname = currentMethod.get().pop() ;
+        String mname = currentMethod.get().peek() ;
         dprint( "." + mname + "<-(" + retVal + ")" ) ;
+        currentMethod.get().pop() ;
     }
 }

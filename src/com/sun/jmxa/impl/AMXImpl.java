@@ -25,14 +25,6 @@ public class AMXImpl implements AMX {
         }
     }
 
-    public GroupType getGroup() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public String getFullType() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     public String getType() {
         return mbean.type() ;
     }

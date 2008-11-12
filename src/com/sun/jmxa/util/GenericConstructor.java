@@ -36,8 +36,6 @@
 
 package com.sun.jmxa.util;
 
-import java.util.List ;
-import java.util.ArrayList ;
 
 import java.lang.reflect.Constructor ;
 import java.util.logging.Level;
@@ -108,15 +106,17 @@ public class GenericConstructor<T> {
         }
         
 	try {
-	    try {
-		return resultType.cast( 
+            try {
+                return resultType.cast( 
                     constructor.newInstance( args ) ) ;	
-	    } catch (IllegalArgumentException argexc) {
-		return resultType.cast( 
+            } catch (IllegalArgumentException argexc) {
+                return resultType.cast( 
                     clearAndGetConstructor( args ).newInstance( args ) ) ;
-	    }
-	} catch (Exception exc ) {
+            }
+        } catch (Exception exc) {
+            Logger.getLogger("com.sun.jmxa.util").
+                log(Level.FINE, "Could not invoke constructor", exc );
             return null ;
-	}
+        }
     }
 }

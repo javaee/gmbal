@@ -144,6 +144,9 @@ public interface ManagedObjectManager extends Closeable {
     
     /** Add a type prefix to strip from type names, to shorten the names for
      * a better presentation to the user.
+     * <P>Note that these type prefixes are NOT available for the root
+     * object passed on the create call.  The root object is best handled
+     * with an explicit type, if the default class name is not desired.
      *
      * @param str Class package name to strip from type name
      */
@@ -204,11 +207,13 @@ public interface ManagedObjectManager extends Closeable {
      * @param level NONE is no debugging at all, NORMAL traces high-level
      * construction of skeletons and type converters, and dumps results of new
      * skeletons and type converters, FINE traces everything in great detail.
+     * The tracing is done with INFO-level logger calls.  The logger name is
+     * that package name (com.sun.jmxa.impl).
      */
     void setRegistrationDebug( RegistrationDebugLevel level ) ;
     
-    /** Enable printing of debug output for runtime MBean operations
-     * to System.out.
+    /** Enable generation of debug log at INFO level for runtime MBean operations
+     * to the com.sun.jmxa.impl logger.
      * 
      * @param flag true to enable runtime debug, false to disable.
      */

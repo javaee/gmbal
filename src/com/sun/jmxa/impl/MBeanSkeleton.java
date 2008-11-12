@@ -36,6 +36,7 @@
 
 package com.sun.jmxa.impl ;
 
+import com.sun.jmxa.MBeanType;
 import com.sun.jmxa.generic.ClassAnalyzer;
 import java.util.List ;
 import java.util.Arrays ;
@@ -91,6 +92,7 @@ public class MBeanSkeleton {
         extends BinaryFunction<FacetAccessor,List<Object>,Object> {} ;
 
     private final String type ;
+    private MBeanType mbeanType ;
     @DumpToString
     private final AtomicLong sequenceNumber ;
     private final MBeanInfo mbInfo ;
@@ -447,7 +449,25 @@ public class MBeanSkeleton {
             }
         }
     }
+    
+    private String getTypeName( final MBeanType mbt, 
+        final Class<?> cls ) {
+        
+        String result ;
+        if (mbt.type().length() > 0) {
+            result = mbt.type() ;
+        } else {
+            result = mom.getStrippedName( cls ) ;
+        }
+        
+        return result ;
+    }
 
+    @MBeanType
+    private static class DefaultMBeanTypeHolder{} 
+    private static MBeanType defaultMBeanType = 
+        DefaultMBeanTypeHolder.class.getAnnotation( MBeanType.class ) ;
+    
     public MBeanSkeleton( final Class<?> annotatedClass, 
         final ClassAnalyzer ca, final ManagedObjectManagerInternal mom ) {
 
@@ -457,12 +477,12 @@ public class MBeanSkeleton {
         final ManagedObject mo = annotatedClass.getAnnotation( 
             ManagedObject.class ) ;
         
-        if (mo.type().equals("")) {
-	    type = mom.getStrippedName( annotatedClass ) ;
-        } else {
-            type = mo.type() ;
+        mbeanType = annotatedClass.getAnnotation( MBeanType.class ) ;
+        if (mbeanType == null) {
+            mbeanType = defaultMBeanType ;
         }
-
+        
+        type = getTypeName( mbeanType, annotatedClass ) ;
         sequenceNumber = new AtomicLong() ;
 	setters = new HashMap<String,AttributeDescriptor>() ;
 	getters = new HashMap<String,AttributeDescriptor>() ; 
@@ -493,6 +513,10 @@ public class MBeanSkeleton {
         }
     }
 
+    public MBeanType getMBeanType() {
+        return mbeanType ;
+    }
+    
     public Object getAttribute( FacetAccessor fa, String name) 
         throws AttributeNotFoundException, MBeanException, ReflectionException {
 
