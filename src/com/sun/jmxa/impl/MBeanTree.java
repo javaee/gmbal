@@ -95,7 +95,7 @@ public class MBeanTree {
         this.typeString = typeString ;
         objectMap = new HashMap<Object,MBeanImpl>() ;
         objectNameMap = new HashMap<ObjectName,Object>() ;
-        dputil = new DprintUtil( this ) ;
+        dputil = new DprintUtil( getClass() ) ;
 
         // Now register the root MBean.
         MBeanImpl rootMB = mom.constructMBean( root, rootName ) ;

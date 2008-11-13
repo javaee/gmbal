@@ -72,7 +72,7 @@ public class AttributeDescriptor {
     private TypeConverter _tc ;
 
     @DumpIgnore
-    private DprintUtil dputil = new DprintUtil( this ) ;
+    private DprintUtil dputil = new DprintUtil( getClass() ) ;
 
     private AttributeDescriptor( final ManagedObjectManagerInternal mom, 
         final Method method, final String id, 

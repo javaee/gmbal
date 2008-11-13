@@ -742,7 +742,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
         regDebugLevel = level ;
         if (level != ManagedObjectManager.RegistrationDebugLevel.NONE ) {
-            dputil = new DprintUtil( this ) ;
+            dputil = new DprintUtil( getClass() ) ;
         } else {
             dputil = null ;
         }

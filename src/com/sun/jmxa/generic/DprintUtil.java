@@ -15,8 +15,8 @@ import java.util.logging.Logger;
  * @author ken
  */
 public class DprintUtil {
-    private Object client ;
     private String sourceClassName ;
+    private String loggerName ;
     private ThreadLocal<Stack<String>> currentMethod = new ThreadLocal<Stack<String>>() {
         @Override
         public Stack<String> initialValue() {
@@ -24,9 +24,9 @@ public class DprintUtil {
         }
     } ;
 
-    public DprintUtil( Object self ) {
-        client = self ;
-        sourceClassName = compressClassName( client.getClass().getName() ) ;      
+    public DprintUtil( Class selfClass ) {
+        sourceClassName = compressClassName( selfClass.getClass().getName() ) ;   
+        loggerName = selfClass.getClass().getPackage().getName() ;
     }        
     
     private static String compressClassName( String name )
@@ -77,7 +77,7 @@ public class DprintUtil {
         String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
             + msg ;
         
-        Logger.getLogger( client.getClass().getPackage().getName() ).
+        Logger.getLogger( loggerName ).
             logp( Level.INFO, fmsg, sourceClassName, mname ) ;
     }
     
@@ -86,7 +86,7 @@ public class DprintUtil {
         String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
             + msg ;
         
-        Logger.getLogger( client.getClass().getPackage().getName() ).
+        Logger.getLogger( loggerName ).
             logp( Level.INFO, fmsg, sourceClassName, mname, exc ) ;
     }
 

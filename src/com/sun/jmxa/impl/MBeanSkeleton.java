@@ -119,7 +119,7 @@ public class MBeanSkeleton {
     }
 
     private MBeanSkeleton( MBeanSkeleton first, MBeanSkeleton second ) {
-        dputil = new DprintUtil( this ) ;
+        dputil = new DprintUtil( getClass() ) ;
 	this.mom = first.mom ;
 
         type = first.type ;
@@ -471,7 +471,7 @@ public class MBeanSkeleton {
     public MBeanSkeleton( final Class<?> annotatedClass, 
         final ClassAnalyzer ca, final ManagedObjectManagerInternal mom ) {
 
-        dputil = new DprintUtil( this ) ;
+        dputil = new DprintUtil( getClass() ) ;
 	this.mom = mom ;
 
         final ManagedObject mo = annotatedClass.getAnnotation( 

@@ -73,10 +73,12 @@ import javax.management.openmbean.TabularDataSupport ;
 
 import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ManagedData ;
+import com.sun.jmxa.generic.DprintUtil;
 import com.sun.jmxa.generic.FacetAccessor;
 import com.sun.jmxa.generic.Pair;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import javax.management.JMException;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
@@ -87,6 +89,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
         new HashMap<Type,OpenType>() ;
     private static final Map<OpenType,Type> simpleOpenTypeMap = 
         new HashMap<OpenType,Type>() ;
+    private static final DprintUtil dputil = new 
+        DprintUtil( TypeConverterImpl.class ) ;
 
     private static void initMaps( final Type type, final OpenType otype ) {
 	simpleTypeMap.put( type, otype ) ;
@@ -274,160 +278,231 @@ public abstract class TypeConverterImpl implements TypeConverter {
     public static TypeConverter makeTypeConverter( final Type type, 
         final ManagedObjectManagerInternal mom ) {
         
-	final OpenType stype = simpleTypeMap.get( type ) ;
-	if (stype != null) {
-	    return handleSimpleType( (Class)type, stype ) ;
-	}
-
-	if (type instanceof Class) {
-            return handleClass( (Class<?>)type, mom ) ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "makeTypeConverter", "type=", type,
+                "mom=", mom ) ;
         }
-
-	if (type instanceof ParameterizedType) {
-	    return handleParameterizedType( (ParameterizedType)type, mom ) ;
-	} 
-	
-	if (type instanceof GenericArrayType) {
-	    return handleArrayType( (GenericArrayType)type, mom ) ;
-	} 
-	
-	if (type instanceof TypeVariable) {
-	    //throw new IllegalArgumentException( "TypeVariable " + type 
-              //  + " not supported" ) ;
-            return handleAsString( Object.class ) ;
-        } 
-	
-	if (type instanceof WildcardType) {
-            // Just treat this the same as its bound type
-            final WildcardType wt = (WildcardType)type ;
-            final Type[] upperBounds = wt.getUpperBounds() ;
-            final Type[] lowerBounds = wt.getLowerBounds() ;
-            if (lowerBounds.length > 0) {
-                //throw new IllegalArgumentException( "WildcardType " + type 
-                  //  + " with lower bounds is not supported" ) ;
-                return handleAsString( Object.class ) ;
+        
+        TypeConverter result = null ;
+        try {
+            final OpenType stype = simpleTypeMap.get( type ) ;
+            if (stype != null) {
+                result = handleSimpleType( (Class)type, stype ) ;
+            } else if (type instanceof Class) {
+                result = handleClass( (Class<?>)type, mom ) ;
+            } else if (type instanceof ParameterizedType) {
+                result = handleParameterizedType( (ParameterizedType)type, mom ) ;
+            } else if (type instanceof GenericArrayType) {
+                result = handleArrayType( (GenericArrayType)type, mom ) ;
+            } else if (type instanceof TypeVariable) {
+                //throw new IllegalArgumentException( "TypeVariable " + type 
+                  //  + " not supported" ) ;
+                result = handleAsString( Object.class ) ;
+            } else if (type instanceof WildcardType) {
+                // Just treat this the same as its bound type
+                final WildcardType wt = (WildcardType)type ;
+                final Type[] upperBounds = wt.getUpperBounds() ;
+                final Type[] lowerBounds = wt.getLowerBounds() ;
+                if (lowerBounds.length > 0) {
+                    //throw new IllegalArgumentException( "WildcardType " + type 
+                      //  + " with lower bounds is not supported" ) ;
+                    result = handleAsString( Object.class ) ;
+                } else if (upperBounds.length == 0) {
+                    // throw new IllegalArgumentException( "WildcardType " + type 
+                       // + " with no bounds is not supported" ) ;
+                    result = handleAsString( Object.class ) ;
+                } else if (upperBounds.length > 1) {
+                    // throw new IllegalArgumentException( "WildcardType " + type 
+                       // + " with multiple upper bounds is not supported" ) ;
+                    result = handleAsString( Object.class ) ;
+                } else {
+                    result = makeTypeConverter( upperBounds[0], mom ) ;
+                }
+            } else {
+                // this should not happen
+                // throw new IllegalArgumentException( "Unknown kind of Type " 
+                   // + type ) ;
+                result = handleAsString( Object.class ) ;
             }
-            if (upperBounds.length == 0) {
-                // throw new IllegalArgumentException( "WildcardType " + type 
-                   // + " with no bounds is not supported" ) ;
-                return handleAsString( Object.class ) ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
             }
-            if (upperBounds.length > 1) {
-                // throw new IllegalArgumentException( "WildcardType " + type 
-                   // + " with multiple upper bounds is not supported" ) ;
-                return handleAsString( Object.class ) ;
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
             }
-            
-            return makeTypeConverter( upperBounds[0], mom ) ;
-	} else {
-	    // this should not happen
-	    // throw new IllegalArgumentException( "Unknown kind of Type " 
-               // + type ) ;
-            return handleAsString( Object.class ) ;
         }
+        
+        return result ;
     }
     
     private static TypeConverter handleClass( final Class<?> cls, 
         final ManagedObjectManagerInternal mom ) {
         
-        final ManagedObject mo = cls.getAnnotation( ManagedObject.class ) ;
-        final ManagedData md = cls.getAnnotation( ManagedData.class ) ;
-
-        if (mo != null) {
-            return handleManagedObject( cls, mom, mo ) ;
-        } else if (md != null) {
-            return handleManagedData( cls, mom, md ) ;
-        } else if (cls.isEnum()) {
-            return handleEnum( cls ) ;
-        } else {
-            // map to string
-            return handleAsString( cls ) ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleClass" ) ;
         }
+        
+        TypeConverter result = null ;
+        
+        try {
+            final ManagedObject mo = cls.getAnnotation( ManagedObject.class ) ;
+            final ManagedData md = cls.getAnnotation( ManagedData.class ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "mo=", mo, "md=", md ) ;
+            }
+            
+            if (mo != null) {
+                result = handleManagedObject( cls, mom, mo ) ;
+            } else if (md != null) {
+                result = handleManagedData( cls, mom, md ) ;
+            } else if (cls.isEnum()) {
+                result = handleEnum( cls ) ;
+            } else {
+                // map to string
+                result = handleAsString( cls ) ;
+            }
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
     } 
 	
     private static TypeConverter handleManagedObject( final Class type, 
 	final ManagedObjectManagerInternal mom, final ManagedObject mo ) {
 
-	return new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
-	    public Object toManagedEntity( Object obj ) {
-		return mom.getObjectName( obj ) ;
-	    }
-
-            @Override
-	    public Object fromManagedEntity( final Object entity ) {
-		if (!(entity instanceof ObjectName)) {
-		    throw new IllegalArgumentException( 
-			"Management entity " + entity 
-                        + " is not an ObjectName" ) ;
+        TypeConverter result = null ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleManagedObject", "type=", type,
+                "mom=", mom, "mo=", mo ) ;
+        }
+        
+        try {
+            result = new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
+                public Object toManagedEntity( Object obj ) {
+                    return mom.getObjectName( obj ) ;
                 }
 
-		final ObjectName oname = (ObjectName)entity ;
-		return mom.getObject( oname ) ;
-	    }
-	} ;
+                @Override
+                public Object fromManagedEntity( final Object entity ) {
+                    if (!(entity instanceof ObjectName)) {
+                        throw new IllegalArgumentException( 
+                            "Management entity " + entity 
+                            + " is not an ObjectName" ) ;
+                    }
+
+                    final ObjectName oname = (ObjectName)entity ;
+                    return mom.getObject( oname ) ;
+                }
+            } ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
     }
 
     @SuppressWarnings("unchecked")
     private static TypeConverter handleArrayType( final GenericArrayType type, 
 	final ManagedObjectManagerInternal mom ) {
 
-	final Type ctype = type.getGenericComponentType() ;
-	final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
-	final OpenType cotype = ctypeTc.getManagedType() ;
-	final OpenType ot ;
-	
-	try {
-	    ot = new ArrayType( 1, cotype ) ;
-	} catch (OpenDataException exc) {
-	    throw new IllegalArgumentException( 
-                "Arrays of arrays not supported: " + cotype, exc ) ;
-	}
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleArrayType" ) ;
+        }
+        
+        TypeConverter result = null ;
+        try {
+            final Type ctype = type.getGenericComponentType() ;
+            final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
+            final OpenType cotype = ctypeTc.getManagedType() ;
+            final OpenType ot ;
 
-	final OpenType myManagedType = ot ;
+            try {
+                ot = new ArrayType( 1, cotype ) ;
+            } catch (OpenDataException exc) {
+                throw new IllegalArgumentException( 
+                    "Arrays of arrays not supported: " + cotype, exc ) ;
+            }
 
-	return new TypeConverterImpl( type, myManagedType ) {
-	    public Object toManagedEntity( final Object obj ) {
-		if (isIdentity()) {
-		    return obj ;
-		} else {
-		    final Class cclass = getJavaClass( ctype ) ;
-		    final int length = Array.getLength( obj ) ;
-		    final Object result = Array.newInstance( cclass, length ) ;
-		    for (int ctr=0; ctr<length; ctr++) {
-			final Object elem = Array.get( obj, ctr ) ;
-			final Object relem =  ctypeTc.toManagedEntity( elem ) ;
-			Array.set( result, ctr, relem ) ;
-		    }
+            final OpenType myManagedType = ot ;
+            
+            if (mom.registrationDebug()) {
+                dputil.info( "ctype=", ctype, "ctypeTc=", ctypeTc,
+                    "cotype=", cotype, "ot=", ot ) ;
+            }
 
-		    return result ;
-		}
-	    }
+            result = new TypeConverterImpl( type, myManagedType ) {
+                public Object toManagedEntity( final Object obj ) {
+                    if (isIdentity()) {
+                        return obj ;
+                    } else {
+                        final Class cclass = getJavaClass( ctype ) ;
+                        final int length = Array.getLength( obj ) ;
+                        final Object result = Array.newInstance( cclass, length ) ;
+                        for (int ctr=0; ctr<length; ctr++) {
+                            final Object elem = Array.get( obj, ctr ) ;
+                            final Object relem =  ctypeTc.toManagedEntity( elem ) ;
+                            Array.set( result, ctr, relem ) ;
+                        }
 
-            @Override
-	    public Object fromManagedEntity( final Object entity ) {
-		if (isIdentity()) {
-		    return entity ;
-		} else {
-		    final Class cclass = getJavaClass( cotype ) ;
+                        return result ;
+                    }
+                }
 
-		    final int length = Array.getLength( entity ) ;
-		    final Object result = Array.newInstance( cclass, length ) ;
-		    for (int ctr=0; ctr<length; ctr++) {
-			final Object elem = Array.get( entity, ctr ) ;
-			final Object relem =  
-                            ctypeTc.fromManagedEntity( elem ) ;
-			Array.set( result, ctr, relem ) ;
-		    }
+                @Override
+                public Object fromManagedEntity( final Object entity ) {
+                    if (isIdentity()) {
+                        return entity ;
+                    } else {
+                        final Class cclass = getJavaClass( cotype ) ;
 
-		    return result ;
-		}
-	    }
+                        final int length = Array.getLength( entity ) ;
+                        final Object result = Array.newInstance( cclass, length ) ;
+                        for (int ctr=0; ctr<length; ctr++) {
+                            final Object elem = Array.get( entity, ctr ) ;
+                            final Object relem =  
+                                ctypeTc.fromManagedEntity( elem ) ;
+                            Array.set( result, ctr, relem ) ;
+                        }
 
-            @Override
-	    public boolean isIdentity() {
-		return ctypeTc.isIdentity() ; 
-	    }
-	} ;
+                        return result ;
+                    }
+                }
+
+                @Override
+                public boolean isIdentity() {
+                    return ctypeTc.isIdentity() ; 
+                }
+            } ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
     }
 
     private static TypeConverter handleEnum( final Class cls ) {
@@ -522,80 +597,155 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static Collection<AttributeDescriptor> analyzeManagedData( 
         final Class<?> cls, final ManagedObjectManagerInternal mom ) {
        
-        final ClassAnalyzer ca = mom.getClassAnalyzer( cls, 
-            ManagedData.class ).second() ;
-	
-        final Pair<Map<String,AttributeDescriptor>,
-            Map<String,AttributeDescriptor>> ainfos =
-                mom.getAttributes( ca ) ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "analyzeManagedData", "cls=", cls, "mom=", mom ) ;
+        }
         
-	return ainfos.first().values() ;
+        Collection<AttributeDescriptor> result = null ;
+        
+        try {
+            final ClassAnalyzer ca = mom.getClassAnalyzer( cls, 
+                ManagedData.class ).second() ;
+
+            final Pair<Map<String,AttributeDescriptor>,
+                Map<String,AttributeDescriptor>> ainfos =
+                    mom.getAttributes( ca ) ;
+
+            result = ainfos.first().values() ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
     }
 
     private static CompositeType makeCompositeType( final Class cls, 
         final ManagedObjectManagerInternal mom, final ManagedData md, 
         Collection<AttributeDescriptor> minfos ) {
 
-	String name = md.name() ;
-	if (name.equals( "" )) {
-	    name = mom.getStrippedName( cls ) ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "makeCompositeType",
+                "cls=", cls, "mom=", mom, "md=", md, "minfos=", minfos ) ;
         }
+        
+        CompositeType result = null ;
+        
+        try {
+            String name = md.name() ;
+            if (name.equals( "" )) {
+                name = mom.getStrippedName( cls ) ;
+            }
+            
+            if (mom.registrationDebug()) {
+                dputil.info( "name=", name ) ;
+            }
+            
+            final String mdDescription = mom.getDescription( cls ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "mdDescription=", mdDescription ) ;
+            }
+            
+            final int length = minfos.size() ;
+            final String[] attrNames = new String[ length ] ;
+            final String[] attrDescriptions = new String[ length ] ;
+            final OpenType[] attrOTypes = new OpenType[ length ] ;
 
-	final String mdDescription = mom.getDescription( cls ) ;
+            int ctr = 0 ;
+            for (AttributeDescriptor minfo : minfos) {
+                attrNames[ctr] = minfo.id() ;
+                attrDescriptions[ctr] = minfo.description() ;
+                attrOTypes[ctr] = minfo.tc().getManagedType() ;
+                ctr++ ;
+            }
+            
+            if (mom.registrationDebug()) {
+                dputil.info( "attrNames=", Arrays.asList(attrNames),
+                    "attrDescriptions=", Arrays.asList(attrDescriptions),
+                    "attrOTypes=", Arrays.asList(attrOTypes) ) ;
+            }
 
-	final int length = minfos.size() ;
-	final String[] attrNames = new String[ length ] ;
-	final String[] attrDescriptions = new String[ length ] ;
-	final OpenType[] attrOTypes = new OpenType[ length ] ;
-
-	int ctr = 0 ;
-	for (AttributeDescriptor minfo : minfos) {
-	    attrNames[ctr] = minfo.id() ;
-	    attrDescriptions[ctr] = minfo.description() ;
-	    attrOTypes[ctr] = minfo.tc().getManagedType() ;
-	    ctr++ ;
-	}
-
-	try {
-	    return new CompositeType( 
-		name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
-	} catch (OpenDataException exc) {
-	    throw new IllegalArgumentException( exc ) ;
+            try {
+                result = new CompositeType( 
+                    name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
+            } catch (OpenDataException exc) {
+                throw new IllegalArgumentException( exc ) ;
+            }
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
         }
+        
+        return result ;
     }
 
     private static TypeConverter handleManagedData( final Class cls, 
 	final ManagedObjectManagerInternal mom, final ManagedData md ) {
 
-	final Collection<AttributeDescriptor> minfos = analyzeManagedData(
-	    cls, mom ) ;
-        final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleManagedData", "cls=", cls,
+                "mom=", mom, "md=", md ) ;
+        }
+        
+        TypeConverter result = null ;
+        
+        try {
+            final Collection<AttributeDescriptor> minfos = analyzeManagedData(
+                cls, mom ) ;
+            final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "minfos=", minfos, "myType=", myType ) ;
+            }
 
-	return new TypeConverterImpl( cls, myType ) {
-	    public Object toManagedEntity( Object obj ) {
-		Map<String,Object> data = new HashMap<String,Object>() ;
-		for (AttributeDescriptor minfo : minfos ) {
-                    if (minfo.isApplicable( obj )) {
-                        FacetAccessor fa = mom.getFacetAccessor( obj ) ;
-                        Object value;
-                        try {
-                            value = minfo.get(fa, mom.runtimeDebug());
-                        } catch (JMException ex) {
-                            throw new IllegalArgumentException( 
-                                "Exception in getting attribute " + minfo, ex ) ;
+            result = new TypeConverterImpl( cls, myType ) {
+                public Object toManagedEntity( Object obj ) {
+                    Map<String,Object> data = new HashMap<String,Object>() ;
+                    for (AttributeDescriptor minfo : minfos ) {
+                        if (minfo.isApplicable( obj )) {
+                            FacetAccessor fa = mom.getFacetAccessor( obj ) ;
+                            Object value;
+                            try {
+                                value = minfo.get(fa, mom.runtimeDebug());
+                            } catch (JMException ex) {
+                                throw new IllegalArgumentException( 
+                                    "Exception in getting attribute " + minfo, ex ) ;
+                            }
+
+                            data.put( minfo.id(), value ) ;
                         }
-                        
-                        data.put( minfo.id(), value ) ;
                     }
-		}
 
-		try {
-		    return new CompositeDataSupport( myType, data ) ;
-		} catch (OpenDataException exc) {
-		    throw new IllegalArgumentException( exc ) ;
-		}
-	    }
-	} ;
+                    try {
+                        return new CompositeDataSupport( myType, data ) ;
+                    } catch (OpenDataException exc) {
+                        throw new IllegalArgumentException( exc ) ;
+                    }
+                }
+            } ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
     }
 
     private static class EnumerationAdapter<T> implements Iterator<T> {
@@ -824,59 +974,89 @@ public abstract class TypeConverterImpl implements TypeConverter {
         final ParameterizedType type, 
 	final ManagedObjectManagerInternal mom ) {
 
-        TypeConverter result ;
-        final Class cls = (Class)(type.getRawType()) ; 
-        final Type[] args = type.getActualTypeArguments() ;
-        if (args.length < 1) {
-            throw new IllegalArgumentException( type 
-                + " must have at least 1 type argument" ) ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleParameterizedType", "type=", type,
+                "mom=", mom ) ;
         }
+        
+        TypeConverter result = null ;
+        
+        try {
+            final Class cls = (Class)(type.getRawType()) ; 
+            final Type[] args = type.getActualTypeArguments() ;
+            if (mom.registrationDebug()) {
+                dputil.info( "cls=", cls, "args=", Arrays.asList( args ) ) ;
+            }
+            
+            if (args.length < 1) {
+                throw new IllegalArgumentException( type 
+                    + " must have at least 1 type argument" ) ;
+            }
 
-        final Type firstType = args[0] ;
-        final TypeConverter firstTc = mom.getTypeConverter( firstType ) ;
+            final Type firstType = args[0] ;
+            final TypeConverter firstTc = mom.getTypeConverter( firstType ) ;
 
-        // Case 1: Some kind of collection. Must have 1 type parameter.
-        if (Iterable.class.isAssignableFrom(cls)) {
-            result = new TypeConverterListBase( type, firstTc ) {
-                protected Iterator getIterator( Object obj ) {
-                    return ((Collection)obj).iterator() ;
-                }
-            } ;
-        } else if (Iterator.class.isAssignableFrom(cls)) {
-            result = new TypeConverterListBase( type, firstTc ) {
-                protected Iterator getIterator( Object obj ) {
-                    return (Iterator)obj ;
-                }
-            } ;
-        } else if (Enumeration.class.isAssignableFrom(cls)) {
-            result = new TypeConverterListBase( type, firstTc ) {
-                @SuppressWarnings("unchecked")
-                protected Iterator getIterator( Object obj ) {
-                    return new EnumerationAdapter( (Enumeration)obj ) ;
-                }
-            } ;
-        } else if (args.length != 2) {
-            result = handleClass( (Class<?>)type.getRawType(), mom ) ;
-        } else {
-            final Type secondType = args[0] ;
-            final TypeConverter secondTc = mom.getTypeConverter( secondType ) ;
-
-            if (Map.class.isAssignableFrom(cls)) {
-                result = new TypeConverterMapBase( type, firstTc, secondTc ) {
-                    @SuppressWarnings("unchecked")
-                    protected Table getTable( Object obj ) {
-                        return new TableMapImpl( (Map)obj ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "firstType=", firstType, "firstTc=", firstTc ) ;
+            }
+            
+            // Case 1: Some kind of collection. Must have 1 type parameter.
+            if (Iterable.class.isAssignableFrom(cls)) {
+                result = new TypeConverterListBase( type, firstTc ) {
+                    protected Iterator getIterator( Object obj ) {
+                        return ((Collection)obj).iterator() ;
                     }
                 } ;
-            } else if (Dictionary.class.isAssignableFrom(cls)) {
-                result = new TypeConverterMapBase( type, firstTc, secondTc ) {
-                    @SuppressWarnings("unchecked")
-                    protected Table getTable( Object obj ) {
-                        return new TableDictionaryImpl( (Dictionary)obj ) ;
+            } else if (Iterator.class.isAssignableFrom(cls)) {
+                result = new TypeConverterListBase( type, firstTc ) {
+                    protected Iterator getIterator( Object obj ) {
+                        return (Iterator)obj ;
                     }
                 } ;
-            } else {
+            } else if (Enumeration.class.isAssignableFrom(cls)) {
+                result = new TypeConverterListBase( type, firstTc ) {
+                    @SuppressWarnings("unchecked")
+                    protected Iterator getIterator( Object obj ) {
+                        return new EnumerationAdapter( (Enumeration)obj ) ;
+                    }
+                } ;
+            } else if (args.length != 2) {
                 result = handleClass( (Class<?>)type.getRawType(), mom ) ;
+            } else {
+                final Type secondType = args[0] ;
+                final TypeConverter secondTc = mom.getTypeConverter( secondType ) ;
+           
+                if (mom.registrationDebug()) {
+                    dputil.info( "secondType=", secondType, 
+                        "secondTc=", secondTc ) ;
+                }
+                
+                if (Map.class.isAssignableFrom(cls)) {
+                    result = new TypeConverterMapBase( type, firstTc, secondTc ) {
+                        @SuppressWarnings("unchecked")
+                        protected Table getTable( Object obj ) {
+                            return new TableMapImpl( (Map)obj ) ;
+                        }
+                    } ;
+                } else if (Dictionary.class.isAssignableFrom(cls)) {
+                    result = new TypeConverterMapBase( type, firstTc, secondTc ) {
+                        @SuppressWarnings("unchecked")
+                        protected Table getTable( Object obj ) {
+                            return new TableDictionaryImpl( (Dictionary)obj ) ;
+                        }
+                    } ;
+                } else {
+                    result = handleClass( (Class<?>)type.getRawType(), mom ) ;
+                }
+            }
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
             }
         }
 
