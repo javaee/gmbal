@@ -61,9 +61,14 @@ import java.math.BigDecimal ;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.IntrospectionException;
+import javax.management.MBeanException;
 import javax.management.MalformedObjectNameException ;
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
+import javax.management.ReflectionException;
 import javax.management.openmbean.SimpleType ;
 import javax.management.openmbean.OpenType ;
 import javax.management.openmbean.CompositeData ;
@@ -75,10 +80,11 @@ import com.sun.jmxa.generic.Algorithms ;
 
 
 import com.sun.jmxa.impl.TypeConverter ;
-import com.sun.jmxa.impl.AttributeDescriptor ;
 import com.sun.jmxa.generic.ClassAnalyzer ;
 import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
 
+import javax.management.DynamicMBean;
+import javax.management.MBeanInfo;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -823,6 +829,159 @@ public class JmxaTest extends TestCase {
                 fail( "Exception on close: " + ex ) ;
             }
         }
+    }
+    
+    @ManagedData
+    @Description( "A simple representation of ab address in America" ) 
+    public static class Address {
+        private int number ;
+        private String street ;
+        private String city ;
+        private String state ;
+        private int zipCode ;
+        
+        public Address( int number, String street, String city, String state,
+            int zipCode ) {
+            this.number = number ;
+            this.street = street ;
+            this.city = city ;
+            this.state = state ;
+            this.zipCode = zipCode ;
+        }
+        
+        @ManagedAttribute
+        @Description( "street number" )
+        public int number() {
+            return number ;
+        }
+        
+        @ManagedAttribute
+        @Description( "street nzme" )
+        public String street() {
+            return street ;
+        }
+
+        @ManagedAttribute
+        @Description( "city nzme" )
+        public String city() {
+            return city ;
+        }
+        
+        @ManagedAttribute
+        @Description( "state nzme" )
+        public String state() {
+            return state ;
+        }
+        
+        @ManagedAttribute
+        @Description( "zip code")
+        public int zipCode() {
+            return zipCode ;
+        }
+    }
+    
+    private static final Address testAddress = new Address(
+        1234, "maple street", "anywhere", "anystate", 99999 ) ;
+    
+    @ManagedData
+    @Description( "A simple representation of a person in America" ) 
+    public static class Person {
+        private String fn ;
+        private String ln ;
+        private Address addr ;
+        
+        public Person( String firstName, String lastName, Address address ) {
+            fn = firstName ;
+            ln = lastName ;
+            addr = address ;
+        }
+        
+        @ManagedAttribute
+        @Description( "first name" ) 
+        public String firstName() {
+            return fn ;
+        }
+        
+        @ManagedAttribute
+        @Description( "last name" )
+        public String lastName() {
+            return ln ;
+        }
+        
+        @ManagedAttribute
+        @Description( "address" )
+        public Address address() {
+            return addr ;
+        }
+    }
+    
+    private static final Person testPerson = new Person( "some", "one", 
+        testAddress ) ;
+    
+    private static final String NMD_TYPE = "NestedManagedDataTest" ;
+    
+    @ManagedObject
+    @MBeanType( type=NMD_TYPE ) 
+    @Description( "Nested Managed Data test")
+    public static class NestedManagedDataTest {
+        Person person ;
+        
+        public NestedManagedDataTest( Person person ) {
+            this.person = person ;
+        }
+        
+        @ManagedAttribute
+        @Description( "a person" )
+        public Person getPerson() {
+            return person ;
+        }
+    }
+    
+    private static final NestedManagedDataTest nmdt = new NestedManagedDataTest(
+        testPerson ) ;
+    
+    public void testNestedManagedData() throws AttributeNotFoundException, 
+        MBeanException, ReflectionException, InstanceNotFoundException, IntrospectionException {
+        
+        ManagedObjectManager mom = ManagedObjectManagerFactory.create(
+            ROOT_DOMAIN, null, null, "root" ) ;
+        mom.addTypePrefix("com.sun.jmxa");
+        
+        try {
+            mom.registerAtRoot( nmdt ) ;
+            ObjectName oname = mom.getObjectName( nmdt ) ;
+            String expectedName = 
+                "this.test:JMXAROOT=root,type=NestedManagedDataTest,name=NestedManagedDataTest" ;
+            ObjectName expectedObjectName = null ;
+            try {
+                expectedObjectName = new ObjectName(expectedName);
+            } catch (MalformedObjectNameException ex) {
+                fail( "Could not create ObjectName" ) ;
+            } 
+            
+            assertEquals( expectedObjectName, oname ) ;
+            
+            MBeanServer server = mom.getMBeanServer() ;
+            MBeanInfo mbi = server.getMBeanInfo( oname ) ;
+            System.out.println( mbi ) ;
+            
+            CompositeData person = (CompositeData) server.getAttribute( oname, 
+                "person" ) ;
+            assertEquals( person.get( "firstName" ), testPerson.firstName()) ;
+            assertEquals( person.get( "lastName" ), testPerson.lastName() ) ;
+            CompositeData address = (CompositeData) person.get("address" ) ;
+            assertEquals( address.get( "number"), testAddress.number() ) ;
+            assertEquals( address.get( "street"), testAddress.street() ) ;
+            assertEquals( address.get( "city"), testAddress.city() ) ;
+            assertEquals( address.get( "state"), testAddress.state() ) ;
+            assertEquals( address.get( "zipCode"), testAddress.zipCode() ) ;
+        } finally {
+            try {
+                mom.close();
+            } catch (IOException ex) {
+                fail( "Exception on close: " + ex ) ;
+            }
+        }    
     }
     
     public static Test suite() {

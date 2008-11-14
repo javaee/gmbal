@@ -25,8 +25,8 @@ public class DprintUtil {
     } ;
 
     public DprintUtil( Class selfClass ) {
-        sourceClassName = compressClassName( selfClass.getClass().getName() ) ;   
-        loggerName = selfClass.getClass().getPackage().getName() ;
+        sourceClassName = compressClassName( selfClass.getName() ) ;   
+        loggerName = selfClass.getPackage().getName() ;
     }        
     
     private static String compressClassName( String name )

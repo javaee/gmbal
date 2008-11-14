@@ -36,39 +36,31 @@
 
 package com.sun.jmxa.impl ;
 
-import com.sun.jmxa.generic.ClassAnalyzer;
-import java.lang.reflect.InvocationTargetException;
-import java.util.List ;
 
 import java.lang.reflect.Method ;
 import java.lang.reflect.Type ;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.ReflectionException ;
 
 
-import com.sun.jmxa.generic.Algorithms ;
 
-import com.sun.jmxa.ManagedAttribute ;
 import com.sun.jmxa.generic.DprintUtil;
 import com.sun.jmxa.generic.DumpIgnore;
 import com.sun.jmxa.generic.DumpToString;
 import com.sun.jmxa.generic.FacetAccessor;
 import com.sun.jmxa.generic.Pair;
-import com.sun.jmxa.generic.Predicate;
 import javax.management.MBeanException;
     
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
 
+    @DumpToString
     private Method _method ;
     private String _id ;
     private String _description ;
     private AttributeType _atype ;
-    private Type _type ;
-
     @DumpToString
+    private Type _type ;
     private TypeConverter _tc ;
 
     @DumpIgnore

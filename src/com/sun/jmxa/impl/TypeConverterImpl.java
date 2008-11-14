@@ -37,6 +37,8 @@
 package com.sun.jmxa.impl ;
 
 import com.sun.jmxa.generic.ClassAnalyzer;
+import com.sun.jmxa.generic.DumpToString ;
+
 import java.lang.reflect.Array ;
 import java.lang.reflect.Constructor ;
 import java.lang.reflect.Type ;
@@ -1064,7 +1066,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
     }
     
     // Basic support for all TypeConverters.
+    @DumpToString
     protected final Type dataType ;
+    @DumpToString
     protected final OpenType managedType ;
 
     protected TypeConverterImpl( final Type dataType, 

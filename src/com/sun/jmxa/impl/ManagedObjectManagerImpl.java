@@ -66,9 +66,9 @@ import com.sun.jmxa.Description ;
 import com.sun.jmxa.IncludeSubclass ;
 import com.sun.jmxa.InheritedAttribute ;
 import com.sun.jmxa.InheritedAttributes ;
+import com.sun.jmxa.MBeanType;
 import com.sun.jmxa.ManagedAttribute;
 import com.sun.jmxa.ManagedObjectManager;
-import com.sun.jmxa.ManagedObjectManagerFactory;
 import com.sun.jmxa.generic.DprintUtil;
 import com.sun.jmxa.generic.DumpIgnore;
 import com.sun.jmxa.generic.ObjectUtility;
@@ -80,9 +80,7 @@ import com.sun.jmxa.generic.Holder;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.SortedSet;
-import java.util.Set ;
 import java.util.TreeSet;
 
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
@@ -117,6 +115,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     @ManagedObject
+    @MBeanType( type="JMXAROOT")
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
         // No methods: will simply implement an AMX container
