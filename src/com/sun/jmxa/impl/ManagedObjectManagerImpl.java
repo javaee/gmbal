@@ -535,7 +535,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             final Class<?> annotatedClass = Algorithms.getFirst( 
                 ca.findClasses( forAnnotation( annotationClass ) ),
-                "No " + annotationClass.getName() + " annotation found" ) ;
+                "No " + annotationClass.getName() + " annotation found on" 
+                    + "ClassAnalyzer " + ca ) ;
 
             if (registrationDebug()) {
                 dputil.info( "annotatedClass = " + annotatedClass ) ;

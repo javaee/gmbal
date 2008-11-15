@@ -15,6 +15,8 @@ import java.util.logging.Logger;
  * @author ken
  */
 public class DprintUtil {
+    private static final boolean USE_LOGGER = false ;
+    
     private String sourceClassName ;
     private String loggerName ;
     private ThreadLocal<Stack<String>> currentMethod = new ThreadLocal<Stack<String>>() {
@@ -77,8 +79,12 @@ public class DprintUtil {
         String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
             + msg ;
         
-        Logger.getLogger( loggerName ).
-            logp( Level.INFO, fmsg, sourceClassName, mname ) ;
+        if (USE_LOGGER) {
+            Logger.getLogger( loggerName ).
+                logp( Level.INFO, fmsg, sourceClassName, mname ) ;
+        } else {
+            System.out.println( fmsg ) ;
+        }
     }
     
     private synchronized void dprint(String msg, Throwable exc ) {
@@ -86,8 +92,12 @@ public class DprintUtil {
         String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
             + msg ;
         
-        Logger.getLogger( loggerName ).
-            logp( Level.INFO, fmsg, sourceClassName, mname, exc ) ;
+        if (USE_LOGGER) {
+            Logger.getLogger( loggerName ).
+                logp( Level.INFO, fmsg, sourceClassName, mname, exc ) ;
+        } else {
+            System.out.println( fmsg ) ;
+        }
     }
 
     private String makeString( Object... args ) {
