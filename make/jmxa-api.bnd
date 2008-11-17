@@ -1,0 +1,3 @@
+-include bnd.properties
+Export-Package: com.sun.jmxa
+Private-Package: com.sun.jmxa.util

@@ -70,7 +70,7 @@ public class GenericConstructor<T> {
         final Class<?>... signature ) {
         this.resultType = type ;
         this.typeName = className ;
-        this.signature = signature ;
+        this.signature = signature.clone() ;
     }
 
     @SuppressWarnings("unchecked")

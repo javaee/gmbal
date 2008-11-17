@@ -474,9 +474,6 @@ public class MBeanSkeleton {
 
         dputil = new DprintUtil( getClass() ) ;
 	this.mom = mom ;
-
-        final ManagedObject mo = annotatedClass.getAnnotation( 
-            ManagedObject.class ) ;
         
         mbeanType = annotatedClass.getAnnotation( MBeanType.class ) ;
         if (mbeanType == null) {

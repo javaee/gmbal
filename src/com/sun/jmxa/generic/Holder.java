@@ -67,8 +67,9 @@ public class Holder<T>
     @Override
     public boolean equals( Object obj )
     {
-	if (!(obj instanceof Holder))
-	    return false ;
+	if (!(obj instanceof Holder)) {
+            return false;
+        }
 
 	Holder other = Holder.class.cast( obj ) ;
 

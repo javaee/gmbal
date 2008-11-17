@@ -655,7 +655,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return adh.content() ;
     }
 
-    public <K,V> void putIfNotPresent( final Map<K,V> map,
+    public synchronized <K,V> void putIfNotPresent( final Map<K,V> map,
         final K key, final V value ) {
     
         if (registrationFineDebug()) {
@@ -707,7 +707,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 public boolean evaluate( Method method ) {
                     ManagedAttribute ma = method.getAnnotation( 
                         ManagedAttribute.class ) ;
-                    AttributeDescriptor ad = null ;
+                    AttributeDescriptor ad ;
                     if (ma == null) {
                         ad = getAttributeDescriptorIfInherited( method, ias ) ;
                     } else {

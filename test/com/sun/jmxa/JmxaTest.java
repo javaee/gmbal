@@ -848,7 +848,7 @@ public class JmxaTest extends TestCase {
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
             String expectedName = "this.test:foo=bar,type=RootType,name=MyRoot" ;
-            ObjectName expectedObjectName = null ;
+            ObjectName expectedObjectName = null;
             try {
                 expectedObjectName = new ObjectName(expectedName);
             } catch (MalformedObjectNameException ex) {

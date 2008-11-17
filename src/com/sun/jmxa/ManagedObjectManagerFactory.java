@@ -39,6 +39,7 @@ package com.sun.jmxa ;
 import java.lang.reflect.Method ;
 
 import com.sun.jmxa.util.GenericConstructor ;
+
 import javax.management.ObjectName;
 
 /** Factory used to create ManagedObjectManager instances.
