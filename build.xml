@@ -81,7 +81,7 @@
 	    <arg file="${findbugs.exclude.file}"/> -->
 	    <arg value="-sourcepath"/>
 	    <arg path="src:test"/>
-	    <arg file="dist/JMXAnnotations.jar"/>
+	    <arg file="dist/jmxa.jar"/>
 	    <arg file="build/test"/>
 	</exec>
     </target>
