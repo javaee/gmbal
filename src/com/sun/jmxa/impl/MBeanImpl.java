@@ -127,6 +127,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     }
  
     public String toString() {
+
         return "MBeanImpl[skel=" + skel
             + ",type=" + type + ",name=" + name
             + ",oname=" + oname ;
@@ -293,8 +294,8 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     private FacetAccessor facetAccessorDelegate = 
         new FacetAccessorImpl( this ) ;
     
-    public <T> T facet(Class<T> cls) {
-        return facetAccessorDelegate.facet( cls ) ;
+    public <T> T facet(Class<T> cls, boolean debug ) {
+        return facetAccessorDelegate.facet( cls, debug ) ;
     }
 
     public <T> void addFacet(T obj) {
@@ -305,8 +306,8 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         facetAccessorDelegate.removeFacet( cls ) ;
     }
 
-    public Object invoke(Method method, Object... args) {
-        return facetAccessorDelegate.invoke( method, args ) ;
+    public Object invoke(Method method, boolean debug, Object... args) {
+        return facetAccessorDelegate.invoke( method, debug, args ) ;
     }
 
     public Collection<Object> facets() {

@@ -91,8 +91,9 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
         
     String getStrippedName( Class<?> cls ) ;
     
-    Predicate<AnnotatedElement> forAnnotation( 
-        final Class<? extends Annotation> annotation ) ;
+    <T extends AnnotatedElement> Predicate<T> forAnnotation( 
+        Class<? extends Annotation> annotation,
+        Class<T> elemType ) ;
     
     FacetAccessor getFacetAccessor( Object obj ) ;
     

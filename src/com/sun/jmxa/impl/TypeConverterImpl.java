@@ -150,9 +150,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	    final Class cjt = getJavaClass( cot ) ;
 	    final Object temp = Array.newInstance( cjt, 0 ) ;
 	    return temp.getClass() ;
-	} else if (ot instanceof TabularData) {
+	} else if (ot instanceof TabularType) {
 	    return TabularData.class ;
-	} else if (ot instanceof CompositeData) {
+	} else if (ot instanceof CompositeType) {
 	    return CompositeData.class ;
 	} else {
 	    throw new IllegalArgumentException( "Unsupported OpenType " + ot ) ;
@@ -702,7 +702,6 @@ public abstract class TypeConverterImpl implements TypeConverter {
         }
         
         TypeConverter result = null ;
-        
         try {
             final Collection<AttributeDescriptor> minfos = analyzeManagedData(
                 cls, mom ) ;
@@ -713,27 +712,45 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             result = new TypeConverterImpl( cls, myType ) {
                 public Object toManagedEntity( Object obj ) {
-                    Map<String,Object> data = new HashMap<String,Object>() ;
-                    for (AttributeDescriptor minfo : minfos ) {
-                        if (minfo.isApplicable( obj )) {
-                            FacetAccessor fa = mom.getFacetAccessor( obj ) ;
-                            Object value;
-                            try {
-                                value = minfo.get(fa, mom.runtimeDebug());
-                            } catch (JMException ex) {
-                                throw new IllegalArgumentException( 
-                                    "Exception in getting attribute " + minfo, ex ) ;
+                    if (mom.runtimeDebug()) {
+                        dputil.enter( "(ManagedData):toManagedEntity", "obj=", obj ) ;
+                    }
+                    
+                    Object runResult = null ;
+                    try {
+                        Map<String,Object> data = new HashMap<String,Object>() ;
+                        for (AttributeDescriptor minfo : minfos) {
+                            if (mom.runtimeDebug()) {
+                                dputil.info( "Fetching attribute " + minfo.id() ) ;
+                            }
+                            
+                            Object value = null ;
+                            if (minfo.isApplicable( obj )) {
+                                try {
+                                    FacetAccessor fa = mom.getFacetAccessor( obj ) ;
+                                    value = minfo.get(fa, mom.runtimeDebug());
+                                } catch (JMException ex) {
+                                    if (mom.runtimeDebug()) {
+                                        dputil.exception( "Error", ex) ;
+                                    }
+                                }
                             }
 
                             data.put( minfo.id(), value ) ;
                         }
-                    }
 
-                    try {
-                        return new CompositeDataSupport( myType, data ) ;
-                    } catch (OpenDataException exc) {
-                        throw new IllegalArgumentException( exc ) ;
+                        try {
+                            runResult = new CompositeDataSupport( myType, data ) ;
+                        } catch (OpenDataException exc) {
+                            throw new IllegalArgumentException( exc ) ;
+                        }
+                    } finally {
+                        if (mom.runtimeDebug()) {
+                            dputil.exit( runResult ) ;
+                        }
                     }
+                    
+                    return runResult ;
                 }
             } ;
         } catch (RuntimeException exc) {

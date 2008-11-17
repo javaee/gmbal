@@ -39,6 +39,7 @@ package com.sun.jmxa ;
 import java.lang.reflect.Method ;
 
 import com.sun.jmxa.util.GenericConstructor ;
+import javax.management.ObjectName;
 
 /** Factory used to create ManagedObjectManager instances.
  */
@@ -49,7 +50,7 @@ public final class ManagedObjectManagerFactory {
         new GenericConstructor<ManagedObjectManager>( 
             ManagedObjectManager.class, 
             "com.sun.jmxa.impl.ManagedObjectManagerImpl",
-                String.class, String.class, Object.class, String.class ) ;
+                String.class, ObjectName.class, Object.class, String.class ) ;
 
     /** Convenience method for getting access to a method through reflection.
      * Same as Class.getDeclaredMethod, but only throws RuntimeExceptions.
@@ -75,18 +76,20 @@ public final class ManagedObjectManagerFactory {
      * @param mode 
      * @param domain The domain to use for all ObjectNames created when
      * MBeans are registered.
-     * @param rootParentName The comma-separated list of name=value pairs
-     * that represents the parent of the root.  The parent is outside of
+     * @param rootParentName The JMX ObjectName of the parent of the root.
+     * The parent is outside of
      * the control of this ManagedObjectManager.  This means that the root is
      * a child of this parent, as represented by the rootParentName.  This 
-     * may be an empty string if the root has no parent.
+     * may be null if the root has no parent.
      * @param rootObject The root managed object to be used as the root of
-     * all MBeans created by this ManagedObjectManager.
-     * @param rootName The name to be used for the root object.
+     * all MBeans created by this ManagedObjectManager.   If this is null,
+     * a JMXA parent named JMXAROOT will be created.
+     * @param rootName The name to be used for the root object.  If this is 
+     * null, the name will be derived from the rootObject.
      * @return A new ManagedObjectManager.
      */
     public static ManagedObjectManager create( 
-        final String domain, final String rootParentName,
+        final String domain, final ObjectName rootParentName,
         final Object rootObject, final String rootName ) {
 	
         return cons.create( domain, rootParentName, rootObject, rootName ) ;
@@ -100,16 +103,17 @@ public final class ManagedObjectManagerFactory {
      * @param mode 
      * @param domain The domain to use for all ObjectNames created when
      * MBeans are registered.
-     * @param rootParentName The comma-separated list of name=value pairs
-     * that represents the parent of the root.  The parent is outside of
+     * @param rootParentName The JMX ObjectName of the parent of the root.
+     * The parent is outside of
      * the control of this ManagedObjectManager.  This means that the root is
-     * a child of this parent, as represented by the rootParentName.
+     * a child of this parent, as represented by the rootParentName.  This 
+     * may be null if the root has no parent.
      * @param rootObject The root managed object to be used as the root of
      * all MBeans created by this ManagedObjectManager.
      * @return The ManagedObjectManager.
      */
     public static ManagedObjectManager create( 
-        final String domain, final String rootParentName,
+        final String domain, final ObjectName rootParentName,
         final Object rootObject ) {
 	
         return create( domain, rootParentName, rootObject, null ) ;

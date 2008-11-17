@@ -44,10 +44,6 @@ import java.lang.reflect.AnnotatedElement ;
 import java.lang.reflect.Method ;
 
 import java.lang.annotation.Annotation ;
-
-import com.sun.jmxa.generic.Predicate ;
-import com.sun.jmxa.generic.Graph ;
-
     
 /** Analyzes class inheritance hiearchy and provides methods for searching for
  * classes and methods.
@@ -121,7 +117,7 @@ public class ClassAnalyzer {
 	this( new Graph<Class<?>>( classes, finder ) ) ;
     }
 
-    public List<Class<?>> findClasses( Predicate pred ) {
+    public List<Class<?>> findClasses( Predicate<Class> pred ) {
 	final List<Class<?>> result = new ArrayList<Class<?>>() ;
 	for (Class<?> c : classInheritance) {
             if (pred.evaluate( c )) {
@@ -134,7 +130,7 @@ public class ClassAnalyzer {
 
     // Tested by testFindMethod
     // Tested by testGetAnnotatedMethods
-    public List<Method> findMethods( Predicate pred ) {
+    public List<Method> findMethods( Predicate<Method> pred ) {
 	final List<Method> result = new ArrayList<Method>() ;
 	for (Class<?> c : classInheritance) {
 	    for (Method m : c.getDeclaredMethods()) {
@@ -145,16 +141,6 @@ public class ClassAnalyzer {
 	}
 
 	return result ;
-    }
-    
-    public Predicate<AnnotatedElement> forAnnotation( 
-        final Class<? extends Annotation> annotation ) {
-
-        return new Predicate<AnnotatedElement>() {
-            public boolean evaluate( AnnotatedElement elem ) {
-                return elem.getAnnotation( annotation ) != null ;
-            }
-        } ;
     }
     
     @Override

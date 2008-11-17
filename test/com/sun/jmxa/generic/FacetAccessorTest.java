@@ -49,8 +49,8 @@ public class FacetAccessorTest extends TestCase {
             this.delegate = new FacetAccessorImpl( this ) ;
         }
         
-        public <T> T facet(Class<T> cls) {
-            return delegate.facet( cls ) ;
+        public <T> T facet(Class<T> cls, boolean debug) {
+            return delegate.facet( cls, debug ) ;
         }
 
         public <T> void addFacet(T obj) {
@@ -61,8 +61,8 @@ public class FacetAccessorTest extends TestCase {
             delegate.removeFacet( cls ) ;
         }
 
-        public Object invoke(Method method, Object... args) {
-            return delegate.invoke( method, args ) ;
+        public Object invoke(Method method, boolean debug, Object... args) {
+            return delegate.invoke( method, debug, args ) ;
         }
         
         public int operation( int arg ) {
@@ -116,14 +116,14 @@ public class FacetAccessorTest extends TestCase {
         System.out.println("facet");
         FacetAccessor fa = new TestClass() ;
 
-        assertEquals( fa, fa.facet( TestClass.class ) ) ;
-        assertEquals( fa, fa.facet( A.class ) ) ;
-        assertNull( fa.facet( B.class ) ) ;
+        assertEquals( fa, fa.facet( TestClass.class, false ) ) ;
+        assertEquals( fa, fa.facet( A.class, false ) ) ;
+        assertNull( fa.facet( B.class, false ) ) ;
         B b = new BImpl( 10 ) ;
         fa.addFacet( b ) ;
-        assertEquals( b, fa.facet( B.class ) ) ;
+        assertEquals( b, fa.facet( B.class, false ) ) ;
         fa.removeFacet( B.class ) ;
-        assertNull( fa.facet( B.class ) ) ;
+        assertNull( fa.facet( B.class, false ) ) ;
     }
 
     /**
@@ -135,14 +135,14 @@ public class FacetAccessorTest extends TestCase {
         B b = new BImpl( 10 ) ;
         fa.addFacet( b ) ;
         
-        assertEquals( fa.invoke( a_operation, 2  ), 4 ) ;
-        assertEquals( fa.invoke( add, 21, 17 ), 38 ) ;
-        assertEquals( fa.invoke( b_operation, 2 ), 20 ) ;
-        assertEquals( fa.invoke( sub, 21, 17 ), 4 ) ;
+        assertEquals( fa.invoke( a_operation, false, 2  ), 4 ) ;
+        assertEquals( fa.invoke( add, false, 21, 17 ), 38 ) ;
+        assertEquals( fa.invoke( b_operation, false, 2 ), 20 ) ;
+        assertEquals( fa.invoke( sub, false, 21, 17 ), 4 ) ;
         
         b = new BImpl( 100 ) ;
         fa.addFacet( b ) ;
-        assertEquals( fa.invoke( b_operation, 2 ), 200 ) ;
+        assertEquals( fa.invoke( b_operation, false, 2 ), 200 ) ;
     }
 
 }

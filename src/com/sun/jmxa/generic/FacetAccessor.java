@@ -23,7 +23,7 @@ public interface FacetAccessor {
      * @return Instance of cls for this facet.  Null if no such
      * facet is available.
      */
-    <T> T facet( Class<T> cls ) ;
+    <T> T facet( Class<T> cls, boolean debug ) ;
     
     /** Add a facet to the object.  The type T must not already
      * be available as a facet.
@@ -52,5 +52,5 @@ public interface FacetAccessor {
      * @param args Arguments to the method.
      * @return restult of the invoke call.
      */
-    Object invoke( Method method, Object... args ) ;
+    Object invoke( Method method, boolean debug, Object... args ) ;
 }

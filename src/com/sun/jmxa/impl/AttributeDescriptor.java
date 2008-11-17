@@ -112,7 +112,12 @@ public class AttributeDescriptor {
         Object result = null;
         
         try {
-            result = _tc.toManagedEntity(fa.invoke(_method));
+            result = _tc.toManagedEntity(fa.invoke(_method, debug ));
+        } catch (RuntimeException exc) {
+            if (debug) {
+                dputil.exception( "Error:", exc ) ;
+            }
+            throw exc ;
         } finally {
             if (debug) {
                 dputil.exit( result ) ;
@@ -132,9 +137,16 @@ public class AttributeDescriptor {
         }
         
         try {
-            target.invoke(_method, _tc.fromManagedEntity(value));
+            target.invoke(_method, debug, _tc.fromManagedEntity(value));
+        } catch (RuntimeException exc) {
+            if (debug) {
+                dputil.exception( "Error:", exc ) ;
+            }
+            throw exc ;
         } finally {
-            dputil.exit() ;
+            if (debug) {
+                dputil.exit() ;
+            }
         }
     }
     

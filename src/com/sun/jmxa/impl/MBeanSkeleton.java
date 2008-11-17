@@ -270,7 +270,7 @@ public class MBeanSkeleton {
         
         try {
             final List<Method> annotatedMethods = ca.findMethods(
-                mom.forAnnotation( ObjectNameKey.class )) ;
+                mom.forAnnotation( ObjectNameKey.class, Method.class )) ;
             
             if (annotatedMethods.size() == 0) {
                 return ;
@@ -353,7 +353,8 @@ public class MBeanSkeleton {
                         dputil.info( "Before invoke: margs=", Arrays.asList( margs ) ) ;
                     }
 
-                    Object result = target.invoke( m, margs ) ;
+                    Object result = target.invoke( m, mom.runtimeDebug(),
+                        margs ) ;
 
                     if (mom.runtimeDebug()) {
                         dputil.info( "After invoke: result=", result ) ;
@@ -419,7 +420,7 @@ public class MBeanSkeleton {
             // Scan for all methods annotation with @ManagedOperation, 
             // including inherited methods.
             final List<Method> ops = ca.findMethods( mom.forAnnotation( 
-                ManagedOperation.class ) ) ;
+                ManagedOperation.class, Method.class ) ) ;
             for (Method m : ops) {             
                 final Pair<Operation,OpenMBeanOperationInfo> data = 
                     makeOperation( m ) ;
@@ -753,6 +754,10 @@ public class MBeanSkeleton {
     
     public MBeanInfo getMBeanInfo() {
 	return mbInfo ;
+    }
+    
+    public ManagedObjectManagerInternal mom() {
+        return mom ;
     }
 }
 

@@ -228,7 +228,7 @@ public class JmxaTest extends TestCase {
 
     public void testGetInheritanceChain() {
         ClassAnalyzer ca = new ClassAnalyzer( I.class ) ;
-        List<Class<?>> res = ca.findClasses( Algorithms.TRUE() ) ;
+        List<Class<?>> res = ca.findClasses( Algorithms.TRUE( Class.class ) ) ;
 	System.out.println( "Inheritance chain for class " + I.class.getName() 
 	    + " is " + res ) ;
 
@@ -344,32 +344,45 @@ public class JmxaTest extends TestCase {
 	assertEquals( expectedResult, resultMethod ) ;
     }
 
-    public void testGetAnnotatedMethods() {
-        ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-        List<Method> methods = ca.findMethods( ca.forAnnotation( Test2.class ) ) ;
-	Set<Method> methodSet = new HashSet<Method>( methods ) ;
+    public void testGetAnnotatedMethods() throws IOException {
+        ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
+            ManagedObjectManagerFactory.create("master", null, null ) ;
+        try {
+            ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
+            List<Method> methods = ca.findMethods( mom.forAnnotation( Test2.class,
+                Method.class) ) ;
+            Set<Method> methodSet = new HashSet<Method>( methods ) ;
 
-	Method[] expectedMethods = { 
-	    getMethod( DD.class, "setFooD", int.class ),
-	    getMethod( CC.class, "getFooC" ),
-	    getMethod( AA.class, "barA" ),
-	    getMethod( AA.class, "barA", int.class ) } ;
+            Method[] expectedMethods = { 
+                getMethod( DD.class, "setFooD", int.class ),
+                getMethod( CC.class, "getFooC" ),
+                getMethod( AA.class, "barA" ),
+                getMethod( AA.class, "barA", int.class ) } ;
 
-	List<Method> expectedMethodList = Arrays.asList( expectedMethods ) ;
-	Set<Method> expectedMethodSet = new HashSet<Method>( expectedMethodList ) ;
+            List<Method> expectedMethodList = Arrays.asList( expectedMethods ) ;
+            Set<Method> expectedMethodSet = new HashSet<Method>( expectedMethodList ) ;
 
-	assertEquals( expectedMethodSet, methodSet ) ;
+            assertEquals( expectedMethodSet, methodSet ) ;
+        } finally {
+            mom.close() ;
+        }
     }
 
-    public void testGetClassAnnotations() {
+    public void testGetClassAnnotations() throws IOException {
         List<Class<?>> expectedResult = new ArrayList<Class<?>>() ;
         expectedResult.add( CC.class ) ;
         expectedResult.add( AA.class ) ;
+        ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
+            ManagedObjectManagerFactory.create("master", null, null ) ;
+        try {
+            ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
+            List<Class<?>> classes = ca.findClasses( mom.forAnnotation( Test3.class,
+                Class.class ) ) ;
 
-        ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-        List<Class<?>> classes = ca.findClasses( ca.forAnnotation( Test3.class ) ) ;
-
-	assertEquals( classes, expectedResult ) ;
+            assertEquals( classes, expectedResult ) ;
+        } finally {
+            mom.close() ;
+        }
     }
 
     private static Method getter_fooA = getMethod( AA.class, "getFooA" ) ;
@@ -496,7 +509,7 @@ public class JmxaTest extends TestCase {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
                 .create( 
-                    "ORBTest", "", null ) ;
+                    "ORBTest", null, null ) ;
         try {
             for (Object[] data : primitiveTCTestData) {
                 Class cls = (Class)data[0] ;
@@ -637,27 +650,47 @@ public class JmxaTest extends TestCase {
 	}
     }
 
-    @SuppressWarnings({"unchecked"})
+    public class ManagedObjectExampleDerived extends ManagedObjectExample {
+        public ManagedObjectExampleDerived( int num, String name ) {
+            super( num, name ) ;
+        }
+    }
+    
     public void testManagedObjectExample() {
-	final String domain = "ORBTest" ;
-        final String rootParentName = "" ;
-	final int num = 12 ;
+        final int num = 12 ;
 	final String name = "Liskov" ;
 	final ManagedObjectExample rootObject = 
             new ManagedObjectExample( num, name ) ;
+        managedObjectExampleHelper( rootObject ) ;
+    }
+    
+    public void testManagedObjectExampleDerived() {
+        final int num = 12 ;
+	final String name = "Liskov" ;
+	final ManagedObjectExample rootObject = 
+            new ManagedObjectExampleDerived( num, name ) ;
+        managedObjectExampleHelper( rootObject ) ; 
+    }
+    
+    @SuppressWarnings({"unchecked"})
+    public void managedObjectExampleHelper( ManagedObjectExample root ) {
+	final String domain = "ORBTest" ;
+	final int num = 12 ;
+	final String name = "Liskov" ;
+
 	final String propName = "ObjectNumber" ;
 	final int onum = 1 ;
 
 	final ManagedObjectManager mom = ManagedObjectManagerFactory.create( 
-            domain, rootParentName, rootObject ) ;
+            domain, null, root ) ;
 
 	try {
             mom.setRegistrationDebug( 
                 ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
 	    // mom.register( moe, propName + "=" + onum ) ;
-            System.out.println( mom.dumpSkeleton( rootObject ) ) ;
+            System.out.println( mom.dumpSkeleton( root ) ) ;
 
-	    ObjectName moeName = mom.getObjectName( rootObject ) ;
+	    ObjectName moeName = mom.getObjectName( root ) ;
 	    assertEquals( domain, moeName.getDomain() ) ;
 	    
 	    Hashtable expectedProperties = new Hashtable() ;
@@ -675,11 +708,11 @@ public class JmxaTest extends TestCase {
 	    Object obj = mbs.getAttribute( moeName, "mde" ) ;
 	    assertTrue( obj instanceof CompositeData ) ;
 	    CompositeData compData = (CompositeData)obj ;
-	    assertEquals( rootObject.getMde().name(), compData.get(
+	    assertEquals( root.getMde().name(), compData.get(
                 MDE_ATTR_ID_NAME ) ) ;
-	    assertEquals( rootObject.getMde().date(), compData.get( 
+	    assertEquals( root.getMde().date(), compData.get( 
                 MDE_ATTR_ID_DATE ) ) ;
-            assertEquals( rootObject.getMde().getString(), compData.get( 
+            assertEquals( root.getMde().getString(), compData.get( 
                 MDE_ATTR_ID_GET_STRING ) ) ;
 
 	    // Validate operations
@@ -688,7 +721,7 @@ public class JmxaTest extends TestCase {
 	    fail( "Caught exception on register " + exc ) ;
 	} finally {
 	    try {
-		mom.unregister( rootObject ) ;
+                mom.close() ;
 	    } catch (Exception exc) {
 		exc.printStackTrace() ;
 		fail( "Caught exception on unregister " + exc ) ;
@@ -702,7 +735,7 @@ public class JmxaTest extends TestCase {
     public void testManagedDataTypeConverter() {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
-                .create( "ORBTest", "", null ) ;
+                .create( "ORBTest", null, null ) ;
     
         try {
             TypeConverter tc = mom.getTypeConverter( ManagedDataExample.class ) ;
@@ -744,7 +777,7 @@ public class JmxaTest extends TestCase {
     }
 
     private static final String ROOT_DOMAIN = "this.test" ;
-    private static final String ROOT_PARENT_NAME = "foo=bar" ;
+    private static final String ROOT_PARENT_NAME = ROOT_DOMAIN + ":foo=bar" ;
     
     private static final String ROOT_TYPE = "RootType" ;
     
@@ -775,12 +808,13 @@ public class JmxaTest extends TestCase {
         }
     }
         
-    public void testRootMBean1() {
+    public void testRootMBean1() throws MalformedObjectNameException {
         final int value = 42 ;
         final String rootName = "MyRoot" ;
         final Object rootObject = new RootObject( value ) ;
         ManagedObjectManager mom = ManagedObjectManagerFactory.create(
-            ROOT_DOMAIN, ROOT_PARENT_NAME, rootObject, rootName ) ;
+            ROOT_DOMAIN, new ObjectName( ROOT_PARENT_NAME ), 
+            rootObject, rootName ) ;
         mom.addTypePrefix("com.sun.jmxa");
         
         try {
@@ -803,12 +837,12 @@ public class JmxaTest extends TestCase {
         }
     }
     
-    public void testRootMBean2() {
+    public void testRootMBean2() throws MalformedObjectNameException {
         final int value = 42 ;
         final String rootName = "MyRoot" ;
         final Object rootObject = new NamedRootObject( rootName, value ) ;
         ManagedObjectManager mom = ManagedObjectManagerFactory.create(
-            ROOT_DOMAIN, ROOT_PARENT_NAME, rootObject ) ;
+            ROOT_DOMAIN, new ObjectName( ROOT_PARENT_NAME ), rootObject ) ;
         mom.addTypePrefix("com.sun.jmxa");
         
         try {

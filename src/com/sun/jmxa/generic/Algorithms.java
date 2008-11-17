@@ -126,7 +126,7 @@ public final class Algorithms {
         } ;
     }
     
-    public static <T> Predicate<T> FALSE(
+    public static <T> Predicate<T> FALSE( Class<T> cls
         ) {
         
         return new Predicate<T>() {
@@ -136,7 +136,7 @@ public final class Algorithms {
         } ;
     } ;
     
-    public static <T> Predicate<T> TRUE(
+    public static <T> Predicate<T> TRUE( Class<T> cls
         ) {
         
         return new Predicate<T>() {

@@ -19,8 +19,9 @@ public class AMXImpl implements AMX {
     public Container getContainer() {
         MBeanImpl parent = mbean.parent() ;
         if (parent != null) {
-            return parent.facet( Container.class ) ;
+            return parent.facet( Container.class, false ) ;
         } else {
+            // XXX Need to get to rootParentName
             return null ;
         }
     }

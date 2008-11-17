@@ -31,7 +31,7 @@ public class ContainerImpl extends AMXImpl implements Container {
         new UnaryFunction<MBeanImpl,AMX>() {
             @SuppressWarnings("unchecked")
             public AMX evaluate( MBeanImpl mb ) {
-                return mb.facet( AMX.class ) ;
+                return mb.facet( AMX.class, false ) ;
             }
         } ;
 
@@ -58,7 +58,7 @@ public class ContainerImpl extends AMXImpl implements Container {
         Map<String,MBeanImpl> contents = mbean.children().get( j2eeType ) ;
         return Algorithms.getOne( contents.values(), "No MBeans found", 
             "More than one MBean of type " + j2eeType + " found" )
-            .facet( AMX.class ) ;
+            .facet( AMX.class, false ) ;
     }
 
     public Set<AMX> getContaineeSet(String j2eeType) {
@@ -85,13 +85,14 @@ public class ContainerImpl extends AMXImpl implements Container {
         for (String str : j2eeTypes ) {
             MBeanImpl mb = mbean.children().get( str ).get( name ) ;
             if (mb != null) {
-                result.add( mb.facet( AMX.class ) ) ;
+                result.add( mb.facet( AMX.class, false ) ) ;
             }
         }
         return result ;    }
 
     public AMX getContainee(String j2eeType, String name) {
-        return mbean.children().get( j2eeType ).get( name ).facet( AMX.class ) ;
+        return mbean.children().get( j2eeType ).get( name ).facet( AMX.class,
+            false ) ;
     }
 
 }

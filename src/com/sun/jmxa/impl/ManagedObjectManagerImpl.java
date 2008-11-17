@@ -123,7 +123,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
     public ManagedObjectManagerImpl( 
         final String domain, 
-        final String rootParentName,
+        final ObjectName rootParentName,
         final Object rootObject,
         final String rootName ) {
         
@@ -318,6 +318,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 "parent=", parent, 
                 "obj=", obj,
                 "name=", name ) ;
+        }
+        
+        if (obj instanceof String) {
+            throw new IllegalArgumentException( "obj argument is a String: " 
+                + obj + " : was a call to registerAtRoot intended here?" ) ;
         }
         
         // Construct the MBean
@@ -534,7 +539,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
 
             final Class<?> annotatedClass = Algorithms.getFirst( 
-                ca.findClasses( forAnnotation( annotationClass ) ),
+                ca.findClasses( forAnnotation( annotationClass, Class.class ) ),
                 "No " + annotationClass.getName() + " annotation found on" 
                     + "ClassAnalyzer " + ca ) ;
 
@@ -579,9 +584,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
         
         try {
-            final Predicate<AnnotatedElement> pred = Algorithms.or( 
-                forAnnotation( InheritedAttribute.class ),
-                forAnnotation( InheritedAttributes.class ) ) ;
+            final Predicate<Class> pred = Algorithms.or( 
+                forAnnotation( InheritedAttribute.class, Class.class ),
+                forAnnotation( InheritedAttributes.class, Class.class ) ) ;
 
             // Construct list of classes annotated with InheritedAttribute or
             // InheritedAttributes.
@@ -781,14 +786,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         typePrefixes.add( arg ) ;
     }
     
-    public synchronized Predicate<AnnotatedElement> forAnnotation( 
-        final Class<? extends Annotation> annotation ) {
+    public synchronized <T extends AnnotatedElement> Predicate<T> forAnnotation( 
+        final Class<? extends Annotation> annotation,
+        final Class<T> cls ) {
 
-        return new Predicate<AnnotatedElement>() {
-            public boolean evaluate( AnnotatedElement elem ) {
+        return new Predicate<T>() {
+            public boolean evaluate( T elem ) {
                 return getAnnotation( elem, annotation ) != null ;
             }
         } ;
     }
-
 }

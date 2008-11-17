@@ -6,7 +6,6 @@
 package com.sun.jmxa.generic;
 
 import java.util.Stack;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,7 +26,7 @@ public class DprintUtil {
     } ;
 
     public DprintUtil( Class selfClass ) {
-        sourceClassName = compressClassName( selfClass.getName() ) ;   
+        sourceClassName = compressClassName( selfClass.getName() ) ;  
         loggerName = selfClass.getPackage().getName() ;
     }        
     
@@ -41,62 +40,29 @@ public class DprintUtil {
             return name;
         }
     }
-    
-    // Return a compressed representation of the thread name.  This is particularly
-    // useful on the server side, where there are many SelectReaderThreads, and
-    // we need a short unambiguous name for such threads.
-    public static String getThreadName( Thread thr ) 
-    {
-	if (thr == null) {
-            return "null";
-        }
-
-	// This depends on the formatting in SelectReaderThread and CorbaConnectionImpl.
-	// Pattern for SelectReaderThreads:
-	// SelectReaderThread CorbaConnectionImpl[ <host> <post> <state>]
-	// Any other pattern in the Thread's name is just returned.
-	String name = thr.getName() ;
-	StringTokenizer st = new StringTokenizer( name ) ;
-	int numTokens = st.countTokens() ;
-	if (numTokens != 5) {
-            return name;
-        }
-
-	String[] tokens = new String[numTokens] ;
-	for (int ctr=0; ctr<numTokens; ctr++ ) {
-            tokens[ctr] = st.nextToken();
-        }
-
-	if( !tokens[0].equals("SelectReaderThread")) {
-            return name;
-        }
-
-	return "SelectReaderThread[" + tokens[2] + ":" + tokens[3] + "]" ;
-    }
  
     private synchronized void dprint(String msg) {
-        String mname = currentMethod.get().peek() ;
-        String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
-            + msg ;
-        
+        String prefix = "(" + Thread.currentThread().getName() + "): " ;
+  
         if (USE_LOGGER) {
+            String mname = currentMethod.get().peek() ;
             Logger.getLogger( loggerName ).
-                logp( Level.INFO, fmsg, sourceClassName, mname ) ;
+                logp( Level.INFO, prefix + msg, sourceClassName, mname ) ;
         } else {
-            System.out.println( fmsg ) ;
+            System.out.println( prefix + sourceClassName + msg ) ;
         }
     }
     
     private synchronized void dprint(String msg, Throwable exc ) {
-        String mname = currentMethod.get().peek() ;
-        String fmsg = "(" + getThreadName( Thread.currentThread() ) + "): " 
-            + msg ;
+        String prefix = "(" + Thread.currentThread().getName() + "): " ;
         
         if (USE_LOGGER) {
+            String mname = currentMethod.get().peek() ;
             Logger.getLogger( loggerName ).
-                logp( Level.INFO, fmsg, sourceClassName, mname, exc ) ;
+                logp( Level.INFO, prefix + msg, sourceClassName, mname, exc ) ;
         } else {
-            System.out.println( fmsg ) ;
+            System.out.println( prefix + sourceClassName + msg + ": " + exc ) ;
+            exc.printStackTrace() ;
         }
     }
 

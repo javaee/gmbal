@@ -59,7 +59,7 @@ public class MBeanTree {
     private Map<Object,MBeanImpl> objectMap ;
     private Map<ObjectName,Object> objectNameMap ;
     private String domain ;
-    private String rootParentName ;
+    private ObjectName rootParentName ;
     private String typeString ; // What string is used for the type of the 
                                 // type name/value pair?
     private ManagedObjectManagerInternal mom ;
@@ -84,7 +84,7 @@ public class MBeanTree {
     
     public MBeanTree( final ManagedObjectManagerInternal mom,
         final String domain, 
-        final String rootParentName,
+        final ObjectName rootParentName,
         final String typeString, 
         final Object root,
         final String rootName ) {
@@ -156,8 +156,11 @@ public class MBeanTree {
         StringBuilder result = new StringBuilder() ;
         result.append( domain ) ;
         result.append( ":" ) ;
-        if (notEmpty( rootParentName )) {
-            result.append( rootParentName ) ;
+        if (rootParentName != null) {
+            String rpDomain = rootParentName.getDomain() ;
+            String rootKVP = rootParentName.toString().substring( 
+                rpDomain.length() + 1 ) ;
+            result.append( rootKVP ) ;
             result.append( "," ) ;
         }
         

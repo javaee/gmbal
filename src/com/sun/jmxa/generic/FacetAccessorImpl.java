@@ -8,7 +8,9 @@ package com.sun.jmxa.generic;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,23 +22,41 @@ public class FacetAccessorImpl implements FacetAccessor {
     private Object delegate ;
     private Map<Class<?>,Object> facetMap =
         new HashMap<Class<?>,Object>() ;
+    private DprintUtil dputil ;
     
     public FacetAccessorImpl( Object delegate ) {
         this.delegate = delegate ;
+        this.dputil = new DprintUtil( getClass() ) ;
     }
     
-    public <T> T facet(Class<T> cls) {
-        Object result ;
-        if (cls.isInstance(delegate)) {
-            result = delegate ;
-        } else {
-            result = facetMap.get( cls ) ;
+    public <T> T facet(Class<T> cls, boolean debug ) {
+        Object result = null ;
+        if (debug) {
+            dputil.enter( "facet", "cls=", cls ) ;
         }
         
-        if (result == null) {
-            return null ;
-        } else {
-            return cls.cast( result ) ;
+        try {
+            if (cls.isInstance(delegate)) {
+                result = delegate ;
+                if (debug) {
+                    dputil.info( "result is delegate" ) ;
+                }
+            } else {
+                result = facetMap.get( cls ) ;
+                if (debug) {
+                    dputil.info( "result=", result ) ;
+                }
+            }
+                    
+            if (result == null) {
+                return null ;
+            } else {
+                return cls.cast( result ) ;
+            }
+        } finally {
+            if (debug) {
+                dputil.exit( result ) ;
+            }
         }
     }
     
@@ -62,21 +82,40 @@ public class FacetAccessorImpl implements FacetAccessor {
                 } } ) ;
     }
 
-    public Object invoke(Method method, Object... args) {
-        Object target = facet( method.getDeclaringClass() ) ;
-        if (target == null) {
-            throw new IllegalArgumentException( 
-                "No facet available for method " + method ) ;
+    public Object invoke(Method method, boolean debug, Object... args) {
+        if (debug) {
+            dputil.enter( "invoke", "method=", method, "args=",
+                Arrays.asList( args ) ) ;
         }
+        
+        Object result = null ;
         try {
-            return method.invoke(target, args);
-        } catch (IllegalAccessException ex) {
-            throw new RuntimeException( "Exception on invocation", ex ) ;
-        } catch (IllegalArgumentException ex) {
-            throw new RuntimeException( "Exception on invocation", ex ) ;
-        } catch (InvocationTargetException ex) {
-            throw new RuntimeException( "Exception on invocation", ex ) ;
+            Object target = facet( method.getDeclaringClass(), debug ) ;
+            if (target == null) {
+                throw new IllegalArgumentException( 
+                    "No facet available for method " + method ) ;
+            }
+            
+            try {
+                result = method.invoke(target, args);
+            } catch (IllegalAccessException ex) {
+                throw new RuntimeException( "Exception on invocation", ex ) ;
+            } catch (IllegalArgumentException ex) {
+                throw new RuntimeException( "Exception on invocation", ex ) ;
+            } catch (InvocationTargetException ex) {
+                throw new RuntimeException( "Exception on invocation", ex ) ;
+            }
+        } catch (RuntimeException exc) {
+            if (debug) {
+                dputil.exception( "Exception in method invoke call", exc ) ;
+            }
+        } finally {
+            if (debug) {
+                dputil.exit( result ) ;
+            }
         }
+        
+        return result ;
     }
 
     public void removeFacet( Class<?> cls ) {
