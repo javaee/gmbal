@@ -1,0 +1,440 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<!-- 
+    Document   : FunctionalSpec
+    Created on : Nov 17, 2008, 4:25:47 PM
+    Author     : ken
+-->
+  <title>JMXA Functional Spec</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body>
+<h1>JMXA Functional Specification</h1>
+<br>
+by Ken Cavanaugh<br>
+Spec version .01<br>
+11/17/08<br>
+<br>
+<h2>Introduction</h2>
+JMXA is a runtime annotation processor that creates Open MBeans.<br>
+This is useful for creating a management API for existing code with
+minimal effort.<br>
+<br>
+Alignment<br>
+&nbsp;&nbsp;&nbsp; with JMX<br>
+&nbsp;&nbsp;&nbsp; with AMX<br>
+<br>
+Similar projects<br>
+&nbsp;&nbsp;&nbsp; JSR 255<br>
+&nbsp;&nbsp;&nbsp; JMX MXBeans in JDK 6<br>
+&nbsp;&nbsp;&nbsp; Spring annotations<br>
+&nbsp;&nbsp;&nbsp; The INRIA thing<br>
+<h2>The Management Data Model</h2>
+JMXA supports a simple hierarchical model of management data as defined
+in JSR 77 and AMX.<br>
+The components of the data model are as follows:<br>
+<ul>
+  <li>A ManagedObject is identified by an ObjectName</li>
+  <li>A ManagedObject has Attributes and Operations</li>
+  <li>A ManagedObject belongs to a type with metadata, represented by
+ModelMBeanInfo</li>
+  <li>A ManagedObject has a type String, which is related to the
+implementing class</li>
+  <li>A ManagedObject has a name String<br>
+  </li>
+  <li>All ManagedObjects have a parent ManagedObject (which is null for
+the root of the tree)</li>
+  <li>ManagedObjects may be leafs (no children) or containers (may
+contain children)</li>
+  <li>A ManagedObject may be uniquely identified by its parent, type,
+and name</li>
+  <li>An Attribute may be read only, write only, or read-write</li>
+  <li>An Attribute has an id</li>
+  <li>An Attribute returns (getter) or takes (setter) a value whose
+type is an OpenType</li>
+  <li>An Operation takes (optional) arguments and (optionally) returns
+a value, all of an OpenType<br>
+  </li>
+</ul>
+<br>
+managed object<br>
+&nbsp;&nbsp;&nbsp; objectNames<br>
+attributes<br>
+operations<br>
+notification<br>
+metadata<br>
+Federation<br>
+<h2>Interfaces</h2>
+Javadocs are <a href="dist/javadoc/index.html">available</a> as part
+of the JMXA project.&nbsp; <br>
+<br>
+There are basically 3 elements to the JMXA API:<br>
+<ol>
+  <li>class ManagedObjectManagerFactory, which provides factory methods
+for creating instance of the ManagedObjectManager interface.</li>
+  <li>interface ManagedObjectManager, which provides
+register/deregister methods (and a number of other capabilities).</li>
+  <li>A number of annotations.<br>
+  </li>
+</ol>
+<br>
+Here is a summary of the annotations:<br>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top; font-weight: bold;">Annotation
+Class<br>
+      </td>
+      <td style="vertical-align: top; font-weight: bold;">Annotation
+Fields<br>
+      </td>
+      <td style="vertical-align: top; font-weight: bold;">Applicable
+Element Type<br>
+      </td>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">Relation
+to JSR 255</span><br>
+      </td>
+      <td style="vertical-align: top; font-weight: bold;">Purpose<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@ManagedObject<br>
+      </td>
+      <td style="vertical-align: top;">none<br>
+      </td>
+      <td style="vertical-align: top;">Class or Interface<br>
+      </td>
+      <td style="vertical-align: top;">255 uses @MXBean<br>
+      </td>
+      <td style="vertical-align: top;">Defines a class whose instances
+are processed into MBeans.<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@ManagedData<br>
+      </td>
+      <td style="vertical-align: top;">String name (defaults to class
+name)<br>
+      </td>
+      <td style="vertical-align: top;">Class or Interface<br>
+      </td>
+      <td style="vertical-align: top;">MXBeans assume all methods are
+in CompositeData<br>
+      </td>
+      <td style="vertical-align: top;">Defines a class whose instances
+are process into Open data for Open Mbeans.<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@ManagedAttribute<br>
+      </td>
+      <td style="vertical-align: top;">String id (defaults to value
+from Method name)<br>
+      </td>
+      <td style="vertical-align: top;">Method<br>
+      </td>
+      <td style="vertical-align: top;">Same<br>
+      </td>
+      <td style="vertical-align: top;">Defines a method that represents
+an attribute either in ManagedData or ManagedObject<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@ManagedOperation<br>
+      </td>
+      <td style="vertical-align: top;">String id (defaults to value
+from Method name)<br>
+      </td>
+      <td style="vertical-align: top;">Method<br>
+      </td>
+      <td style="vertical-align: top;">Same<br>
+      </td>
+      <td style="vertical-align: top;">Defines a method that represents
+an operation in ManagedObject <br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@Description<br>
+      </td>
+      <td style="vertical-align: top;">String value<br>
+      </td>
+      <td style="vertical-align: top;">Class, Interface, or Method<br>
+      </td>
+      <td style="vertical-align: top;">Same (but JSR 255 includes I18N)<br>
+      </td>
+      <td style="vertical-align: top;">Defines the descriptive text
+associated with a Class, Interface, or Method<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@IncludeSubclass<br>
+      </td>
+      <td style="vertical-align: top;">Class[] value<br>
+      </td>
+      <td style="vertical-align: top;">Class or Interface<br>
+      </td>
+      <td style="vertical-align: top;">N/A<br>
+      </td>
+      <td style="vertical-align: top;">Lists subclasses of the
+annotated class that should also be scanned for annotations which are
+included only on instances of the appropriate type<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@ObjectNameKey<br>
+      </td>
+      <td style="vertical-align: top;">none<br>
+      </td>
+      <td style="vertical-align: top;">Method<br>
+      </td>
+      <td style="vertical-align: top;">N/A<br>
+      </td>
+      <td style="vertical-align: top;">Defines a method (must be a
+getter) whose result is the name of the MBean for an instance of the
+class<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@ParameterNames<br>
+      </td>
+      <td style="vertical-align: top;">String[] value (defaults to "")<br>
+      </td>
+      <td style="vertical-align: top;">Method<br>
+      </td>
+      <td style="vertical-align: top;">N/A (JSR 255 will take this
+information from reflection, which will make arg names available in JDK
+7)<br>
+      </td>
+      <td style="vertical-align: top;">Defines the method names to be
+used on an MBean operation<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@InheritedAttribute<br>
+      </td>
+      <td style="vertical-align: top;">
+      <ul>
+        <li>String description</li>
+        <li>String id (default "" which means take from method name)</li>
+        <li>String methodName (default "" which means use id<br>
+        </li>
+      </ul>
+      <br>
+      </td>
+      <td style="vertical-align: top;">Class or Interface<br>
+      </td>
+      <td style="vertical-align: top;">N/A<br>
+      </td>
+      <td style="vertical-align: top;">Defines a method inherited from
+a class that cannot be annotated as an attribute<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@InheritedAttributes<br>
+      </td>
+      <td style="vertical-align: top;">InheritedAttribute[] value<br>
+      </td>
+      <td style="vertical-align: top;">Class or Interface<br>
+      </td>
+      <td style="vertical-align: top;">N/A<br>
+      </td>
+      <td style="vertical-align: top;">Allows including multiple
+inherited attributes<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@MBeanType<br>
+      </td>
+      <td style="vertical-align: top;">Still under discussion (see
+below)<br>
+      </td>
+      <td style="vertical-align: top;">Class or Interface<br>
+      </td>
+      <td style="vertical-align: top;">N/A (but JMX supports
+descriptors; see below)<br>
+      </td>
+      <td style="vertical-align: top;">Adds GFv3 and AMX specific
+metadata to be defined for MBeans<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<h3>The ManagedObjectManagerFactory</h3>
+<h4>getMethod</h4>
+<h4>create<br>
+</h4>
+<br>
+<h3>The ManagedObjectManager</h3>
+<h4>register and registerAtRoot</h4>
+<h4>unregister<br>
+</h4>
+<h4>getObject/getObjectName</h4>
+<h4>addTypePrefix</h4>
+<h4>MBeanServer and ResourceBundle</h4>
+<h4>addAnnotation</h4>
+<h4>Debugging support<br>
+</h4>
+<h3>Processing of method names for IDs</h3>
+The following rules are applied to generate attribute and operation IDs
+from method names:<br>
+<ol>
+  <li>If the method is annotated with @ManagedAttribute:<br>
+  </li>
+  <ol>
+    <li>If the method is a getter (that is, it has no arguments and a
+non-void result):</li>
+    <ol>
+      <li>If the method name starts with "get", remove "get" and make
+the next letter lowercase.</li>
+      <li>If the return type is boolean, and the method starts with
+"is", remove "is" and make the next letter lowercase4.</li>
+      <li>Otherwise the method name is the id.<br>
+      </li>
+    </ol>
+    <li>If the method is a setter (that, has one argument and a void
+result):</li>
+    <ol>
+      <li>If the method name starts with "set", remove "set" and make
+the next letter lowercase.</li>
+      <li>Otherwise the method name is the id.</li>
+    </ol>
+    <li>Otherwise the method is not a valid attribute, and we have an
+error.</li>
+  </ol>
+  <li>If the method is annotated with @ManagedOperation:</li>
+  <ol>
+    <li>The id is the method name.</li>
+  </ol>
+</ol>
+<h3>I18N support</h3>
+<h3>OpenType mapping<br>
+</h3>
+<br>
+<h3>Metadata support<br>
+</h3>
+MBeanType<br>
+general Metadata and ModelMBeanInfo etc.<br>
+<br>
+<h3>AMX support on MBeans<br>
+</h3>
+<h3>Examples</h3>
+The basic usage of JMXA is as follows:<br>
+<ol>
+  <li>Add annotations to existing application objects (here application
+means anything you want to manage, part of GFv3 or not) to expose
+attributes and operations.</li>
+  <li>In some cases you may need to expose some data by defining new
+methods.&nbsp; Currently all JMXA visible annotations must be public,
+but I may relax that (at the cost of requiring an access check
+permission for reflection).</li>
+  <li>In the initialization of a module, create an appropriate
+ManagedObjectManager (call it mom).&nbsp; This requires thinking about
+where in the federated hierarchy the root of the ManagedObjectManager
+should live.&nbsp; In some cases, this may be different depending on
+the environment in which the instrumented code runs.</li>
+  <li>Whenever an Object is created that requires a management
+interface, register that object with the mom.</li>
+  <li>Whenever an Object is no longer needed, unregister that object
+with the mom.</li>
+  <li>Whenever the module lifecycle ends, call mom.close() to clean up
+the root object and any other remaining registered objects.</li>
+</ol>
+<h3>Handling Polymorphism</h3>
+<h3>How to create names for managed objects</h3>
+<h3>What if you cannot add an annotation?<br>
+</h3>
+<br>
+<h2>Dependencies</h2>
+The only dependency that JMXA has is JDK 5.&nbsp; It does not require
+anything from JMX<br>
+that is not in JDK 5.&nbsp; It also has no dependencies on GlassFish
+v3&nbsp; or CORBA.<br>
+<h2>Project Details</h2>
+Currently the JMXA project is publicly available at <a
+ href="https://kenai.com/hg/gf-corba-v3-mirror%7Ejmxannotations">https://kenai.com/hg/gf-corba-v3-mirror~jmxannotations.</a><br>
+This is a Mercurial workspace within the GlasFish CORBA v3
+project.&nbsp; I'll create a new JMXA <br>
+project on Kenai once the name has been settled.&nbsp; Note that JMXA
+will NOT be build as part of the <br>
+GFv3 build.&nbsp; This is necessary because JMXA is also used outside
+of GFv3, and we need to avoid<br>
+circular build dependencies (e.g. GFv3 dependsOn CORBA dependsOn JMXA,
+which creates a <br>
+build loop if GFv3 also contains JMXA).<br>
+<br>
+JMXA uses the following packages:<br>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">Package
+Name</span><br>
+      </td>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">OSGi&nbsp;
+Bundle</span><br>
+      </td>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">Purpose</span><br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">com.sun.jmxa<br>
+      </td>
+      <td style="vertical-align: top;">jmxa-api<br>
+      </td>
+      <td style="vertical-align: top;">all public interfaces<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">com.sun.jmxa.util<br>
+      </td>
+      <td style="vertical-align: top;">jmxa-api<br>
+      </td>
+      <td style="vertical-align: top;">contains code needed to support
+the API-Impl split (reflective construction of the implementation)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">com.sun.jmxa.generic<br>
+      </td>
+      <td style="vertical-align: top;">jmxa-impl<br>
+      </td>
+      <td style="vertical-align: top;">General-purpose code for
+debugging, plus simple function programming support<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">com.sun.jmxa.impl<br>
+      </td>
+      <td style="vertical-align: top;">jmxa-impl<br>
+      </td>
+      <td style="vertical-align: top;">The full implementation.&nbsp; <br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+The resulting OSGi bundles are currently (version 1.0.0-b001) sized at:<br>
+<br>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top;">jmxa-api<br>
+      </td>
+      <td style="vertical-align: top;">9774 bytes<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">jmxa-impl<br>
+      </td>
+      <td style="vertical-align: top;">109802 bytes<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+</body>
+</html>

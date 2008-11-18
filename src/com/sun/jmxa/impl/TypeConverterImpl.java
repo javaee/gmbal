@@ -268,14 +268,6 @@ public abstract class TypeConverterImpl implements TypeConverter {
      * For now, we will ignore this, because I think all CompositeData types in the ORB will be 
      * read only.  If this is NOT the case, we can adopt a solution similar to the MXBean 
      * @ConstructorProperties.
-     *
-     * XXX Can we automate the handling of recursive types?
-     * Yes, but I'm not sure if it's worthwhile.  Basic idea is to introduce more annotations:
-     * @Key is used on a method that returns a value unique per instance of the class 
-     * (like @ObjectNameKey, although support of multiple keys is questionable here)
-     * Then @ManagedAttributes that are also annotated with @Map are mapped to the value
-     * returned from the @Key field of the returned value.  Details are definitely needed 
-     * here.
      */
     public static TypeConverter makeTypeConverter( final Type type, 
         final ManagedObjectManagerInternal mom ) {

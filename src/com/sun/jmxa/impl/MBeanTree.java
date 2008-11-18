@@ -208,7 +208,6 @@ public class MBeanTree {
                     dputil.info( msg ) ;
                 }
                 
-                // XXX I18N
                 throw new IllegalArgumentException( msg ) ;
             }
             

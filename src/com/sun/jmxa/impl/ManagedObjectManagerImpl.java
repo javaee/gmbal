@@ -83,6 +83,21 @@ import java.util.Comparator;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+/* Implementation notes:
+ * XXX Do we need to support an @Notification annotation as in JSR 255?
+ * XXX Do we need dependency injection (@Resource)?
+ * XXX Test attribute change notification.
+ * XXX Should we automate handling of recursive types using @Key/@Map?
+ * XXX Add support for @Descriptor/@DescriptorKey from JSR 255 and earlier
+ * XXX Move to ModelMBeanInfo
+ * XXX Can we automate the handling of recursive types?
+ * Yes, but I'm not sure if it's worthwhile.  Basic idea is to introduce more annotations:
+ * @Key is used on a method that returns a value unique per instance of the class 
+ * (like @ObjectNameKey, although support of multiple keys is questionable here)
+ * Then @ManagedAttributes that are also annotated with @Map are mapped to the value
+ * returned from the @Key field of the returned value.  Details are definitely needed 
+ * here.
+ */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final String domain ;
     private ResourceBundle resourceBundle ;

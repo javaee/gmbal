@@ -51,16 +51,6 @@ import javax.management.NotificationEmitter ;
  * objects.  This is mostly a facade over MBeanServer.
  */
 
-/*
- * XXX Do we need to support an @Notification annotation as in JSR 255?
- * XXX Do we need dependency injection (@Resource)?
- * XXX Test attribute change notification.
- * XXX Test @ObjectNameKey
- * XXX Should we automate handling of recursive types using @Key/@Map?
- * XXX Do we need to support @Descriptor from JSR 255?
- * XXX Do we want simplified exception wrapper scheme for I18N of exceptions?
- * XXX Do we support both AMX style and non-AMX style registration?  Prefer not to.
- */
 public interface ManagedObjectManager extends Closeable {
     /** Construct an Open Mean for obj according to its annotations,
      * and register it with domain getDomain() and the appropriate
