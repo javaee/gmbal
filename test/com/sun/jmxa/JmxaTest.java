@@ -59,8 +59,6 @@ import java.util.Date ;
 import java.math.BigInteger ;
 import java.math.BigDecimal ;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -83,7 +81,6 @@ import com.sun.jmxa.impl.TypeConverter ;
 import com.sun.jmxa.generic.ClassAnalyzer ;
 import com.sun.jmxa.impl.ManagedObjectManagerInternal ;
 
-import javax.management.DynamicMBean;
 import javax.management.MBeanInfo;
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -338,6 +335,7 @@ public class JmxaTest extends TestCase {
 
 	final Method expectedResult = getMethod( AA.class, "barA" ) ;
 
+        @SuppressWarnings("unchecked")
 	final List<Method> result = ca.findMethods( predicate ) ;
         assertEquals( result.size(), 1 ) ;
         Method resultMethod = result.get(0) ;
@@ -346,7 +344,7 @@ public class JmxaTest extends TestCase {
 
     public void testGetAnnotatedMethods() throws IOException {
         ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
-            ManagedObjectManagerFactory.create("master", null, null ) ;
+            ManagedObjectManagerFactory.createStandalone("master" ) ;
         try {
             ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
             List<Method> methods = ca.findMethods( mom.forAnnotation( Test2.class,
@@ -373,7 +371,7 @@ public class JmxaTest extends TestCase {
         expectedResult.add( CC.class ) ;
         expectedResult.add( AA.class ) ;
         ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
-            ManagedObjectManagerFactory.create("master", null, null ) ;
+            ManagedObjectManagerFactory.createStandalone("master" ) ;
         try {
             ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
             List<Class<?>> classes = ca.findClasses( mom.forAnnotation( Test3.class,
@@ -508,8 +506,7 @@ public class JmxaTest extends TestCase {
     public void testPrimitiveTypeConverter() {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
-                .create( 
-                    "ORBTest", null, null ) ;
+                .createStandalone( "ORBTest" ) ;
         try {
             for (Object[] data : primitiveTCTestData) {
                 Class cls = (Class)data[0] ;
@@ -681,8 +678,9 @@ public class JmxaTest extends TestCase {
 	final String propName = "ObjectNumber" ;
 	final int onum = 1 ;
 
-	final ManagedObjectManager mom = ManagedObjectManagerFactory.create( 
-            domain, null, root ) ;
+	final ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
+            domain ) ;
+        mom.createRoot( root ) ;
 
 	try {
             mom.setRegistrationDebug( 
@@ -694,7 +692,7 @@ public class JmxaTest extends TestCase {
 	    assertEquals( domain, moeName.getDomain() ) ;
 	    
 	    Hashtable expectedProperties = new Hashtable() ;
-	    expectedProperties.put( "name", ManagedObjectExample.class.getName() ) ;
+	    expectedProperties.put( "name", "na" ) ;
 	    expectedProperties.put( "type", ManagedObjectExample.class.getName() ) ;
 	    
 	    assertEquals( expectedProperties, moeName.getKeyPropertyList() ) ;
@@ -735,7 +733,7 @@ public class JmxaTest extends TestCase {
     public void testManagedDataTypeConverter() {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
-                .create( "ORBTest", null, null ) ;
+                .createStandalone( "ORBTest" ) ;
     
         try {
             TypeConverter tc = mom.getTypeConverter( ManagedDataExample.class ) ;
@@ -812,9 +810,9 @@ public class JmxaTest extends TestCase {
         final int value = 42 ;
         final String rootName = "MyRoot" ;
         final Object rootObject = new RootObject( value ) ;
-        ManagedObjectManager mom = ManagedObjectManagerFactory.create(
-            ROOT_DOMAIN, new ObjectName( ROOT_PARENT_NAME ), 
-            rootObject, rootName ) ;
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
+            new ObjectName( ROOT_PARENT_NAME ) ) ;
+        mom.createRoot( rootObject, rootName ) ;
         mom.addTypePrefix("com.sun.jmxa");
         
         try {
@@ -841,8 +839,9 @@ public class JmxaTest extends TestCase {
         final int value = 42 ;
         final String rootName = "MyRoot" ;
         final Object rootObject = new NamedRootObject( rootName, value ) ;
-        ManagedObjectManager mom = ManagedObjectManagerFactory.create(
-            ROOT_DOMAIN, new ObjectName( ROOT_PARENT_NAME ), rootObject ) ;
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
+            new ObjectName( ROOT_PARENT_NAME ) ) ;
+        mom.createRoot( rootObject ) ;
         mom.addTypePrefix("com.sun.jmxa");
         
         try {
@@ -977,15 +976,16 @@ public class JmxaTest extends TestCase {
     public void testNestedManagedData() throws AttributeNotFoundException, 
         MBeanException, ReflectionException, InstanceNotFoundException, IntrospectionException {
         
-        ManagedObjectManager mom = ManagedObjectManagerFactory.create(
-            ROOT_DOMAIN, null, null, "root" ) ;
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
+            ROOT_DOMAIN ) ;
+        mom.createRoot() ;
         mom.addTypePrefix("com.sun.jmxa");
         
         try {
             mom.registerAtRoot( nmdt ) ;
             ObjectName oname = mom.getObjectName( nmdt ) ;
             String expectedName = 
-                "this.test:JMXAROOT=root,type=NestedManagedDataTest,name=NestedManagedDataTest" ;
+                "this.test:JMXAROOT=na,type=NestedManagedDataTest,name=na" ;
             ObjectName expectedObjectName = null ;
             try {
                 expectedObjectName = new ObjectName(expectedName);

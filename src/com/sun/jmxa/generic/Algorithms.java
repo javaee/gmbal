@@ -65,23 +65,23 @@ public final class Algorithms {
     }
         
     public static <A,R> UnaryFunction<A,R> mapToFunction( final Map<A,R> map ) {
-	return new UnaryFunction<A,R>() {
-	    public R evaluate( A arg ) {
-		return map.get( arg ) ;
-	    }
-	} ;
+        return new UnaryFunction<A,R>() {
+            public R evaluate( A arg ) {
+                return map.get( arg ) ;
+            }
+        } ;
     }
 
     public static <A,R> void map( final Collection<A> arg, 
         final Collection<R> result,
-	final UnaryFunction<A,R> func ) {
+        final UnaryFunction<A,R> func ) {
 
-	for (A a : arg) {
-	    final R newArg = func.evaluate( a ) ;
-	    if (newArg != null) {
-		result.add( newArg ) ;
+        for (A a : arg) {
+            final R newArg = func.evaluate( a ) ;
+            if (newArg != null) {
+                result.add( newArg ) ;
             }
-	}
+        }
     }
 
     public static <K,A,R> Map<K,R> map( final Map<K,A> arg,

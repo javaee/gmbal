@@ -52,6 +52,14 @@ import javax.management.NotificationEmitter ;
  */
 
 public interface ManagedObjectManager extends Closeable {
+    NotificationEmitter createRoot() ;
+    
+    NotificationEmitter createRoot( Object root ) ;
+    
+    NotificationEmitter createRoot( Object root, String name ) ;
+    
+    Object getRoot() ;
+    
     /** Construct an Open Mean for obj according to its annotations,
      * and register it with domain getDomain() and the appropriate
      * ObjectName.  The MBeanServer from setMBeanServer (or its default) is used.

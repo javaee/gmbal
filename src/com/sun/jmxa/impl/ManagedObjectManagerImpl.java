@@ -85,11 +85,7 @@ import java.util.TreeSet;
 
 /* Implementation notes:
  * XXX Do we need to support an @Notification annotation as in JSR 255?
- * XXX Do we need dependency injection (@Resource)?
  * XXX Test attribute change notification.
- * XXX Should we automate handling of recursive types using @Key/@Map?
- * XXX Add support for @Descriptor/@DescriptorKey from JSR 255 and earlier
- * XXX Move to ModelMBeanInfo
  * XXX Can we automate the handling of recursive types?
  * Yes, but I'm not sure if it's worthwhile.  Basic idea is to introduce more annotations:
  * @Key is used on a method that returns a value unique per instance of the class 
@@ -99,7 +95,7 @@ import java.util.TreeSet;
  * here.
  */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
-    private final String domain ;
+    private String domain ;
     private ResourceBundle resourceBundle ;
     private MBeanServer server ; 
     private MBeanTree tree ;
@@ -129,35 +125,31 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return "ManagedObjectManagerImpl[domain=" + domain + "]" ;
     }
     
-    @ManagedObject
-    @MBeanType( type="JMXAROOT")
-    @Description( "Dummy class used when no root is specified" ) 
-    private static class Root {
-        // No methods: will simply implement an AMX container
+    private ManagedObjectManagerImpl() {
+        this.resourceBundle = null ;
+        this.server = ManagementFactory.getPlatformMBeanServer() ;
+	this.skeletonMap = new WeakHashMap<Class<?>,MBeanSkeleton>() ;
+	this.typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
+        this.addedAnnotations = 
+            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
     }
     
-    public ManagedObjectManagerImpl( 
-        final String domain, 
-        final ObjectName rootParentName,
-        final Object rootObject,
-        final String rootName ) {
+    public ManagedObjectManagerImpl( final String domain ) {
+        this() ;
+        this.domain = domain ;
         
-	this.domain = domain ;
-        resourceBundle = null ;
+        // set actualRoot, rootName later
+        // MBeanTree need mom, domain, rootParentName
+        this.tree = new MBeanTree( this, domain, null, "type" ) ;
+    }
 
-	server = ManagementFactory.getPlatformMBeanServer() ;
-        Object actualRoot = rootObject ;
-        if (actualRoot == null) {
-            actualRoot = new Root() ;
-        }
-        
-	skeletonMap = new WeakHashMap<Class<?>,MBeanSkeleton>() ;
-	typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
-        addedAnnotations = 
-            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
-        
-        tree = new MBeanTree( this, domain, rootParentName, "type",
-            actualRoot, rootName ) ;
+    public ManagedObjectManagerImpl( final ObjectName rootParentName ) {
+        this() ;
+        this.domain = rootParentName.getDomain() ;
+
+        // set actualRoot, rootName later
+        // MBeanTree need mom, domain, rootParentName
+        this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
     }
 
     private static final TypeConverter recursiveTypeMarker = 
@@ -180,6 +172,29 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 dputil.exit() ;
             }
         }
+    }
+    
+    @ManagedObject
+    @MBeanType( type="JMXAROOT")
+    @Description( "Dummy class used when no root is specified" ) 
+    private static class Root {
+        // No methods: will simply implement an AMX container
+    }
+    
+    public synchronized NotificationEmitter createRoot() {
+        return tree.setRoot( new Root(), null ) ;
+    }
+
+    public synchronized NotificationEmitter createRoot(Object root) {
+        return tree.setRoot( root, null ) ;
+    }
+
+    public synchronized NotificationEmitter createRoot(Object root, String name) {
+        return tree.setRoot( root, name ) ;
+    }
+
+    public synchronized Object getRoot() {
+        return tree.getRoot() ;
     }
     
     public synchronized MBeanSkeleton getSkeleton( Class<?> cls ) {
@@ -302,7 +317,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             if (objName == null) {
                 objName = skel.getNameValue( result ) ;
                 if (objName == null) {
-                    objName = type ;
+                    objName = "na" ;
                 }
             }  
            
@@ -341,13 +356,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
         
         // Construct the MBean
-	try {
+        try {
             final MBeanImpl mb = constructMBean( obj, name ) ;
             
             return tree.register( parent, obj, mb) ;
-	} catch (JMException exc) {
-	    throw new IllegalArgumentException( exc ) ;
-	} finally {
+    	} catch (JMException exc) {
+            throw new IllegalArgumentException( exc ) ;
+        } finally {
             if (registrationDebug()) {
                 dputil.exit() ;
             }
@@ -362,11 +377,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     
     public NotificationEmitter registerAtRoot(Object obj, String name) {
-        return register( null, obj, name ) ;
+        return register( tree.getRoot(), obj, name ) ;
     }
 
     public NotificationEmitter registerAtRoot(Object obj) {
-        return register( null, obj, null ) ;
+        return register( tree.getRoot(), obj, null ) ;
     }
     
     public synchronized void unregister( Object obj ) {
@@ -811,4 +826,5 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
         } ;
     }
+
 }

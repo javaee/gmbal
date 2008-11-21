@@ -57,24 +57,15 @@ import javax.management.MBeanException ;
 import javax.management.InvalidAttributeValueException ;
 import javax.management.AttributeNotFoundException ;
 import javax.management.ReflectionException ;
-import javax.management.MBeanInfo ;
 import javax.management.MBeanOperationInfo ;
 import javax.management.MBeanParameterInfo ;
 
-import javax.management.openmbean.OpenMBeanAttributeInfo ;
-import javax.management.openmbean.OpenMBeanAttributeInfoSupport ;
-import javax.management.openmbean.OpenMBeanOperationInfo ;
-import javax.management.openmbean.OpenMBeanOperationInfoSupport ;
-import javax.management.openmbean.OpenMBeanParameterInfo ;
-import javax.management.openmbean.OpenMBeanParameterInfoSupport ;
-import javax.management.openmbean.OpenMBeanInfoSupport ;
 import javax.management.NotificationBroadcasterSupport ;
 import javax.management.AttributeChangeNotification ;
 
 import com.sun.jmxa.generic.BinaryFunction ;
 import com.sun.jmxa.ObjectNameKey ;
 import com.sun.jmxa.ManagedOperation ;
-import com.sun.jmxa.ManagedObject ;
 import com.sun.jmxa.ParameterNames ;
 
 import com.sun.jmxa.generic.DprintUtil;
@@ -83,7 +74,13 @@ import com.sun.jmxa.generic.Pair ;
 import com.sun.jmxa.generic.DumpToString ;
 
 import com.sun.jmxa.generic.FacetAccessor;
+import javax.management.Descriptor;
 import javax.management.JMException;
+import javax.management.modelmbean.DescriptorSupport;
+import javax.management.modelmbean.ModelMBeanAttributeInfo;
+import javax.management.modelmbean.ModelMBeanInfoSupport;
+import javax.management.modelmbean.ModelMBeanOperationInfo;
+import javax.management.openmbean.OpenMBeanParameterInfoSupport;
 
 public class MBeanSkeleton {
     // Object evaluate( Object, List<Object> ) 
@@ -91,11 +88,12 @@ public class MBeanSkeleton {
     public interface Operation
         extends BinaryFunction<FacetAccessor,List<Object>,Object> {} ;
 
+    private Descriptor descriptor ;
     private final String type ;
     private MBeanType mbeanType ;
     @DumpToString
     private final AtomicLong sequenceNumber ;
-    private final MBeanInfo mbInfo ;
+    private final ModelMBeanInfoSupport mbInfo ;
     @DumpToString
     private final ManagedObjectManagerInternal mom ;
     @DumpIgnore
@@ -104,8 +102,8 @@ public class MBeanSkeleton {
     private final Map<String,AttributeDescriptor> getters ;
     private AttributeDescriptor nameAttributeDescriptor ;
     private final Map<String,Map<List<String>,Operation>> operations ;
-    private final List<OpenMBeanAttributeInfo> mbeanAttributeInfoList ; 
-    private final List<OpenMBeanOperationInfo> mbeanOperationInfoList ; 
+    private final List<ModelMBeanAttributeInfo> mbeanAttributeInfoList ;
+    private final List<ModelMBeanOperationInfo> mbeanOperationInfoList ;
  
     private <K,L,V> void addToCompoundMap( Map<K,Map<L,V>> source, Map<K,Map<L,V>> dest ) {
         for (Map.Entry<K,Map<L,V>> entry : source.entrySet()) {
@@ -120,43 +118,46 @@ public class MBeanSkeleton {
 
     private MBeanSkeleton( MBeanSkeleton first, MBeanSkeleton second ) {
         dputil = new DprintUtil( getClass() ) ;
-	this.mom = first.mom ;
+        this.mom = first.mom ;
 
         type = first.type ;
 
         sequenceNumber = new AtomicLong() ;
-	setters = new HashMap<String,AttributeDescriptor>() ;
-        setters.putAll( second.setters ) ;
-        setters.putAll( first.setters ) ;
+        setters = new HashMap<String,AttributeDescriptor>() ;
+            setters.putAll( second.setters ) ;
+            setters.putAll( first.setters ) ;
 
-	getters = new HashMap<String,AttributeDescriptor>() ; 
-        getters.putAll( second.getters ) ;
-        getters.putAll( first.getters ) ;
+        getters = new HashMap<String,AttributeDescriptor>() ;
+            getters.putAll( second.getters ) ;
+            getters.putAll( first.getters ) ;
 
-	operations = new HashMap<String,Map<List<String>,Operation>>() ;
-        addToCompoundMap( second.operations, operations ) ;
-        addToCompoundMap( first.operations, operations ) ;
+        operations = new HashMap<String,Map<List<String>,Operation>>() ;
+            addToCompoundMap( second.operations, operations ) ;
+            addToCompoundMap( first.operations, operations ) ;
 
-	mbeanAttributeInfoList = new ArrayList<OpenMBeanAttributeInfo>() ;
-        mbeanAttributeInfoList.addAll( second.mbeanAttributeInfoList ) ;
-        mbeanAttributeInfoList.addAll( first.mbeanAttributeInfoList ) ;
+        mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>() ;
+            mbeanAttributeInfoList.addAll( second.mbeanAttributeInfoList ) ;
+            mbeanAttributeInfoList.addAll( first.mbeanAttributeInfoList ) ;
 
-	mbeanOperationInfoList = new ArrayList<OpenMBeanOperationInfo>() ;
-        mbeanOperationInfoList.addAll( second.mbeanOperationInfoList ) ;
-        mbeanOperationInfoList.addAll( first.mbeanOperationInfoList ) ;
+        mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
+            mbeanOperationInfoList.addAll( second.mbeanOperationInfoList ) ;
+            mbeanOperationInfoList.addAll( first.mbeanOperationInfoList ) ;
+
+        descriptor = ImmutableDescriptor.union( first.descriptor,
+            second.descriptor ) ;
 
         mbInfo = makeMbInfo( first.mbInfo.getDescription() ) ;
     }
 
-    private MBeanInfo makeMbInfo( String description ) {
-	OpenMBeanAttributeInfo[] attrInfos = mbeanAttributeInfoList.toArray( 
-	    new OpenMBeanAttributeInfo[mbeanAttributeInfoList.size()] ) ;
-	OpenMBeanOperationInfo[] operInfos = mbeanOperationInfoList.toArray(
-	    new OpenMBeanOperationInfo[mbeanOperationInfoList.size() ] ) ;
-        
-	return new OpenMBeanInfoSupport( 
-	    type, description, attrInfos, null, 
-            operInfos, null ) ;
+    private ModelMBeanInfoSupport makeMbInfo( String description ) {
+        ModelMBeanAttributeInfo[] attrInfos = mbeanAttributeInfoList.toArray(
+            new ModelMBeanAttributeInfo[mbeanAttributeInfoList.size()] ) ;
+        ModelMBeanOperationInfo[] operInfos = mbeanOperationInfoList.toArray(
+            new ModelMBeanOperationInfo[mbeanOperationInfoList.size() ] ) ;
+
+        return new ModelMBeanInfoSupport(
+            type, description, attrInfos, null,
+                operInfos, null, descriptor ) ;
     }
 
     /** Create a new MBeanSkeleton that is the composition of this one
@@ -194,6 +195,23 @@ public class MBeanSkeleton {
                         "Getter and setter types do not match" ) ;
             }
 
+            Descriptor desc = ImmutableDescriptor.EMPTY_DESCRIPTOR ;
+            if (getter != null) {
+                desc = ImmutableDescriptor.union( desc,
+                    DescriptorIntrospector.descriptorForElement(
+                        getter.method() ) );
+            }
+
+            if (setter != null) {
+                desc = ImmutableDescriptor.union( desc,
+                    DescriptorIntrospector.descriptorForElement(
+                        setter.method() ) );
+            }
+
+            if (desc.getFieldNames().length == 0) {
+                desc = null ;
+            }
+
             AttributeDescriptor nonNullDescriptor = 
                 (getter != null) ? getter : setter ;
 
@@ -205,9 +223,9 @@ public class MBeanSkeleton {
             
             TypeConverter tc = mom.getTypeConverter( nonNullDescriptor.type() ) ;
 
-            OpenMBeanAttributeInfo ainfo = new OpenMBeanAttributeInfoSupport( name, 
-                description, tc.getManagedType(), 
-                getter != null, setter != null, false ) ;
+            ModelMBeanAttributeInfo ainfo = new ModelMBeanAttributeInfo( name,
+                description, tc.getManagedType().toString(),
+                getter != null, setter != null, false, desc ) ;
             
             if (mom.registrationFineDebug()) {
                 dputil.info("ainfo=", ainfo ) ;
@@ -306,7 +324,7 @@ public class MBeanSkeleton {
         }
     }
     
-    private Pair<Operation,OpenMBeanOperationInfo> makeOperation( 
+    private Pair<Operation,ModelMBeanOperationInfo> makeOperation(
         final Method m ) {
 	
         if (mom.registrationFineDebug()) {
@@ -320,6 +338,13 @@ public class MBeanSkeleton {
                 rtype ) ;
             final Type[] atypes = m.getGenericParameterTypes() ;
             final List<TypeConverter> atcs = new ArrayList<TypeConverter>() ;
+            
+            Descriptor modelDescriptor =
+                DescriptorIntrospector.descriptorForElement( m ) ;
+            if (modelDescriptor.getFieldNames().length == 0) {
+                modelDescriptor = null ;
+            }
+
             for (Type ltype : atypes) {
                 atcs.add( mom.getTypeConverter( ltype ) ) ;
             }
@@ -330,6 +355,7 @@ public class MBeanSkeleton {
                 dputil.info( "rtc=", rtc ) ;
                 dputil.info( "atcs=", atcs ) ;
                 dputil.info( "atypes=", atypes ) ;
+                dputil.info( "descriptor=", modelDescriptor ) ;
             }
             
             final Operation oper = new Operation() {
@@ -380,30 +406,31 @@ public class MBeanSkeleton {
                     + " of arguments as the length of the method parameter list" );
             }
 
-            final OpenMBeanParameterInfo[] paramInfo = 
-                new OpenMBeanParameterInfo[ atcs.size() ] ;
+            final MBeanParameterInfo[] paramInfo = 
+                new MBeanParameterInfo[ atcs.size() ] ;
             int ctr = 0 ;
             for (TypeConverter tc : atcs) {
-                paramInfo[ctr] = new OpenMBeanParameterInfoSupport( 
+                paramInfo[ctr] = new OpenMBeanParameterInfoSupport(
                     (pna == null) ? "arg" + ctr : pna.value()[ctr], 
                     desc, tc.getManagedType() ) ;
                 ctr++ ;
             }
 
+
             // XXX Note that impact is always set to ACTION_INFO here.  If this is 
             // useful to set in general, we need to add impact to the 
             // ManagedOperation annotation.
             // This is basically what JSR 255 does.
-            final OpenMBeanOperationInfo operInfo = 
-                new OpenMBeanOperationInfoSupport( m.getName(),
-                desc, paramInfo, rtc.getManagedType(), 
-                MBeanOperationInfo.ACTION_INFO ) ;
+            final ModelMBeanOperationInfo operInfo =
+                new ModelMBeanOperationInfo( m.getName(),
+                desc, paramInfo, rtc.getManagedType().toString(),
+                MBeanOperationInfo.ACTION_INFO, modelDescriptor ) ;
 
             if (mom.registrationFineDebug()) {
                 dputil.info( "operInfo=", operInfo ) ;
             }
             
-            return new Pair<Operation,OpenMBeanOperationInfo>( oper, operInfo ) ;
+            return new Pair<Operation,ModelMBeanOperationInfo>( oper, operInfo ) ;
         } finally {
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
@@ -422,9 +449,9 @@ public class MBeanSkeleton {
             final List<Method> ops = ca.findMethods( mom.forAnnotation( 
                 ManagedOperation.class, Method.class ) ) ;
             for (Method m : ops) {             
-                final Pair<Operation,OpenMBeanOperationInfo> data = 
+                final Pair<Operation,ModelMBeanOperationInfo> data =
                     makeOperation( m ) ;
-                final OpenMBeanOperationInfo info = data.second() ;
+                final ModelMBeanOperationInfo info = data.second() ;
 
                 final List<String> dataTypes = new ArrayList<String>() ;
                 for (MBeanParameterInfo pi : info.getSignature()) {
@@ -468,12 +495,15 @@ public class MBeanSkeleton {
     private static class DefaultMBeanTypeHolder{} 
     private static MBeanType defaultMBeanType = 
         DefaultMBeanTypeHolder.class.getAnnotation( MBeanType.class ) ;
-    
+    private static final ImmutableDescriptor DEFAULT_CLASS_DESCRIPTOR =
+        (ImmutableDescriptor) DescriptorIntrospector.descriptorForElement(
+            DefaultMBeanTypeHolder.class ) ;
+
     public MBeanSkeleton( final Class<?> annotatedClass, 
         final ClassAnalyzer ca, final ManagedObjectManagerInternal mom ) {
 
         dputil = new DprintUtil( getClass() ) ;
-	this.mom = mom ;
+        this.mom = mom ;
         
         mbeanType = annotatedClass.getAnnotation( MBeanType.class ) ;
         if (mbeanType == null) {
@@ -482,15 +512,27 @@ public class MBeanSkeleton {
         
         type = getTypeName( mbeanType, annotatedClass ) ;
         sequenceNumber = new AtomicLong() ;
-	setters = new HashMap<String,AttributeDescriptor>() ;
-	getters = new HashMap<String,AttributeDescriptor>() ; 
-	operations = new HashMap<String,Map<List<String>,Operation>>() ;
-	mbeanAttributeInfoList = new ArrayList<OpenMBeanAttributeInfo>() ;
-	mbeanOperationInfoList = new ArrayList<OpenMBeanOperationInfo>() ;
+        setters = new HashMap<String,AttributeDescriptor>() ;
+        getters = new HashMap<String,AttributeDescriptor>() ;
+        operations = new HashMap<String,Map<List<String>,Operation>>() ;
+        mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>() ;
+        mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
 
         analyzeAttributes( ca ) ;
         analyzeOperations( ca ) ;
         analyzeObjectNameKeys( ca ) ;
+
+        Descriptor rdesc = new DescriptorSupport(
+            DEFAULT_CLASS_DESCRIPTOR.getFieldNames(),
+            DEFAULT_CLASS_DESCRIPTOR.getFieldValues(null) ) ;
+        Descriptor cdesc = DescriptorIntrospector.descriptorForElement(
+             annotatedClass ) ;
+        for (String key : cdesc.getFieldNames()) {
+            rdesc.setField(key, cdesc.getFieldValue(key));
+        }
+        rdesc.setField( "type", type ) ;
+        rdesc.setField( "name", type ) ;
+        rdesc.setField( "descriptorType", "mbean" ) ;
 
         mbInfo = makeMbInfo( mom.getDescription( annotatedClass ) ) ;
     }
@@ -749,8 +791,8 @@ public class MBeanSkeleton {
         return value ;
     }
     
-    public MBeanInfo getMBeanInfo() {
-	return mbInfo ;
+    public ModelMBeanInfoSupport getMBeanInfo() {
+        return mbInfo ;
     }
     
     public ManagedObjectManagerInternal mom() {

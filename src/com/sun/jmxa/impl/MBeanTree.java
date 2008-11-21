@@ -40,6 +40,8 @@ import com.sun.jmxa.generic.DprintUtil;
 import com.sun.jmxa.generic.FacetAccessor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
 import javax.management.JMException;
@@ -55,6 +57,8 @@ import javax.management.ObjectName;
  * @author ken
  */
 public class MBeanTree {
+    private boolean rootIsSet = false ;
+    private Object root ;
     private MBeanImpl rootEntity ;
     private Map<Object,MBeanImpl> objectMap ;
     private Map<ObjectName,Object> objectNameMap ;
@@ -82,21 +86,14 @@ public class MBeanTree {
         objectNameMap.remove( oname ) ;
     }
     
-    public MBeanTree( final ManagedObjectManagerInternal mom,
-        final String domain, 
-        final ObjectName rootParentName,
-        final String typeString, 
-        final Object root,
-        final String rootName ) {
-
-        this.mom = mom ;
-        this.domain = domain ;
-        this.rootParentName = rootParentName ;
-        this.typeString = typeString ;
-        objectMap = new HashMap<Object,MBeanImpl>() ;
-        objectNameMap = new HashMap<ObjectName,Object>() ;
-        dputil = new DprintUtil( getClass() ) ;
-
+    public synchronized NotificationEmitter setRoot( Object root, String rootName ) {
+        if (rootIsSet) {
+            throw new IllegalStateException( 
+                "Root has already been set: cannot set it again" ) ;
+        } else {
+            rootIsSet = true ;
+        }
+        
         // Now register the root MBean.
         MBeanImpl rootMB = mom.constructMBean( root, rootName ) ;
         
@@ -119,7 +116,32 @@ public class MBeanTree {
                 ex ) ;
         }
         
+        this.root = root ;
         rootEntity = rootMB ;
+        return rootMB ;
+    }
+    
+    public synchronized Object getRoot() {
+        if (rootIsSet) {
+            return root ;
+        } else {
+            throw new IllegalStateException( "Root has not yet been set" ) ;
+        }
+        
+    }
+    
+    public MBeanTree( final ManagedObjectManagerInternal mom,
+        final String domain, 
+        final ObjectName rootParentName,
+        final String typeString ) {
+        
+        this.mom = mom ;
+        this.domain = domain ;
+        this.rootParentName = rootParentName ;
+        this.typeString = typeString ;
+        objectMap = new HashMap<Object,MBeanImpl>() ;
+        objectNameMap = new HashMap<ObjectName,Object>() ;
+        dputil = new DprintUtil( getClass() ) ;
     }
 
     public synchronized FacetAccessor getFacetAccessor(Object obj) {
@@ -199,6 +221,10 @@ public class MBeanTree {
         }
         
         try { 
+            if (parent == null) {
+                throw new IllegalArgumentException( "Parent cannot be null" ) ;
+            }
+            
             MBeanImpl oldMB = objectMap.get( obj ) ;
             if (oldMB != null) {
                 String msg = "Object " + obj + " is already registered as " 
@@ -212,18 +238,14 @@ public class MBeanTree {
             }
             
             MBeanImpl parentEntity ;
-            if (parent == null) {
-                parentEntity = rootEntity ;
-            } else {
-                parentEntity = objectMap.get( parent ) ;
-                if (parentEntity == null) {
-                    String msg = "parent object " + parent + " not found" ;
-                    if (mom.registrationDebug()) {
-                        dputil.info( msg ) ;
-                    }
 
-                    throw new IllegalArgumentException( msg ) ;
+            parentEntity = objectMap.get( parent ) ;
+            if (parentEntity == null) {
+                String msg = "parent object " + parent + " not found" ;
+                if (mom.registrationDebug()) {
+                    dputil.info( msg ) ;
                 }
+                throw new IllegalArgumentException( msg ) ;
             }
             
             ObjectName oname = objectName( parentEntity, mb.type(), 
@@ -246,6 +268,11 @@ public class MBeanTree {
     
     public synchronized void unregister( Object obj ) 
         throws InstanceNotFoundException, MBeanRegistrationException {
+        if (obj == root) {
+            rootIsSet = false ;
+            root = null ;
+            rootEntity = null ;
+        }
         
         MBeanImpl mb = objectMap.get( obj ) ;
         for (Map<String,MBeanImpl> nameToMBean : mb.children().values() ) {
@@ -274,13 +301,15 @@ public class MBeanTree {
     public synchronized MBeanImpl getMBeanImpl( Object obj ) {
         return objectMap.get( obj ) ;
     }
+    
     public synchronized void clear(){
-        for (MBeanImpl entity : objectMap.values()) {
+        if (rootIsSet) {
             try {
-                entity.unregister();
-            } catch (JMException ex) {
-                // XXX log this, but we are cleaning up, so
-                // no other action.
+                unregister(root);
+            } catch (InstanceNotFoundException ex) {
+                throw new IllegalStateException( "Should not happen!", ex ) ;
+            } catch (MBeanRegistrationException ex) {
+                throw new IllegalStateException( "Should not happen!", ex ) ;
             }
         }
         

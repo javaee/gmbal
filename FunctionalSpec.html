@@ -33,38 +33,50 @@ Similar projects<br>
 <h2>The Management Data Model</h2>
 JMXA supports a simple hierarchical model of management data as defined
 in JSR 77 and AMX.<br>
+<img style="width: 730px; height: 507px;" alt="JMXA Class Diagram"
+ src="JMXA.png"><br>
 The components of the data model are as follows:<br>
 <ul>
-  <li>A ManagedObject is identified by an ObjectName</li>
-  <li>A ManagedObject has Attributes and Operations</li>
-  <li>A ManagedObject belongs to a type with metadata, represented by
-ModelMBeanInfo</li>
-  <li>A ManagedObject has a type String, which is related to the
-implementing class</li>
-  <li>A ManagedObject has a name String<br>
-  </li>
-  <li>All ManagedObjects have a parent ManagedObject (which is null for
-the root of the tree)</li>
-  <li>ManagedObjects may be leafs (no children) or containers (may
-contain children)</li>
-  <li>A ManagedObject may be uniquely identified by its parent, type,
-and name</li>
-  <li>An Attribute may be read only, write only, or read-write</li>
-  <li>An Attribute has an id</li>
-  <li>An Attribute returns (getter) or takes (setter) a value whose
-type is an OpenType</li>
-  <li>An Operation takes (optional) arguments and (optionally) returns
-a value, all of an OpenType<br>
-  </li>
+  <li>A ManagedObjectManager acts as a container for all state related
+to a particular usage of JMXA. This includes:</li>
+  <ul>
+    <li>A domain to use for all ObjectNames created in this
+ManagedObjectManager</li>
+    <li>A rootParentName, which is the ObjectName of the parent of the
+ManagedObjectManager</li>
+    <li>A root object, which represents the top of the tree of MBean
+managed by the ManagedObjectManager<br>
+    </li>
+  </ul>
+  <li>From a POJO with annotations, an MBeanImpl is constructed.&nbsp;
+An MBeanImpl has a number of objects associated with it:</li>
+  <ul>
+    <li>0 or more Attributes, which may be getters or setters or both</li>
+    <li>0 or more Operations, which may be invoked</li>
+    <li>Metadata, represented by ModelMBeanInfoSupport (so that
+metadata Descriptors are available on JDK 5 as well as JDK 6)</li>
+    <li>A single parent MBeanImpl, which may be null (this is one end
+of the contains relation)</li>
+    <li>0 or more child MBeanImpls (this is the other end of the
+contains relation)</li>
+    <li>Following JSR 77, a type and a name String, which together with
+the ObjectName of the parent are used to form the ObjectName of the
+MBeanImpl<br>
+    </li>
+  </ul>
+  <li>Attributes and Operations have ids</li>
 </ul>
+Note that all types consumed or produced by Attributes and Operations
+are OpenTypes.<br>
 <br>
-managed object<br>
-&nbsp;&nbsp;&nbsp; objectNames<br>
-attributes<br>
-operations<br>
-notification<br>
-metadata<br>
-Federation<br>
+This diagram is a simplification of the actual implementation of
+JMXA.&nbsp; In particular, <br>
+the metadata, attributes, and operations are maintained in a
+MBeanSkeleton class, which is<br>
+shared by all MBeanImpls for instances of the same class.&nbsp; The
+TypeConverter that handles<br>
+conversion between Java types and the corresponding OpenType is also
+not included here.<br>
 <h2>Interfaces</h2>
 Javadocs are <a href="dist/javadoc/index.html">available</a> as part
 of the JMXA project.&nbsp; <br>
@@ -248,7 +260,7 @@ inherited attributes<br>
       <td style="vertical-align: top;">@MBeanType<br>
       </td>
       <td style="vertical-align: top;">Still under discussion (see
-below)<br>
+below: note that this is just an application of @DescriptionKey<br>
       </td>
       <td style="vertical-align: top;">Class or Interface<br>
       </td>
@@ -259,22 +271,116 @@ descriptors; see below)<br>
 metadata to be defined for MBeans<br>
       </td>
     </tr>
+    <tr>
+      <td style="vertical-align: top;">@DescriptionKey<br>
+      </td>
+      <td style="vertical-align: top;">String value<br>
+      </td>
+      <td style="vertical-align: top;">Annotation method<br>
+      </td>
+      <td style="vertical-align: top;">same as JSR 255<br>
+      </td>
+      <td style="vertical-align: top;">Define metadata that can be
+added to any MBean<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">@DescriptionField<br>
+      </td>
+      <td style="vertical-align: top;">String value (must be name=value)<br>
+      </td>
+      <td style="vertical-align: top;">Class, Interface, or Method<br>
+      </td>
+      <td style="vertical-align: top;">same as JSR 255<br>
+      </td>
+      <td style="vertical-align: top;">Define metadata directly on MBean<br>
+      </td>
+    </tr>
   </tbody>
 </table>
 <br>
 <h3>The ManagedObjectManagerFactory</h3>
+The ManagedObjectManagerFactory is primarily used to create
+ManagedObjectManagers.&nbsp; It is the only concrete class in the JMXA
+API.<br>
 <h4>getMethod</h4>
-<h4>create<br>
-</h4>
+This is a simple wrapper around Class.getDeclaredMethod that converts
+the checked exceptions from getDeclaredMethod into unchecked
+exceptions.&nbsp; It is intended for use with the <a
+ href="#addAnnotation">addAnnotation</a> method.<br>
+See also the <a href="#What_if_you_cannot_add_an_annotation">discussion</a>
+about adding annotations.<br>
+<h4>create</h4>
+There are two versions of create: create( String ) and create(
+ObjectName ).&nbsp; create( String ) is used to create a standalone
+hierarchy: the String is the domain to use for all ObjectNames created
+from the resulting ManagedObjectManager.&nbsp; In this versioSn, the
+root has no parent.<br>
 <br>
+create( ObjectName ) is used to create a hierarchy of MBeans that are
+rooted under a parent MBean that is not managed by the created instance
+of ManagedObjectManager.&nbsp; In this case, the parent of the
+ManagedObjectManager is identified by the object name (called the
+rootParentName) that is passed to the create call.&nbsp; Note that the
+root parent MBean MUST be managed by the same MBeanServer as the
+ManagedObjectManager.<br>
 <h3>The ManagedObjectManager</h3>
+The ManagedObjectManager is the main API for JMXA.&nbsp; It contains a
+tree of MBeans with a single root,<br>
+which may optionally be federated into a large MBean hierarchy.<br>
+<br>
+The most important methods are createRoot, register, and
+unregister.&nbsp; Any application of JMXA must use these methods.&nbsp;
+<br>
+<h4>createRoot</h4>
+There are several methods to create a root in the
+ManagedObjectManager.&nbsp; createRoot() creates a root that simply
+acts as an AMX container.&nbsp; Its type and name are both set to
+JMXAROOT.<br>
+<br>
+createRoot( Object ) and createRoot( Object, String ) both use the
+given object as the root, and just as in the register methods, these
+methods create an MBean from the Object using the annotations on its
+class. The createRoot( Object ) method will derive the name from the
+object itself by calling the @ObjectNameKey method from the
+class.&nbsp; If no such method is available, the name is set to the
+type value.&nbsp; The second method allows the name to specified
+explicitly.&nbsp; This can be useful in case where either
+@ObjectNameKey is not used, or there are multiple ManagedObjectManager
+instances with the same root type that share the same parent.&nbsp; In
+this case, it is essential that each root have a distinct name.last<br>
+<br>
+createRoot may only be called when the ManagedObjectManager does not
+already contain a root. This is true immediately after a
+ManagedObjectManagerFactory.create call, or after unregistering the
+root.<br>
+<h4>getRoot</h4>
+getRoot returns the current root of the ManagedObjectManager.&nbsp; If
+no root is available, getRoot throws an IllegalStateException.<br>
 <h4>register and registerAtRoot</h4>
-<h4>unregister<br>
-</h4>
+There are two forms of register: register( Object parent, Object obj )
+and register( Object parent, Object obj, String name ).&nbsp; The first
+form obtains the name from obj (either via @ObjectNameKey, or by
+default using the type), the second allows explicit
+specification.&nbsp; The returned result is an instance of
+NotificationEmitter that may be used to register a NoticationListener
+to listen for attribute change notifications on that particular
+MBean.&nbsp; <br>
+<br>
+There are also two forms of registerAtRoot: registerAtRoot( Object obj
+) and registerAtRoot( Object obj, String name).&nbsp; These methods are
+exactly equivalent to mom.register( mom.getRoot(), obj ) and
+mom.register( mom.getRoot(), obj, name ).<br>
+<h4>unregister</h4>
+unregister( Object ) unregisters an object that was previously
+registered.&nbsp; It also deletes any children of the object in
+depth-first order.&nbsp; Unregister removes the generated MBean from
+the ManagedObjectManager and also unregisters the MBean from the
+ManagedObjectManager's MBeanServer.<br>
 <h4>getObject/getObjectName</h4>
 <h4>addTypePrefix</h4>
 <h4>MBeanServer and ResourceBundle</h4>
-<h4>addAnnotation</h4>
+<h4><a name="addAnnotation"></a>addAnnotation</h4>
 <h4>Debugging support<br>
 </h4>
 <h3>Processing of method names for IDs</h3>
@@ -344,9 +450,11 @@ the root object and any other remaining registered objects.</li>
 </ol>
 <h3>Handling Polymorphism</h3>
 <h3>How to create names for managed objects</h3>
-<h3>What if you cannot add an annotation?<br>
+<h3><a name="What_if_you_cannot_add_an_annotation"></a>What if you
+cannot add an annotation?<br>
 </h3>
-<br>
+<h3>Issues with generic types<br>
+</h3>
 <h2>Dependencies</h2>
 The only dependency that JMXA has is JDK 5.&nbsp; It does not require
 anything from JMX<br>
@@ -424,13 +532,13 @@ The resulting OSGi bundles are currently (version 1.0.0-b001) sized at:<br>
     <tr>
       <td style="vertical-align: top;">jmxa-api<br>
       </td>
-      <td style="vertical-align: top;">9774 bytes<br>
+      <td style="vertical-align: top;">10716 bytes<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;">jmxa-impl<br>
       </td>
-      <td style="vertical-align: top;">109802 bytes<br>
+      <td style="vertical-align: top;">119653 bytes<br>
       </td>
     </tr>
   </tbody>
