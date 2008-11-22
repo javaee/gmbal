@@ -128,8 +128,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ManagedObjectManagerImpl() {
         this.resourceBundle = null ;
         this.server = ManagementFactory.getPlatformMBeanServer() ;
-	this.skeletonMap = new WeakHashMap<Class<?>,MBeanSkeleton>() ;
-	this.typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
+        this.skeletonMap = new WeakHashMap<Class<?>,MBeanSkeleton>() ;
+        this.typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
         this.addedAnnotations = 
             new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
     }
