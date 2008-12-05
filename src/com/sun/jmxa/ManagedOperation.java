@@ -50,5 +50,7 @@ public @interface ManagedOperation {
     /** The id of the operation.  Defaults to the method name.
      */
     String id() default "" ;
+
+    Impact impact() default Impact.UNKNOWN ;
 }
 

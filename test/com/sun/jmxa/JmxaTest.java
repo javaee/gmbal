@@ -683,10 +683,9 @@ public class JmxaTest extends TestCase {
         mom.createRoot( root ) ;
 
 	try {
-            mom.setRegistrationDebug( 
-                ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
-	    // mom.register( moe, propName + "=" + onum ) ;
-            System.out.println( mom.dumpSkeleton( root ) ) ;
+        mom.setRegistrationDebug(
+            ManagedObjectManager.RegistrationDebugLevel.NONE ) ;
+        System.out.println( mom.dumpSkeleton( root ) ) ;
 
 	    ObjectName moeName = mom.getObjectName( root ) ;
 	    assertEquals( domain, moeName.getDomain() ) ;

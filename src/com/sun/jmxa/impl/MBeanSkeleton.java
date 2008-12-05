@@ -57,7 +57,6 @@ import javax.management.MBeanException ;
 import javax.management.InvalidAttributeValueException ;
 import javax.management.AttributeNotFoundException ;
 import javax.management.ReflectionException ;
-import javax.management.MBeanOperationInfo ;
 import javax.management.MBeanParameterInfo ;
 
 import javax.management.NotificationBroadcasterSupport ;
@@ -168,6 +167,35 @@ public class MBeanSkeleton {
         return new MBeanSkeleton( skel, this ) ;
     }
 
+    private enum DescriptorType { mbean, attribute, operation }
+
+    // Create a valid descriptor so that ModelMBinfoSupport won't throw
+    // an exception.
+    Descriptor makeValidDescriptor( Descriptor desc, DescriptorType dtype,
+        String dname ) {
+
+	Map<String,Object> map = new HashMap<String,Object>() ;
+	String[] names = desc.getFieldNames() ;
+	Object[] values = desc.getFieldValues( (String[])null ) ;
+	for (int ctr=0; ctr<names.length; ctr++ ) {
+	    map.put( names[ctr], values[ctr] ) ;
+	}
+
+        map.put( "descriptorType", dtype.toString() ) ;
+        if (dtype == DescriptorType.operation) {
+            map.put( "role", "operation" ) ;
+            map.put( "targetType", "ObjectReference" ) ;
+        } else if (dtype == DescriptorType.mbean) {
+            map.put( "persistPolicy", "never" ) ;
+            map.put( "log", "F" ) ;
+            map.put( "visibility", "1" ) ;
+	}
+
+        map.put( "name", dname ) ;
+	map.put( "displayName", dname ) ;
+
+        return new ImmutableDescriptor( map ) ;
+    }
 
     @Override
     public String toString() {
@@ -195,6 +223,11 @@ public class MBeanSkeleton {
                         "Getter and setter types do not match" ) ;
             }
 
+            AttributeDescriptor nonNullDescriptor =
+                (getter != null) ? getter : setter ;
+
+            String name = nonNullDescriptor.id() ;
+            String description = nonNullDescriptor.description() ;
             Descriptor desc = ImmutableDescriptor.EMPTY_DESCRIPTOR ;
             if (getter != null) {
                 desc = ImmutableDescriptor.union( desc,
@@ -208,17 +241,11 @@ public class MBeanSkeleton {
                         setter.method() ) );
             }
 
-            if (desc.getFieldNames().length == 0) {
-                desc = null ;
-            }
+            desc = makeValidDescriptor( desc, DescriptorType.attribute, name ) ;
 
-            AttributeDescriptor nonNullDescriptor = 
-                (getter != null) ? getter : setter ;
-
-            String name = nonNullDescriptor.id() ;
-            String description = nonNullDescriptor.description() ;
             if (mom.registrationFineDebug()) {
-                dputil.info( "name=", name, "description=", description ) ;
+                dputil.info( "name=", name, "description=", description,
+                    "desc=", desc ) ;
             }
             
             TypeConverter tc = mom.getTypeConverter( nonNullDescriptor.type() ) ;
@@ -338,12 +365,12 @@ public class MBeanSkeleton {
                 rtype ) ;
             final Type[] atypes = m.getGenericParameterTypes() ;
             final List<TypeConverter> atcs = new ArrayList<TypeConverter>() ;
+            final ManagedOperation mo = mom.getAnnotation( m,
+                ManagedOperation.class ) ;
             
-            Descriptor modelDescriptor =
-                DescriptorIntrospector.descriptorForElement( m ) ;
-            if (modelDescriptor.getFieldNames().length == 0) {
-                modelDescriptor = null ;
-            }
+            Descriptor modelDescriptor = makeValidDescriptor(
+                DescriptorIntrospector.descriptorForElement( m ),
+                DescriptorType.operation, m.getName() ) ;
 
             for (Type ltype : atypes) {
                 atcs.add( mom.getTypeConverter( ltype ) ) ;
@@ -410,21 +437,16 @@ public class MBeanSkeleton {
                 new MBeanParameterInfo[ atcs.size() ] ;
             int ctr = 0 ;
             for (TypeConverter tc : atcs) {
-                paramInfo[ctr] = new OpenMBeanParameterInfoSupport(
+                paramInfo[ctr] = new MBeanParameterInfo(
                     (pna == null) ? "arg" + ctr : pna.value()[ctr], 
-                    desc, tc.getManagedType() ) ;
+                    tc.getManagedType().toString(), desc ) ;
                 ctr++ ;
             }
 
-
-            // XXX Note that impact is always set to ACTION_INFO here.  If this is 
-            // useful to set in general, we need to add impact to the 
-            // ManagedOperation annotation.
-            // This is basically what JSR 255 does.
             final ModelMBeanOperationInfo operInfo =
                 new ModelMBeanOperationInfo( m.getName(),
                 desc, paramInfo, rtc.getManagedType().toString(),
-                MBeanOperationInfo.ACTION_INFO, modelDescriptor ) ;
+                mo.impact().ordinal(), modelDescriptor ) ;
 
             if (mom.registrationFineDebug()) {
                 dputil.info( "operInfo=", operInfo ) ;
@@ -495,8 +517,8 @@ public class MBeanSkeleton {
     private static class DefaultMBeanTypeHolder{} 
     private static MBeanType defaultMBeanType = 
         DefaultMBeanTypeHolder.class.getAnnotation( MBeanType.class ) ;
-    private static final ImmutableDescriptor DEFAULT_CLASS_DESCRIPTOR =
-        (ImmutableDescriptor) DescriptorIntrospector.descriptorForElement(
+    private static final Descriptor DEFAULT_CLASS_DESCRIPTOR =
+        DescriptorIntrospector.descriptorForElement(
             DefaultMBeanTypeHolder.class ) ;
 
     public MBeanSkeleton( final Class<?> annotatedClass, 
@@ -522,17 +544,9 @@ public class MBeanSkeleton {
         analyzeOperations( ca ) ;
         analyzeObjectNameKeys( ca ) ;
 
-        Descriptor rdesc = new DescriptorSupport(
-            DEFAULT_CLASS_DESCRIPTOR.getFieldNames(),
-            DEFAULT_CLASS_DESCRIPTOR.getFieldValues(null) ) ;
-        Descriptor cdesc = DescriptorIntrospector.descriptorForElement(
-             annotatedClass ) ;
-        for (String key : cdesc.getFieldNames()) {
-            rdesc.setField(key, cdesc.getFieldValue(key));
-        }
-        rdesc.setField( "type", type ) ;
-        rdesc.setField( "name", type ) ;
-        rdesc.setField( "descriptorType", "mbean" ) ;
+        descriptor = makeValidDescriptor(
+            DescriptorIntrospector.descriptorForElement(
+                annotatedClass ), DescriptorType.mbean, type ) ;
 
         mbInfo = makeMbInfo( mom.getDescription( annotatedClass ) ) ;
     }

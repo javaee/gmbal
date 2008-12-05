@@ -78,27 +78,16 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         final Object obj, final MBeanServer server,
         final String type ) {
 
-	this.skel = skel ;
+        this.skel = skel ;
         this.type = type ;
         this.name = null ;
         this.oname = null ;
         this.parent = null ;
         this.children = new HashMap<String,Map<String,MBeanImpl>>() ;
-	this.target = obj ;
+        this.target = obj ;
         addFacet( obj ) ;
-        // XXX add appropriate AMX facet
-        // if (isContainer) <-- How do we determine this?
-        //      addFacet( new ContainerImpl( this ) ) ;
-        // else
-        //      addFacet( new AMXImpl( this ) ) ;
-        //
-        // Possibilities:
-        // Dynamic: start as AMXImpl, add child, then change to container.
-        // Requires regenerating the MBean and re-registering it, plus could
-        // be really confusing for the use.
-        // Static: need to know whether registered object should be leaf or 
-        // container.  How to do this?  Static is probably a better approach.
-        //
+        addFacet( new AMXImpl( this ) ) ;
+
         // XXX How do we make sure that construction of MBean skel and
         // facet registration stay in sync?  The code is currently separated into
         // two places (here and call to new MBeanSkeleton( skel, skel )).
@@ -106,6 +95,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         this.server = server ;
     }
         
+    @Override
     public synchronized boolean equals( Object obj ) {
         if (this == obj) {
             return true ;
@@ -122,10 +112,12 @@ public class MBeanImpl extends NotificationBroadcasterSupport
             type.equals( other.type() ) ;
     }
     
+    @Override
     public synchronized int hashCode() {
         return name.hashCode() ^ type.hashCode() ^ parent.hashCode() ;
     }
  
+    @Override
     public String toString() {
 
         return "MBeanImpl[skel=" + skel

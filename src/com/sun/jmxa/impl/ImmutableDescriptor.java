@@ -88,6 +88,10 @@ public class ImmutableDescriptor implements Descriptor {
         this(makeMap(fieldNames, fieldValues));
     }
 
+    public ImmutableDescriptor( Descriptor desc ) {
+        this( desc.getFieldNames(), desc.getFieldValues(null) ) ;
+    }
+
     /**
      * Construct a descriptor containing the given fields.  Each String
      * must be of the form {@code fieldName=fieldValue}.  The field name
@@ -147,11 +151,13 @@ public class ImmutableDescriptor implements Descriptor {
     private Object readResolve() throws InvalidObjectException {
 
         boolean bad = false;
-        if (names == null || values == null || names.length != values.length)
+        if (names == null || values == null || names.length != values.length) {
             bad = true;
+        }
         if (!bad) {
-            if (names.length == 0 && getClass() == ImmutableDescriptor.class)
+            if (names.length == 0 && getClass() == ImmutableDescriptor.class) {
                 return EMPTY_DESCRIPTOR;
+            }
             final Comparator<String> compare = String.CASE_INSENSITIVE_ORDER;
             String lastName = ""; // also catches illegal null name
             for (int i = 0; i < names.length; i++) {
@@ -163,24 +169,28 @@ public class ImmutableDescriptor implements Descriptor {
                 lastName = names[i];
             }
         }
-        if (bad)
+        if (bad) {
             throw new InvalidObjectException("Bad names or values");
+        }
 
         return this;
     }
 
     private static SortedMap<String, ?> makeMap(String[] fieldNames,
                                                 Object[] fieldValues) {
-        if (fieldNames == null || fieldValues == null)
+        if (fieldNames == null || fieldValues == null) {
             throw new IllegalArgumentException("Null array parameter");
-        if (fieldNames.length != fieldValues.length)
+        }
+        if (fieldNames.length != fieldValues.length) {
             throw new IllegalArgumentException("Different size arrays");
+        }
         SortedMap<String, Object> map =
                 new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
         for (int i = 0; i < fieldNames.length; i++) {
             String name = fieldNames[i];
-            if (name == null || name.equals(""))
+            if (name == null || name.equals("")) {
                 throw new IllegalArgumentException("Empty or null field name");
+            }
             Object old = map.put(name, fieldValues[i]);
             if (old != null) {
                 throw new IllegalArgumentException("Duplicate field name: " +
@@ -191,8 +201,9 @@ public class ImmutableDescriptor implements Descriptor {
     }
 
     private static SortedMap<String, ?> makeMap(String[] fields) {
-        if (fields == null)
+        if (fields == null) {
             throw new IllegalArgumentException("Null fields parameter");
+        }
         String[] fieldNames = new String[fields.length];
         String[] fieldValues = new String[fields.length];
         for (int i = 0; i < fields.length; i++) {
@@ -244,11 +255,13 @@ public class ImmutableDescriptor implements Descriptor {
         // Optimize the case where exactly one Descriptor is non-Empty
         // and it is immutable - we can just return it.
         int index = findNonEmpty(descriptors, 0);
-        if (index < 0)
+        if (index < 0) {
             return EMPTY_DESCRIPTOR;
+        }
         if (descriptors[index] instanceof ImmutableDescriptor
-                && findNonEmpty(descriptors, index + 1) < 0)
+                && findNonEmpty(descriptors, index + 1) < 0) {
             return (ImmutableDescriptor) descriptors[index];
+        }
 
         Map<String, Object> map =
             new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
@@ -260,10 +273,12 @@ public class ImmutableDescriptor implements Descriptor {
                     ImmutableDescriptor id = (ImmutableDescriptor) d;
                     names = id.names;
                     if (id.getClass() == ImmutableDescriptor.class
-                            && names.length > biggestImmutable.names.length)
+                            && names.length > biggestImmutable.names.length) {
                         biggestImmutable = id;
-                } else
+                    }
+                } else {
                     names = d.getFieldNames();
+                }
                 for (String n : names) {
                     Object v = d.getFieldValue(n);
                     Object old = map.put(n, v);
@@ -272,8 +287,9 @@ public class ImmutableDescriptor implements Descriptor {
                         if (old.getClass().isArray()) {
                             equal = Arrays.deepEquals(new Object[] {old},
                                                       new Object[] {v});
-                        } else
+                        } else {
                             equal = old.equals(v);
+                        }
                         if (!equal) {
                             final String msg =
                                 "Inconsistent values for descriptor field " +
@@ -284,24 +300,29 @@ public class ImmutableDescriptor implements Descriptor {
                 }
             }
         }
-        if (biggestImmutable.names.length == map.size())
+        if (biggestImmutable.names.length == map.size()) {
             return biggestImmutable;
+        }
         return new ImmutableDescriptor(map);
     }
 
     private static boolean isEmpty(Descriptor d) {
-        if (d == null)
+        if (d == null) {
             return true;
-        else if (d instanceof ImmutableDescriptor)
+        }
+        else if (d instanceof ImmutableDescriptor) {
             return ((ImmutableDescriptor) d).names.length == 0;
-        else
-            return (d.getFieldNames().length == 0);
+        }
+        else {
+            return d.getFieldNames().length == 0;
+        }
     }
 
     private static int findNonEmpty(Descriptor[] ds, int start) {
         for (int i = start; i < ds.length; i++) {
-            if (!isEmpty(ds[i]))
+            if (!isEmpty(ds[i])) {
                 return i;
+            }
         }
         return -1;
     }
@@ -313,13 +334,16 @@ public class ImmutableDescriptor implements Descriptor {
     public final Object getFieldValue(String fieldName) {
         checkIllegalFieldName(fieldName);
         int i = fieldIndex(fieldName);
-        if (i < 0)
+        if (i < 0) {
             return null;
+        }
         Object v = values[i];
-        if (v == null || !v.getClass().isArray())
+        if (v == null || !v.getClass().isArray()) {
             return v;
-        if (v instanceof Object[])
+        }
+        if (v instanceof Object[]) {
             return ((Object[]) v).clone();
+        }
         // clone the primitive array, could use an 8-way if/else here
         int len = Array.getLength(v);
         Object a = Array.newInstance(v.getClass().getComponentType(), len);
@@ -331,29 +355,37 @@ public class ImmutableDescriptor implements Descriptor {
         String[] result = new String[names.length];
         for (int i = 0; i < result.length; i++) {
             Object value = values[i];
-            if (value == null)
+            if (value == null) {
                 value = "";
-            else if (!(value instanceof String))
+            }
+            else if (!(value instanceof String)) {
                 value = "(" + value + ")";
+            }
             result[i] = names[i] + "=" + value;
         }
         return result;
     }
 
     public final Object[] getFieldValues(String... fieldNames) {
-        if (fieldNames == null)
+        if (fieldNames == null) {
             return values.clone();
+        }
         Object[] result = new Object[fieldNames.length];
         for (int i = 0; i < fieldNames.length; i++) {
             String name = fieldNames[i];
-            if (name != null && !name.equals(""))
+            if (name != null && !name.equals("")) {
                 result[i] = getFieldValue(name);
+            }
         }
         return result;
     }
 
     public final String[] getFieldNames() {
         return names.clone();
+    }
+
+    public Map<String,?> getMap() {
+	return makeMap(names, values);
     }
 
     /**
@@ -382,10 +414,12 @@ public class ImmutableDescriptor implements Descriptor {
     //       due to 6369229.
     @Override
     public boolean equals(Object o) {
-        if (o == this)
+        if (o == this) {
             return true;
-        if (!(o instanceof Descriptor))
+        }
+        if (!(o instanceof Descriptor)) {
             return false;
+        }
         String[] onames;
         if (o instanceof ImmutableDescriptor) {
             onames = ((ImmutableDescriptor) o).names;
@@ -393,17 +427,21 @@ public class ImmutableDescriptor implements Descriptor {
             onames = ((Descriptor) o).getFieldNames();
             Arrays.sort(onames, String.CASE_INSENSITIVE_ORDER);
         }
-        if (names.length != onames.length)
+        if (names.length != onames.length) {
             return false;
+        }
         for (int i = 0; i < names.length; i++) {
-            if (!names[i].equalsIgnoreCase(onames[i]))
+            if (!names[i].equalsIgnoreCase(onames[i])) {
                 return false;
+            }
         }
         Object[] ovalues;
-        if (o instanceof ImmutableDescriptor)
+        if (o instanceof ImmutableDescriptor) {
             ovalues = ((ImmutableDescriptor) o).values;
-        else
+        }
+        else {
             ovalues = ((Descriptor) o).getFieldValues(onames);
+        }
         return Arrays.deepEquals(values, ovalues);
     }
 
@@ -462,8 +500,9 @@ public class ImmutableDescriptor implements Descriptor {
     public String toString() {
         StringBuilder sb = new StringBuilder("{");
         for (int i = 0; i < names.length; i++) {
-            if (i > 0)
+            if (i > 0) {
                 sb.append(", ");
+            }
             sb.append(names[i]).append("=");
             Object v = values[i];
             if (v != null && v.getClass().isArray()) {
@@ -521,14 +560,18 @@ public class ImmutableDescriptor implements Descriptor {
      */
     public final void setFields(String[] fieldNames, Object[] fieldValues)
         throws RuntimeOperationsException {
-        if (fieldNames == null || fieldValues == null)
+        if (fieldNames == null || fieldValues == null) {
             illegal("Null argument");
-        if (fieldNames.length != fieldValues.length)
+        }
+        if (fieldNames.length != fieldValues.length) {
             illegal("Different array sizes");
-        for (int i = 0; i < fieldNames.length; i++)
+        }
+        for (int i = 0; i < fieldNames.length; i++) {
             checkIllegalFieldName(fieldNames[i]);
-        for (int i = 0; i < fieldNames.length; i++)
+        }
+        for (int i = 0; i < fieldNames.length; i++) {
             setField(fieldNames[i], fieldValues[i]);
+        }
     }
 
     /**
@@ -544,13 +587,15 @@ public class ImmutableDescriptor implements Descriptor {
         throws RuntimeOperationsException {
         checkIllegalFieldName(fieldName);
         int i = fieldIndex(fieldName);
-        if (i < 0)
+        if (i < 0) {
             unsupported();
+        }
         Object value = values[i];
         if ((value == null) ?
                 (fieldValue != null) :
-                !value.equals(fieldValue))
+                !value.equals(fieldValue)) {
             unsupported();
+        }
     }
 
     /**
@@ -570,15 +615,17 @@ public class ImmutableDescriptor implements Descriptor {
     }
 
     static Descriptor nonNullDescriptor(Descriptor d) {
-        if (d == null)
+        if (d == null) {
             return EMPTY_DESCRIPTOR;
-        else
+        } else {
             return d;
+        }
     }
 
     private static void checkIllegalFieldName(String name) {
-        if (name == null || name.equals(""))
+        if (name == null || name.equals("")) {
             illegal("Null or empty field name");
+        }
     }
 
     private static void unsupported() {

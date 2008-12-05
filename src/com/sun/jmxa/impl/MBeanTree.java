@@ -40,8 +40,6 @@ import com.sun.jmxa.generic.DprintUtil;
 import com.sun.jmxa.generic.FacetAccessor;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
 import javax.management.JMException;
@@ -53,6 +51,9 @@ import javax.management.ObjectName;
 
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
+ *
+ * XXX Need to get some benchmarks for registration cost.
+ * XXX Do we need to enable/disable MBean registration with MBeanServer.
  *
  * @author ken
  */
@@ -126,8 +127,7 @@ public class MBeanTree {
             return root ;
         } else {
             throw new IllegalStateException( "Root has not yet been set" ) ;
-        }
-        
+        }   
     }
     
     public MBeanTree( final ManagedObjectManagerInternal mom,
@@ -170,7 +170,6 @@ public class MBeanTree {
         String type, String name ) 
         throws MalformedObjectNameException {
         
-        // XXX Should we cache the ObjectName in the entity itself?
         if (parent != null) {
             checkCorrectRoot( parent ) ;
         }

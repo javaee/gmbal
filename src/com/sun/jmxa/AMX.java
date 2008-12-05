@@ -36,6 +36,7 @@
 
 package com.sun.jmxa;
 
+import java.util.Map;
 import javax.management.Descriptor;
 
 
@@ -51,8 +52,6 @@ import javax.management.Descriptor;
 @ManagedObject
 @Description( "Base interface for any MBean that works in the AMX framework" )
 public interface AMX {
-    // XXX align the metadata names here with the @MBeanType annotation.
-
     /** the JMX domain for all AMX MBeans */
     public static final String DOMAIN = "amx";
     /** the ObjectName name property key */
@@ -92,7 +91,7 @@ public interface AMX {
      */
     // This is not mapped to an attribute, because it is always available on a
     // dynamic MBean simply by calling getMBeanInfo().
-    public Descriptor getMeta();
+    public Map<String,?> getMeta();
 
     /** "go up one level": the MBean containing this one, can be null for root
      * @return The container of this MBean (null if already at root).

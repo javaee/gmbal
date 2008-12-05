@@ -42,7 +42,9 @@ import com.sun.jmxa.generic.UnaryFunction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.management.Descriptor;
 import javax.management.MBeanInfo;
@@ -63,10 +65,15 @@ public class AMXImpl implements AMX {
         return mbean.name() ;
     }
 
-    public Descriptor getMeta() {
+    public Map<String,?> getMeta() {
         MBeanInfo mbi = mbean.getMBeanInfo() ;
         ModelMBeanInfoSupport  mmbi = (ModelMBeanInfoSupport)mbi ;
-        return mmbi.getDescriptor() ;
+        Descriptor desc = mmbi.getDescriptor() ;
+        Map<String,Object> result = new HashMap<String,Object>() ;
+        for (String key : desc.getFieldNames()) {
+            result.put( key, desc.getFieldValue(key)) ;
+        }
+        return result ;
     }
 
     public AMX getContainer() {

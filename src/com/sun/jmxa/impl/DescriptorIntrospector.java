@@ -69,8 +69,9 @@ public class DescriptorIntrospector {
      */
 
     public static Descriptor descriptorForElement(final AnnotatedElement elmt) {
-        if (elmt == null)
+        if (elmt == null) {
             return ImmutableDescriptor.EMPTY_DESCRIPTOR;
+        }
         final Annotation[] annots = elmt.getAnnotations();
         return descriptorForAnnotations(annots);
     }
