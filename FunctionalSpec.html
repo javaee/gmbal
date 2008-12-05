@@ -10,14 +10,16 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 </head>
 <body>
-<h1>JMXA Functional Specification</h1>
+<h1>GlassFish MBean Annotation Library (gmbal)</h1>
+<h1>Functional Specification</h1>
 <br>
 by Ken Cavanaugh<br>
-Spec version .01<br>
-11/17/08<br>
+Spec version .02<br>
+12/05/08<br>
 <br>
 <h2>Introduction</h2>
-JMXA is a runtime annotation processor that creates Open MBeans.<br>
+The GlassFish MBean Annotation Library (gmbal) is a runtime annotation
+processor that creates Open MBeans.<br>
 This is useful for creating a management API for existing code with
 minimal effort.<br>
 <br>
@@ -38,7 +40,7 @@ in JSR 77 and AMX.<br>
 The components of the data model are as follows:<br>
 <ul>
   <li>A ManagedObjectManager acts as a container for all state related
-to a particular usage of JMXA. This includes:</li>
+to a particular usage of gmbal. This includes:</li>
   <ul>
     <li>A domain to use for all ObjectNames created in this
 ManagedObjectManager</li>
@@ -70,7 +72,7 @@ Note that all types consumed or produced by Attributes and Operations
 are OpenTypes.<br>
 <br>
 This diagram is a simplification of the actual implementation of
-JMXA.&nbsp; In particular, <br>
+gmbal.&nbsp; In particular, <br>
 the metadata, attributes, and operations are maintained in a
 MBeanSkeleton class, which is<br>
 shared by all MBeanImpls for instances of the same class.&nbsp; The
@@ -79,9 +81,9 @@ conversion between Java types and the corresponding OpenType is also
 not included here.<br>
 <h2>Interfaces</h2>
 Javadocs are <a href="dist/javadoc/index.html">available</a> as part
-of the JMXA project.&nbsp; <br>
+of the gmbal project.&nbsp; <br>
 <br>
-There are basically 3 elements to the JMXA API:<br>
+There are basically 3 elements to the gmbal API:<br>
 <ol>
   <li>class ManagedObjectManagerFactory, which provides factory methods
 for creating instance of the ManagedObjectManager interface.</li>
@@ -301,7 +303,7 @@ added to any MBean<br>
 <br>
 <h3>The ManagedObjectManagerFactory</h3>
 The ManagedObjectManagerFactory is primarily used to create
-ManagedObjectManagers.&nbsp; It is the only concrete class in the JMXA
+ManagedObjectManagers.&nbsp; It is the only concrete class in the gmbal
 API.<br>
 <h4>getMethod</h4>
 This is a simple wrapper around Class.getDeclaredMethod that converts
@@ -325,18 +327,19 @@ rootParentName) that is passed to the create call.&nbsp; Note that the
 root parent MBean MUST be managed by the same MBeanServer as the
 ManagedObjectManager.<br>
 <h3>The ManagedObjectManager</h3>
-The ManagedObjectManager is the main API for JMXA.&nbsp; It contains a
+The ManagedObjectManager is the main API for gmbal.&nbsp; It contains a
 tree of MBeans with a single root,<br>
 which may optionally be federated into a large MBean hierarchy.<br>
 <br>
 The most important methods are createRoot, register, and
-unregister.&nbsp; Any application of JMXA must use these methods.&nbsp;
+unregister.&nbsp; Any application of gmbal must use these
+methods.&nbsp;
 <br>
 <h4>createRoot</h4>
 There are several methods to create a root in the
 ManagedObjectManager.&nbsp; createRoot() creates a root that simply
 acts as an AMX container.&nbsp; Its type and name are both set to
-JMXAROOT.<br>
+GMBALROOT.<br>
 <br>
 createRoot( Object ) and createRoot( Object, String ) both use the
 given object as the root, and just as in the register methods, these
@@ -433,7 +436,7 @@ The basic usage of JMXA is as follows:<br>
 means anything you want to manage, part of GFv3 or not) to expose
 attributes and operations.</li>
   <li>In some cases you may need to expose some data by defining new
-methods.&nbsp; Currently all JMXA visible annotations must be public,
+methods.&nbsp; Currently all gmbal visible annotations must be public,
 but I may relax that (at the cost of requiring an access check
 permission for reflection).</li>
   <li>In the initialization of a module, create an appropriate
@@ -456,24 +459,21 @@ cannot add an annotation?<br>
 <h3>Issues with generic types<br>
 </h3>
 <h2>Dependencies</h2>
-The only dependency that JMXA has is JDK 5.&nbsp; It does not require
+The only dependency that gmbal has is JDK 5.&nbsp; It does not require
 anything from JMX<br>
 that is not in JDK 5.&nbsp; It also has no dependencies on GlassFish
 v3&nbsp; or CORBA.<br>
 <h2>Project Details</h2>
-Currently the JMXA project is publicly available at <a
- href="https://kenai.com/hg/gf-corba-v3-mirror%7Ejmxannotations">https://kenai.com/hg/gf-corba-v3-mirror~jmxannotations.</a><br>
-This is a Mercurial workspace within the GlasFish CORBA v3
-project.&nbsp; I'll create a new JMXA <br>
-project on Kenai once the name has been settled.&nbsp; Note that JMXA
-will NOT be build as part of the <br>
-GFv3 build.&nbsp; This is necessary because JMXA is also used outside
-of GFv3, and we need to avoid<br>
-circular build dependencies (e.g. GFv3 dependsOn CORBA dependsOn JMXA,
-which creates a <br>
-build loop if GFv3 also contains JMXA).<br>
+The gmbal project is publicly available in a mercurial workspace at <a
+ href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a><br>
+Note that gmbal
+will NOT be build as part of the&nbsp; GFv3 build.&nbsp; This is
+necessary because gmbal is also used outside
+of GFv3, and we need to avoid circular build dependencies (e.g. GFv3
+dependsOn CORBA dependsOn gmbal,
+which creates a build loop if GFv3 also contains gmbal).<br>
 <br>
-JMXA uses the following packages:<br>
+gmbal uses the following packages:<br>
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2"
  cellspacing="2">
   <tbody>
@@ -488,35 +488,35 @@ Bundle</span><br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.jmxa<br>
+      <td style="vertical-align: top;">com.sun.gmbal<br>
       </td>
-      <td style="vertical-align: top;">jmxa-api<br>
+      <td style="vertical-align: top;">gmbal-api<br>
       </td>
       <td style="vertical-align: top;">all public interfaces<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.jmxa.util<br>
+      <td style="vertical-align: top;">com.sun.gmbal.util<br>
       </td>
-      <td style="vertical-align: top;">jmxa-api<br>
+      <td style="vertical-align: top;">gmbal-api<br>
       </td>
       <td style="vertical-align: top;">contains code needed to support
 the API-Impl split (reflective construction of the implementation)<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.jmxa.generic<br>
+      <td style="vertical-align: top;">com.sun.gmbal.generic<br>
       </td>
-      <td style="vertical-align: top;">jmxa-impl<br>
+      <td style="vertical-align: top;">gmbal-impl<br>
       </td>
       <td style="vertical-align: top;">General-purpose code for
 debugging, plus simple function programming support<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.jmxa.impl<br>
+      <td style="vertical-align: top;">com.sun.gmbal.impl<br>
       </td>
-      <td style="vertical-align: top;">jmxa-impl<br>
+      <td style="vertical-align: top;">gmbal-impl<br>
       </td>
       <td style="vertical-align: top;">The full implementation.&nbsp; <br>
       </td>
@@ -530,15 +530,15 @@ The resulting OSGi bundles are currently (version 1.0.0-b001) sized at:<br>
  cellspacing="2">
   <tbody>
     <tr>
-      <td style="vertical-align: top;">jmxa-api<br>
+      <td style="vertical-align: top;">gmbal-api<br>
       </td>
-      <td style="vertical-align: top;">10716 bytes<br>
+      <td style="vertical-align: top;">15573 bytes<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">jmxa-impl<br>
+      <td style="vertical-align: top;">gmbal-impl<br>
       </td>
-      <td style="vertical-align: top;">119653 bytes<br>
+      <td style="vertical-align: top;">120231 bytes<br>
       </td>
     </tr>
   </tbody>
