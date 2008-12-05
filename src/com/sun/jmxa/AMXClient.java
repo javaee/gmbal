@@ -40,6 +40,8 @@ import com.sun.jmxa.AMX;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.AttributeNotFoundException;
@@ -70,7 +72,7 @@ import javax.management.modelmbean.ModelMBeanInfo;
  *
  * @author ken
  */
-public class AMXClient implements AMX, DynamicMBean {
+public class AMXClient implements AMX {
     private MBeanServerConnection server ;
     private ObjectName oname ;
 
@@ -161,10 +163,15 @@ public class AMXClient implements AMX, DynamicMBean {
         }
     }
 
-    public Object getAttribute(String attribute)
-        throws AttributeNotFoundException, MBeanException, ReflectionException {
+    public Object getAttribute(String attribute) {
         try {
             return server.getAttribute(oname, attribute);
+        } catch (MBeanException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (AttributeNotFoundException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (ReflectionException ex) {
+            throw new RuntimeException( ex ) ;
         } catch (InstanceNotFoundException ex) {
             throw new RuntimeException( ex ) ;
         } catch (IOException ex) {
@@ -172,12 +179,18 @@ public class AMXClient implements AMX, DynamicMBean {
         }
     }
 
-    public void setAttribute(Attribute attribute)
-        throws AttributeNotFoundException, InvalidAttributeValueException,
-        MBeanException, ReflectionException {
+    public void setAttribute(Attribute attribute) {
         try {
             server.setAttribute(oname, attribute);
         } catch (InstanceNotFoundException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (AttributeNotFoundException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (InvalidAttributeValueException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (MBeanException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (ReflectionException ex) {
             throw new RuntimeException( ex ) ;
         } catch (IOException ex) {
             throw new RuntimeException( ex ) ;
@@ -231,9 +244,5 @@ public class AMXClient implements AMX, DynamicMBean {
         } catch (IOException ex) {
             throw new RuntimeException( ex ) ;
         }
-    }
-
-    private ObjectName[] fetchAttribute(String string, ObjectName[] objectName) {
-        throw new UnsupportedOperationException("Not yet implemented");
     }
 }
