@@ -66,7 +66,7 @@ public class DprintUtil {
 	// Note that this must end in . in order to be renamed correctly.
 	String prefix = "org.glassfish.gmbal." ;
 	if (name.startsWith( prefix ) ) {
-	    return "(JMXA)." + name.substring( prefix.length() ) ;
+	    return "(GMBAL)." + name.substring( prefix.length() ) ;
 	} else {
             return name;
         }

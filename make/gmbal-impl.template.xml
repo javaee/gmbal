@@ -3,7 +3,7 @@
     <dependencies>
         <dependency>
             <groupId>@groupId@</groupId>
-            <artifactId>jmxa-api</artifactId>
+            <artifactId>gmbal-api</artifactId>
             <version>@version@</version>
         </dependency>
     </dependencies>

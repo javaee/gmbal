@@ -984,7 +984,7 @@ public class JmxaTest extends TestCase {
             mom.registerAtRoot( nmdt ) ;
             ObjectName oname = mom.getObjectName( nmdt ) ;
             String expectedName = 
-                "this.test:JMXAROOT=na,type=NestedManagedDataTest,name=na" ;
+                "this.test:GMBALROOT=na,type=NestedManagedDataTest,name=na" ;
             ObjectName expectedObjectName = null ;
             try {
                 expectedObjectName = new ObjectName(expectedName);

@@ -175,7 +175,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     @ManagedObject
-    @MBeanType( type="JMXAROOT")
+    @MBeanType( type="GMBALROOT")
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
         // No methods: will simply implement an AMX container
