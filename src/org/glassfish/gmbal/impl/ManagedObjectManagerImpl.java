@@ -137,7 +137,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public ManagedObjectManagerImpl( final String domain ) {
         this() ;
         this.domain = domain ;
-        
+
         // set actualRoot, rootName later
         // MBeanTree need mom, domain, rootParentName
         this.tree = new MBeanTree( this, domain, null, "type" ) ;
@@ -172,6 +172,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 dputil.exit() ;
             }
         }
+    }
+
+    public ObjectName getRootParentName() {
+        return tree.getRootParentName() ;
     }
     
     @ManagedObject

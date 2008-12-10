@@ -51,6 +51,7 @@ import org.glassfish.gmbal.generic.Predicate;
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
+import javax.management.ObjectName;
 
 public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     /** Construct or lookup the TypeConverter for the given type.
@@ -98,6 +99,8 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     FacetAccessor getFacetAccessor( Object obj ) ;
     
     MBeanImpl constructMBean( Object obj, String name ) ;
+
+    ObjectName getRootParentName() ;
     
     boolean registrationDebug() ;
     

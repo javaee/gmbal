@@ -33,20 +33,20 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package org.glassfish.gmbal ;
+package org.glassfish.gmbal.typelib;
 
-import java.lang.annotation.Documented ;
-import java.lang.annotation.Target ;
-import java.lang.annotation.ElementType ;
-import java.lang.annotation.Retention ;
-import java.lang.annotation.RetentionPolicy ;
-
-/** This annotation defines a Managed Object.   An interface or class annotated as ManagedObject
- * has a corresponding open MBean constructed according to the ManagedAttribute and
- * ManagedOperation annotations on its methods.
+/**
+ *
+ * @author ken
  */
-@Documented 
-@Target(ElementType.TYPE) 
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ManagedObject {
+public interface Visitor<R> {
+    R visitEvaluatedType( EvaluatedType et ) ;
+    
+    R visitEvaluatedArrayType( EvaluatedArrayType eat ) ;
+    
+    R visitEvaluatedDeclaration( EvaluatedDeclaration ed ) ;
+    
+    R visitEvaluatedClassDeclaration( EvaluatedClassDeclaration ecd ) ;
+    
+    R visitEvaluatedMethodDeclaration( EvaluatedMethodDeclaration emd ) ;
 }

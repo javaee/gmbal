@@ -34,8 +34,9 @@
  * holder.
  */
 
-package org.glassfish.gmbal;
+package org.glassfish.gmbal.impl;
 
+import org.glassfish.gmbal.*;
 import org.glassfish.gmbal.AMX;
 import java.io.IOException;
 import java.util.HashMap;
@@ -72,7 +73,7 @@ import javax.management.modelmbean.ModelMBeanInfo;
  *
  * @author ken
  */
-public class AMXClient implements AMX {
+public class AMXClient implements AMX, DynamicMBean {
     private MBeanServerConnection server ;
     private ObjectName oname ;
 

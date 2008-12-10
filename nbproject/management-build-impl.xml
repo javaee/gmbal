@@ -143,7 +143,6 @@ is divided into following sections:
     <target name="run-lcl-mgt-single" if="netbeans.home" depends="init,compile-single" description="Manage a selected class in the IDE.">
         <fail unless="manage.class">Must select one file in the IDE or set manage.class</fail>
         <!--
-                    TODO
                 -->
     </target>
     <!--

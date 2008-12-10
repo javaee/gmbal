@@ -75,11 +75,11 @@ public @interface MBeanType {
     @DescriptorKey( AMX.META_SINGLETON )
     boolean isSingleton() default false ;
         
-    /** True if all MBean attributes are invariant, that is, have the same
+    /** True if the MBeanInfo is invariant, that is, has the same
      * value for the lifetime of the MBean.  This may be used as a hint
-     * to clients that the contents of the MBean can be cached.
+     * to clients that the MBeanInfo can be cached.
      * 
-     * @return True if all attributes of the MBean are invariant.
+     * @return True if the MBeanInfo is invariant.
      */
     @DescriptorKey( AMX.META_INVARIANT_MBEANINFO )
     boolean isInvariantMBeanInfo() default true ;

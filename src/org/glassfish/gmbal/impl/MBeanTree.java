@@ -316,4 +316,8 @@ public class MBeanTree {
         objectNameMap.clear() ;
         rootEntity = null ;
     }
+
+    public ObjectName getRootParentName() {
+        return rootParentName ;
+    }
 }

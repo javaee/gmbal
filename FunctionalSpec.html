@@ -14,24 +14,163 @@
 <h1>Functional Specification</h1>
 <br>
 by Ken Cavanaugh<br>
-Spec version .02<br>
+Spec version .03<br>
 12/05/08<br>
 <br>
 <h2>Introduction</h2>
 The GlassFish MBean Annotation Library (gmbal) is a runtime annotation
 processor that creates Open MBeans.<br>
 This is useful for creating a management API for existing code with
-minimal effort.<br>
+minimal effort.&nbsp; It is intended to be applied<br>
+to existing modules (which may be OSGi bundles in GlassFish v3, or any
+other packaging model including <br>
+standard jar files), but could be used anywhere that it is desired to
+combine the definition of the<br>
+management API with the module API and implementation.<br>
 <br>
-Alignment<br>
-&nbsp;&nbsp;&nbsp; with JMX<br>
-&nbsp;&nbsp;&nbsp; with AMX<br>
+There are really two parts to creating a management API for a module:
+instrumenting the module implementation,<br>
+and providing a client interface that may be accessed remotely.&nbsp;
+This is what AMX has done in GlassFish, and<br>
+gmbal will follow the same model.<br>
 <br>
-Similar projects<br>
-&nbsp;&nbsp;&nbsp; JSR 255<br>
-&nbsp;&nbsp;&nbsp; JMX MXBeans in JDK 6<br>
-&nbsp;&nbsp;&nbsp; Spring annotations<br>
-&nbsp;&nbsp;&nbsp; The INRIA thing<br>
+The details on the client model still need to be worked out, but
+basically gmbal will generate Java source code <br>
+from annotated classes to provides client-side proxies for remote
+access to the gmbal-generated MBeans. <br>
+The proxies will take care of mapping MBean ObjectNamess to a
+type-specific interface that extends the AMX interface,<br>
+mapping OpenTypes to application-domain types (e.g. map CompositeData
+to a Java class containing getters<br>
+for its various data elements), and any other details that make the
+client side API simple to use.<br>
+<br>
+The source code generation will be in two pieces:<br>
+<ol>
+  <li>A set of interfaces for MBean and OpenType definitions that can
+have as extensive JavaDocs written as needed. The description
+information will be filled in as a default and starting point for the
+JavaDocs. This should be generated once and maintained separately&nbsp;
+to preserve the JavaDocs, rather than generated for each build.<br>
+  </li>
+  <li>A set of implementations of the interfaces that is generated for
+each build. This will detect inconsistencies between the interfaces and
+implementations.</li>
+</ol>
+The source code generation will be driven from the meta data produced
+by analyzing the classes, using the same code. The tool itself will be
+packaged separately from the main implementation, since it is only
+needed at build time.<br>
+<br>
+<h3>Alignment with related projects</h3>
+JMX is also defining similar annotations in JSR 255 for JDK 7.&nbsp; I
+am aligning gmbal with the JMX annotations as much as I think is
+reasonable, given the different goals of the project.&nbsp; <br>
+<br>
+The similarities include:<br>
+<ul>
+  <li>@ManagedAttribute is the same, except that gmbal allows
+overriding the id.</li>
+  <li>@ManagedOperation is the same, except that gmbal allows
+overriding the id.</li>
+  <li>@DescriptorKey is the same.</li>
+  <li>@DescriptorFields is the same.</li>
+  <li>@Description is similar, but gmbal only has a value() attribute,
+while JSR 255 has key and bundleBaseName. Gmbal takes the approach that
+I18N support is handled by using keys on the annotation only, then
+providing a separate resource bundle which can be registered with the
+ManagedObjectManager (see the discussion <a
+ href="#MBeanServer_and_ResourceBundle">below</a>).<br>
+  </li>
+</ul>
+Differences:<br>
+<ul>
+  <li>The packaging is necessarily different: org.glassfish.gmbal for
+gmbal, javax.management for JSR 255.</li>
+  <li>Gmbal uses @ManagedObject instead of @MBean or @MXBean (because I
+really don't want that level of confusion).</li>
+  <li>Gmbal only support attribute change notifications (so far), so
+the @NotificationInfo does not exist in Gmbal.</li>
+  <li>Gmbal has an @ManagedData annotation to define the mapping of
+data types into CompositeData, while JSR 255 follows MXBeans and simply
+assumes that all methods that follow the JavaBeans patterns define
+read-only attributes.</li>
+  <li>Gmbal supports an MBeanType annotation, but this is really just
+an extension to the @Descriptor mechanism borrowed from JMX
+ModelMBeans.&nbsp; The MBeanType annotation is provided to support
+AMX-specific metadata.</li>
+  <li>Gmbal includes @ParameterNames to provide reasonable names for
+the arguments on MBean operations.&nbsp; JSR 255 does not currently
+have such a mechanism, because JDK 7 will have an extension to Java
+reflection that captures the argument names on methods.</li>
+  <li>Gmbal includes @ObjectNameKey to make it easy to define the value
+of the "name" field in the ObjectName. This makes registration of
+object as MBeans slightly simpler.</li>
+  <li>Gmbal includes @IncludeSubclass, which allows limited (and
+closed) polymorphism for CompositeData.&nbsp; This partially solves the
+problem of mapping a group of types sharing type Base that appear as
+(for example) attributes with type List&lt;Base&gt;.</li>
+  <li>Gmbal includes @InheritedAttribute(s) to allow using methods
+inherited from super classes or super interfaces that cannot be
+annotated as attribute and operations.</li>
+  <li>Gmbal is more limited currently in mapping OpenType -&gt; Java
+type than JMX is, as this does not seem to be a feature that we need.<br>
+  </li>
+</ul>
+Note that there are two complimentary ways to define MBeans: MXBeans
+and annotations.&nbsp; MXBeans are somewhat more convenient to use in
+cases where EVERY method in a class or interface is part of the
+management interface, whereas annotations are more convenient for
+adding a management interface to existing code.<br>
+<br>
+AMX in GlassFish v3 is being generalized to define exactly what an
+MBean must do to be manageable in the GlassFish v3 admin tools (see
+Lloyd's <a
+ href="https://glassfish.dev.java.net/nonav/v3/admin/planning/V3Changes/V3_AMX_SPI.html">GlassFish
+V3 AMX SPI</a> specification). Gmbal will follow all mandatory and most
+of the optional requirements of this specification so that any module
+that uses gmbal to define MBeans will automatically participate in the
+GFv3 admin console and CLI when run in a GFv3 container.&nbsp; However,
+this will not prevent the use of gmbal in these same modules as a
+standalone MBean definition library.<br>
+<br>
+This last point needs a little more explanation.&nbsp; The main
+interface that matters for running in or out of a GFv3 container is
+ManagedObjectManagerFactory.createXXX (XXX is either Standalone or
+Federated). The createStandalone method is needed for running outside
+of GFv3, and takes the domain name as an argument. createFedederated
+must be called inside of GFv3, and this require the ObjectName of the
+ManagedObjectManager root MBean's parent.&nbsp; Calling the appropriate
+method is probably best handled in many cases by having a OSGi bundle
+for a module that is responsible for integrating the module into
+GFv3.&nbsp; For example, the ORB will need such a module to handle
+registration of all of the GFv3-specific interceptors and other
+initialization when the GFv3 ORB instance is created.<br>
+<br>
+<h3>Similar projects</h3>
+I have already discussed JSR 255 in the previous section, but there are
+other projects that also define MBeans using annotations.<br>
+<br>
+The Spring project also defines a set of annotations to use for
+creating MBeans.&nbsp; Eamonn McManus has pointed<br>
+to this as one of the starting points for JSR 255 in a blog <a
+ href="http://weblogs.java.net/blog/emcmanus/archive/2007/08/defining_mbeans.html">post</a>
+from August 2007.&nbsp; JSR 255 and Spring share the<br>
+@ManagedAttribute and @ManagedOperation annotations, but the Spring
+annotations include a description fields,<br>
+whereas JSR 255 has moved the description into a separate annotation
+(as I have in gmbal as well).<br>
+<br>
+The WebObject project from INRIA in France has created the <a
+ href="http://spoon.gforge.inria.fr/SpoonJMX/Main">SpoonJMX</a>
+project, which also allows the use of annotations<br>
+to define MBeans. SpoonJMX uses @ManagedResource to define an MBean
+class.&nbsp; It uses @ManagedAttribute and @ManagedOperation<br>
+as in the other systems.&nbsp; SpoonJMX defines the @ObjectNameKey
+annotation, which I have adopted for use in<br>
+gmbal as well.&nbsp; SpoonJMX also defines more attributes on the
+annotations than either gmbal or JSR 255.<br>
+<br>
 <h2>The Management Data Model</h2>
 JMXA supports a simple hierarchical model of management data as defined
 in JSR 77 and AMX.<br>
@@ -68,8 +207,8 @@ MBeanImpl<br>
   </ul>
   <li>Attributes and Operations have ids</li>
 </ul>
-Note that all types consumed or produced by Attributes and Operations
-are OpenTypes.<br>
+Note that all values consumed or produced by Attributes and Operations
+are instances of OpenTypes.<br>
 <br>
 This diagram is a simplification of the actual implementation of
 gmbal.&nbsp; In particular, <br>
@@ -79,6 +218,7 @@ shared by all MBeanImpls for instances of the same class.&nbsp; The
 TypeConverter that handles<br>
 conversion between Java types and the corresponding OpenType is also
 not included here.<br>
+<br>
 <h2>Interfaces</h2>
 Javadocs are <a href="dist/javadoc/index.html">available</a> as part
 of the gmbal project.&nbsp; <br>
@@ -101,7 +241,7 @@ Here is a summary of the annotations:<br>
       <td style="vertical-align: top; font-weight: bold;">Annotation
 Class<br>
       </td>
-      <td style="vertical-align: top; font-weight: bold;">Annotation
+      <td style="vertical-align: top; font-weight: bold; width: 25%;">Annotation
 Fields<br>
       </td>
       <td style="vertical-align: top; font-weight: bold;">Applicable
@@ -187,7 +327,8 @@ associated with a Class, Interface, or Method<br>
       </td>
       <td style="vertical-align: top;">Class[] value<br>
       </td>
-      <td style="vertical-align: top;">Class or Interface<br>
+      <td style="vertical-align: top;">Class or Interface for
+ManagedData<br>
       </td>
       <td style="vertical-align: top;">N/A<br>
       </td>
@@ -213,7 +354,9 @@ class<br>
     <tr>
       <td style="vertical-align: top;">@ParameterNames<br>
       </td>
-      <td style="vertical-align: top;">String[] value (defaults to "")<br>
+      <td style="vertical-align: top;">String[] value (defaults to "")
+(if present, must have same length as number of arguments in the
+annotated method)<br>
       </td>
       <td style="vertical-align: top;">Method<br>
       </td>
@@ -232,7 +375,8 @@ used on an MBean operation<br>
       <ul>
         <li>String description</li>
         <li>String id (default "" which means take from method name)</li>
-        <li>String methodName (default "" which means use id<br>
+        <li>String methodName (default "" which means use id)</li>
+        <li>one of methodName or id must NOT be ""<br>
         </li>
       </ul>
       <br>
@@ -261,8 +405,22 @@ inherited attributes<br>
     <tr>
       <td style="vertical-align: top;">@MBeanType<br>
       </td>
-      <td style="vertical-align: top;">Still under discussion (see
-below: note that this is just an application of @DescriptionKey<br>
+      <td style="vertical-align: top;">
+      <ul>
+        <li>String type (the type to use in an ObjectName:&nbsp;
+defaults to class name, but see also&nbsp; <a href="#addTypePrefix">addTypePrefix</a>)</li>
+        <li>boolean isContainer (true if this MBean can contain other
+MBeans)</li>
+        <li>boolean isSingleton (true&nbsp; if only one MBean of this
+type is allowed as a child of&nbsp; another MBean)</li>
+        <li>&nbsp;boolean isInvariantMBeanInfo (true if the MBeanInfo
+can never change)</li>
+        <li>String pathPart (value to use in AMX CLI commands: defaults
+to type)<br>
+        </li>
+      </ul>
+&nbsp;(This is just an application of @DescriptionKey, with a little
+special support in the gmbal implementation)<br>
       </td>
       <td style="vertical-align: top;">Class or Interface<br>
       </td>
@@ -305,6 +463,7 @@ added to any MBean<br>
 The ManagedObjectManagerFactory is primarily used to create
 ManagedObjectManagers.&nbsp; It is the only concrete class in the gmbal
 API.<br>
+<br>
 <h4>getMethod</h4>
 This is a simple wrapper around Class.getDeclaredMethod that converts
 the checked exceptions from getDeclaredMethod into unchecked
@@ -312,6 +471,7 @@ exceptions.&nbsp; It is intended for use with the <a
  href="#addAnnotation">addAnnotation</a> method.<br>
 See also the <a href="#What_if_you_cannot_add_an_annotation">discussion</a>
 about adding annotations.<br>
+<br>
 <h4>create</h4>
 There are two versions of create: create( String ) and create(
 ObjectName ).&nbsp; create( String ) is used to create a standalone
@@ -326,6 +486,7 @@ ManagedObjectManager is identified by the object name (called the
 rootParentName) that is passed to the create call.&nbsp; Note that the
 root parent MBean MUST be managed by the same MBeanServer as the
 ManagedObjectManager.<br>
+<br>
 <h3>The ManagedObjectManager</h3>
 The ManagedObjectManager is the main API for gmbal.&nbsp; It contains a
 tree of MBeans with a single root,<br>
@@ -334,6 +495,7 @@ which may optionally be federated into a large MBean hierarchy.<br>
 The most important methods are createRoot, register, and
 unregister.&nbsp; Any application of gmbal must use these
 methods.&nbsp;
+<br>
 <br>
 <h4>createRoot</h4>
 There are several methods to create a root in the
@@ -357,9 +519,11 @@ createRoot may only be called when the ManagedObjectManager does not
 already contain a root. This is true immediately after a
 ManagedObjectManagerFactory.create call, or after unregistering the
 root.<br>
+<br>
 <h4>getRoot</h4>
 getRoot returns the current root of the ManagedObjectManager.&nbsp; If
 no root is available, getRoot throws an IllegalStateException.<br>
+<br>
 <h4>register and registerAtRoot</h4>
 There are two forms of register: register( Object parent, Object obj )
 and register( Object parent, Object obj, String name ).&nbsp; The first
@@ -374,21 +538,120 @@ There are also two forms of registerAtRoot: registerAtRoot( Object obj
 ) and registerAtRoot( Object obj, String name).&nbsp; These methods are
 exactly equivalent to mom.register( mom.getRoot(), obj ) and
 mom.register( mom.getRoot(), obj, name ).<br>
+<br>
 <h4>unregister</h4>
 unregister( Object ) unregisters an object that was previously
 registered.&nbsp; It also deletes any children of the object in
 depth-first order.&nbsp; Unregister removes the generated MBean from
 the ManagedObjectManager and also unregisters the MBean from the
 ManagedObjectManager's MBeanServer.<br>
+<br>
 <h4>getObject/getObjectName</h4>
-<h4>addTypePrefix</h4>
-<h4>MBeanServer and ResourceBundle</h4>
+The register methods return a NotificationEmitter which can be used to
+register a NotificationListener to listen for attribute change
+events.&nbsp; But sometimes access to the ObjectName is needed.&nbsp;
+getObjectName returns the ObjectName that was created for an object
+that was passed to the register method.&nbsp; getObject is used to
+handle the opposite case: going from the ObjectName to the registered
+Object.&nbsp; Note that in both case the registered Object is the
+implementation object passed to a register method, NOT the internally
+created dynamic MBean (which is not directly provided).<br>
+<br>
+<h4><a name="addTypePrefix"></a>addTypePrefix</h4>
+A type prefix is simply a prefix of a fully qualified Java class name.
+By default, the MBean ObjectName type field is set to the full
+qualified class name of the implementation class, stripped of the
+longest type prefix of the class name.&nbsp; For example, in CORBA the
+type prefixes are set to:<br>
+<br>
+<div style="margin-left: 40px;">com.sun.corba.se<br>
+com.sun.corba.se.spi<br>
+com.sun.corba.se.spi.orbutil<br>
+com.sun.corba.se.impl<br>
+com.sun.corba.se.impl.orbutil<br>
+<br>
+</div>
+This helps keep the ObjectNames to a reasonable length.&nbsp;
+Applications of gmbal are also free to specifiy the exact type name to
+use through an annotation.<br>
+<br>
+<h4><a name="MBeanServer_and_ResourceBundle"></a>MBeanServer and
+ResourceBundle</h4>
+Accessors (getter and setter) are provided for the MBeanServer and the
+ResourceBundle.<br>
+<br>
+The MBeanServer is used for all register and unregister operations in
+the ManagedObjectManager instance. It defaults to the<br>
+platform MBeanServer.<br>
+<br>
+The ResourceBundle is used to internationalize all descriptions.&nbsp;
+If set, the description value is used as a key in the resource bundle,<br>
+otherwise the description value is taken as the actual description.<br>
 <h4><a name="addAnnotation"></a>addAnnotation</h4>
-<h4>Debugging support<br>
-</h4>
+The best way to explain this method is to start wth an example.&nbsp;
+CORBA defines a class org.omg.PortableServer.Servant.&nbsp; <br>
+The definition of Servant is a standard, and so I cannot add
+annotations to the source code for Servant.&nbsp; Gmbal is flexible<br>
+enough that we can put the annotation almost anywhere, so what are the
+possible subclasses of Servant?<br>
+Mostly one subclass is used in GlassFish for dynamic RMI-IIOP:
+ReflectiveTie, but others are possible, including<br>
+Ties generated by the idlj compiler.&nbsp; We also cannot add
+non-standard annotations to standard-compliant code generated<br>
+by a code generator.<br>
+<br>
+This becomes an issue when adding annotations to things like the ORB's
+POA, which has a method:<br>
+<pre>@ManagedData<br>Servant get_servant() { ... }<br></pre>
+that I would like to use as an attribute.&nbsp; How should gmbal
+represent Servant in this case?&nbsp; I may want to represent<br>
+the Servant as ManagedData, using one or more methods (such as byte[]
+_object_id()) on the Servant as attributes,<br>
+but there is no place that I can put an annotation for this.<br>
+<br>
+The solution I have adopted in gmbal is to allow annotations to be
+added on "dummy" classes, and then use <br>
+ManagedObjectManager.addAnnotation to add the annotation to the
+appropriate type.&nbsp; For example, the above example<br>
+can be handled by:<br>
+<br>
+<pre>@ManagedData<br>@InheritedAttributes( {<br>    @InheritedAttribute( methodName="_object_id", id="objectId",<br>	description="The Object Id for this Servant" ),<br>    ... // serveral other methods<br>} )<br>public interface DummyServant {}<br><br>mom.addAnnotation( Servant.class, DummyServant.class.getAnnotation( ManagedObject.class ) ) ;<br>mom.addAnnotation( Servant.class, DummyServant.class.getAnnotation( InheritedAttributes.class ) ) ;<br></pre>
+This behaves exactly as if the annotations on DummyServant were on
+Servant, allowing the appropriate <br>
+annotation processing to take place.<br>
+<h4>Debugging support</h4>
+Gmbal is a fairly complex system, and it is possible to apply it in
+ways that lead to incorrect results.<br>
+To help with this, I have defined several features that can be useful
+for debugging:<br>
+<ul>
+  <li>setRegistrationDebugLevel( RegistrationDebugLevel level ).&nbsp;
+Here the level can be NONE, NORMAL, or FINE.&nbsp; When enabled, this
+method causes detailed tracing (more detailed with FINE) of the
+operations involved in registering an MBean.</li>
+  <li>setRuntimeDebugLevel( boolean flag ).&nbsp; If this is enabled,
+the operations involved in getting or setting attributes or calling an
+operation on an MBean are traced.</li>
+  <li>String dumpSkeleton( Object obj ).&nbsp; If obj is an object that
+has been registered with the ManagedObjectManaged, this returns a
+String dump of the MBeanSkeleton object, which provides detailed
+information about the exact attributes and operations supported by the
+MBean.</li>
+</ul>
+These operations can be used to get useful information about the
+operation of gmbal.&nbsp; The setXXXDebugLevel methods currently dump<br>
+information to System.out, but the code has a flag that can be set to
+dump information to a Logger.&nbsp; The Logger may become the <br>
+default dump mechanism in the future.<br>
+<h2>Further notes on the API<br>
+</h2>
+There are a number of details about how the APIs work that require
+further discussion.<br>
+<br>
 <h3>Processing of method names for IDs</h3>
 The following rules are applied to generate attribute and operation IDs
 from method names:<br>
+<br>
 <ol>
   <li>If the method is annotated with @ManagedAttribute:<br>
   </li>
@@ -399,7 +662,7 @@ non-void result):</li>
       <li>If the method name starts with "get", remove "get" and make
 the next letter lowercase.</li>
       <li>If the return type is boolean, and the method starts with
-"is", remove "is" and make the next letter lowercase4.</li>
+"is", remove "is" and make the next letter lowercase.</li>
       <li>Otherwise the method name is the id.<br>
       </li>
     </ol>
@@ -418,9 +681,39 @@ error.</li>
     <li>The id is the method name.</li>
   </ol>
 </ol>
+These rules are applied unless the ManagedAttribute or ManagedOperation
+annotation has a non-default id attribute, in which<br>
+case the id from the annotation is used.<br>
+<br>
 <h3>I18N support</h3>
 <h3>OpenType mapping<br>
 </h3>
+Gmbal mostly follows the OpenType mapping rules for MXBeans (see the <a
+ href="http://java.sun.com/javase/6/docs/api/javax/management/MXBean.html#mapping-rules">Type
+Mapping Rules</a>), but of course<br>
+MXBeans are only available on JDK 6 and later, and gmbal supports JDK
+5. There are a few differences:<br>
+<ol>
+  <li>Gmbal supports all Collection, Iterator, Iterable, and
+Enumeration types where MXBeans support List, Set, and SortedSet.</li>
+  <li>Gmbal also maps Dictionary as well as Map to TabularType.</li>
+  <li>Gmbal maps all @ManagedObject types to ObjectName (in MXBeans,
+this is any MXBean interface.</li>
+  <li>Gmbal only maps other types to CompositeData if the type has an
+@ManagedData annotation.&nbsp; If not, gmbal maps the type to a String
+using its toString() method.</li>
+  <li>While MXBeans handle SortedSet and SortedMap specially, gmbal
+does not.</li>
+  <li>Gmbal does not support reconstructing a Java type from
+CompositeData. Gmbal could be extended in this area if necessary.</li>
+  <li>Gmbal will provide more support for converting generic types into
+generic MBean types, which can be instantiated into specific MBeans
+based on the actual type parameters supplied to an instance of the
+generic type.</li>
+</ol>
+Gmbal does not currently provide support for setting attributes with
+CompositeData values (but this would be easy to add, following<br>
+the rules used for MXBeans).<br>
 <br>
 <h3>Metadata support<br>
 </h3>
@@ -456,13 +749,38 @@ the root object and any other remaining registered objects.</li>
 <h3><a name="What_if_you_cannot_add_an_annotation"></a>What if you
 cannot add an annotation?<br>
 </h3>
-<h3>Issues with generic types<br>
-</h3>
+<h3>Issues with generic types</h3>
+This is best explained with an example.&nbsp; Suppose we have
+interfaces defined as follows:<br>
+<pre>@ManagedData<br>public interface ExampleData&lt;S,T&gt; {<br>    S	getInfo() ;<br><br>    List&lt;T&gt; getData() ;<br>}<br><br>public interface Example&lt;S,T&gt; {<br>    @ManagedAttribute<br>    ExampleData&lt;S,T&gt; getInfo() ;<br>}<br><br>@ManagedObject<br>public interface MyBean extends Example&lt;Date,List&lt;String&gt;&gt; {<br>}<br></pre>
+What sort of MBean should we create for MyBean?&nbsp; If we just use
+reflection on MyBean, we find an attribute info that<br>
+returns an ExampleData&lt;S,T&gt;, which would turn into a
+CompositeData with two attributes:<br>
+<ul>
+  <li>id=info, type=Object (since type is type variable S)</li>
+  <li>id=data, type=List&lt;Object&gt; (since type is List&lt;type
+variable&gt;</li>
+</ul>
+But we acutally have a lot more information than this: if we "evalute"
+the types, we should see attributes on the CompositeData like:<br>
+<ul>
+  <li>id=info, type=Date</li>
+  <li>id=data, type=List&lt;List&lt;String&gt;&gt;</li>
+</ul>
+So instead of erasing the types, we evaluate the type variable by
+replacing the type variables with the types used<br>
+to instantiate them.&nbsp; Another way of looking at this is that
+annotating a generic interface or class with @ManagedData or<br>
+@ManagedObject is basically creating a template for creating the actual
+CompositeData or Open MBean.<br>
 <h2>Dependencies</h2>
 The only dependency that gmbal has is JDK 5.&nbsp; It does not require
 anything from JMX<br>
 that is not in JDK 5.&nbsp; It also has no dependencies on GlassFish
 v3&nbsp; or CORBA.<br>
+<br>
+<h2>Testing</h2>
 <h2>Project Details</h2>
 The gmbal project is publicly available in a mercurial workspace at <a
  href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a><br>
@@ -524,7 +842,7 @@ debugging, plus simple function programming support<br>
   </tbody>
 </table>
 <br>
-The resulting OSGi bundles are currently (version 1.0.0-b001) sized at:<br>
+The resulting OSGi bundles are currently (version 2.0.0-b001) sized at:<br>
 <br>
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2"
  cellspacing="2">
@@ -532,13 +850,13 @@ The resulting OSGi bundles are currently (version 1.0.0-b001) sized at:<br>
     <tr>
       <td style="vertical-align: top;">gmbal-api<br>
       </td>
-      <td style="vertical-align: top;">15573 bytes<br>
+      <td style="vertical-align: top;">12751 bytes<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;">gmbal-impl<br>
       </td>
-      <td style="vertical-align: top;">120231 bytes<br>
+      <td style="vertical-align: top;">123049 bytes<br>
       </td>
     </tr>
   </tbody>

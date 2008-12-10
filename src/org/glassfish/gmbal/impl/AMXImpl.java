@@ -48,7 +48,9 @@ import java.util.Map;
 import java.util.Set;
 import javax.management.Descriptor;
 import javax.management.MBeanInfo;
+import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
+import org.glassfish.gmbal.ManagedObjectManager;
 
 /**
  *
@@ -81,14 +83,13 @@ public class AMXImpl implements AMX {
         if (parent != null) {
             return parent.facet( AMX.class, false ) ;
         } else {
-            // XXX Need to handle two cases here:
-            // 1. Standalone: just return null
-            // 2. Federated: need to an instance of AMX that corresponds
-            //    to a different implementation based on the object name.
-            //    That requires a proxy.  This can be obtained easily enough
-            //    from the rootParentName, assuming that the rootParent uses
-            //    the same MBeanServer as this MOM.
-            return null ;
+            ManagedObjectManagerInternal mom = mbean.skeleton().mom() ;
+            ObjectName rpn = mom.getRootParentName() ;
+            if (rpn == null) {
+                return null ;
+            } else {
+                return new AMXClient( mom.getMBeanServer(), rpn ) ;
+            }
         }
     }
 
