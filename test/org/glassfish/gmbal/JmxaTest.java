@@ -779,7 +779,7 @@ public class JmxaTest extends TestCase {
     private static final String ROOT_TYPE = "RootType" ;
     
     @ManagedObject
-    @MBeanType( type=ROOT_TYPE, isContainer=true )
+    @MBeanType( pathPart=ROOT_TYPE, isLeaf=false )
     public static class RootObject {
         private int value ;
         
@@ -792,7 +792,7 @@ public class JmxaTest extends TestCase {
     }
     
     @ManagedObject
-    @MBeanType( type=ROOT_TYPE, isContainer=true )
+    @MBeanType( pathPart=ROOT_TYPE, isLeaf=false )
     public static class NamedRootObject extends RootObject{
         String name ;
         
@@ -953,7 +953,7 @@ public class JmxaTest extends TestCase {
     private static final String NMD_TYPE = "NestedManagedDataTest" ;
     
     @ManagedObject
-    @MBeanType( type=NMD_TYPE ) 
+    @MBeanType( pathPart=NMD_TYPE )
     @Description( "Nested Managed Data test")
     public static class NestedManagedDataTest {
         Person person ;
