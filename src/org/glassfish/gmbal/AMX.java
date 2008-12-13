@@ -68,23 +68,35 @@ public interface AMX {
     public String getName();
 
     /** boolean indicating that the MBean type can have only 1 instance */
-    public static final String META_SINGLETON = "Singleton";
-
-    /** boolean indicating that the MBean contains other MBeans.  See getContained() */
-    public static final String META_CONTAINER = "Container";
-
-    /** boolean indicating that MBeanInfo is immutable */
-    public static final String META_INVARIANT_MBEANINFO = "InvariantMBeanInfo";
-
-    /** Metadata used to override the type of the AMX MBean.
-     * This provides the value used in the ObjectName for the TYPE_PROP_KEY.
-     */
-    public static final String META_TYPE = "Type" ;
+    public static final String META_SINGLETON = "amx.isSingleton";
 
     /** The name part to be used for this item's "path".
-        By convention this is the MBean's type, but could be something else,
-        such as its XML element type (for config MBeans). */
-    public static final String META_PATH_PART = "PathPart";
+     *  By convention this is the MBean's type, but could be something else,
+     *  such as its XML element type (for config MBeans).
+     */
+    public static final String META_PATH_PART = "amx.pathPart";
+
+    /** boolean indicating that MBeanInfo is immutable */
+    public static final String META_MBEANINFO_INVARIANT =
+        "amx.isMBeanInfoInvariant";
+
+    /** Name of proxy interfae, if any (defaults to a generic interface).
+     */
+    public static final String META_PROXY_INTERFACE_NAME =
+        "amx.proxyInterfaceName" ;
+
+    public static final String META_GROUP_TYPE =
+        "amx.group" ;
+
+    /** boolean indicating that the MBean may not contain other MBeans.
+     * See getContained()
+     */
+    public static final String META_LEAF = "amx.isLeaf";
+
+    /** Gives the allowed subtypes of this node.  If empty (the default),
+     * any types are allowed.
+     */
+    public static final String META_SUB_TYPES = "amx.subTypes" ;
 
     /** Get all metadata about this MBean.  See {@link #META_SINGLETON} et al.
      * @return The descriptor, which will be a ModelMBeanInfoSupport instance.

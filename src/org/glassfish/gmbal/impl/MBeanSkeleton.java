@@ -75,11 +75,9 @@ import org.glassfish.gmbal.generic.DumpToString ;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import javax.management.Descriptor;
 import javax.management.JMException;
-import javax.management.modelmbean.DescriptorSupport;
 import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
-import javax.management.openmbean.OpenMBeanParameterInfoSupport;
 
 public class MBeanSkeleton {
     // Object evaluate( Object, List<Object> ) 
@@ -504,8 +502,8 @@ public class MBeanSkeleton {
         final Class<?> cls ) {
         
         String result ;
-        if (mbt.type().length() > 0) {
-            result = mbt.type() ;
+        if (mbt.pathPart().length() > 0) {
+            result = mbt.pathPart() ;
         } else {
             result = mom.getStrippedName( cls ) ;
         }

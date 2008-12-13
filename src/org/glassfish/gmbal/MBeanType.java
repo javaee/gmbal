@@ -54,42 +54,56 @@ import java.lang.annotation.RetentionPolicy ;
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MBeanType {
-    /** An explicit type name to be used for a ManagedObject.
-     * @return The optional type value.
-     */
-    @DescriptorKey( AMX.META_TYPE )
-    String type() default "" ;
-    
-    /** Return true if this MBean may contain other MBeans, otherwise false.
-     * 
-     * @return whether or not this MBean is a container.
-     */
-    @DescriptorKey( AMX.META_CONTAINER )
-    boolean isContainer() default false ;
-    
     /** True if only one MBean of this type may be created inside the same
      * parent container
-     * 
+     *
      * @return
      */
     @DescriptorKey( AMX.META_SINGLETON )
     boolean isSingleton() default false ;
-        
-    /** True if the MBeanInfo is invariant, that is, has the same
-     * value for the lifetime of the MBean.  This may be used as a hint
-     * to clients that the MBeanInfo can be cached.
-     * 
-     * @return True if the MBeanInfo is invariant.
-     */
-    @DescriptorKey( AMX.META_INVARIANT_MBEANINFO )
-    boolean isInvariantMBeanInfo() default true ;
-    
-    /** Value to use in AMX CLI pathnames that include this MBean.
-     * Defaults to same value as type (whether type is obtained explicitly
-     * or implicitly).
-     * 
-     * @return The optional pathName component.
+
+    /** An explicit type name to be used for a ManagedObject.
+     * Defaults to the name derived from the Class name.
+     * @return The optional type value.
      */
     @DescriptorKey( AMX.META_PATH_PART )
     String pathPart() default "" ;
+
+    /** True if the MBeanInfo is invariant, that is, has the same
+     * value for the lifetime of the MBean.  This may be used as a hint
+     * to clients that the MBeanInfo can be cached.
+     *
+     * @return True if the MBeanInfo is invariant.
+     */
+    @DescriptorKey( AMX.META_MBEANINFO_INVARIANT )
+    boolean isMBeanInfoInvariant() default true ;
+
+    /** Defines the name of the interface to use when generating a proxy
+     * for this class.  Defaults to a generic interface.
+     * XXX Is there a default code generation pattern we expect to use here?
+     * @return
+     */
+    @DescriptorKey( AMX.META_PROXY_INTERFACE_NAME )
+    String proxyInterfaceName() default "" ;
+
+    /** String denoting classification of MBean.  Predefined values are
+     * configuration, monitoring, jsr77, utility, and other.
+     * @return The group type.
+     */
+    @DescriptorKey( AMX.META_GROUP_TYPE )
+    String group() default "other" ;
+
+    /** Return true if this MBean may contain other MBeans, otherwise false.
+     * 
+     * @return whether or not this MBean is a container.
+     */
+    @DescriptorKey( AMX.META_LEAF )
+    boolean isLeaf() default true ;
+
+    /** Return the list of types that are legal as types of children of this
+     * type.  If unknown, must be an empty array.  Not used is isLeaf is true.
+     * @return Array of child types
+     */
+    @DescriptorKey( AMX.META_SUB_TYPES )
+    String[] subTypes() default {} ;
 } 

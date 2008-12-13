@@ -14,7 +14,7 @@
 <h1>Functional Specification</h1>
 <br>
 by Ken Cavanaugh<br>
-Spec version .03<br>
+Spec version .20<br>
 12/05/08<br>
 <br>
 <h2>Introduction</h2>
@@ -407,16 +407,21 @@ inherited attributes<br>
       </td>
       <td style="vertical-align: top;">
       <ul>
-        <li>String type (the type to use in an ObjectName:&nbsp;
-defaults to class name, but see also&nbsp; <a href="#addTypePrefix">addTypePrefix</a>)</li>
-        <li>boolean isContainer (true if this MBean can contain other
+        <li>String pathPart (the type to use in an ObjectName or in an
+admin CLI path expression:&nbsp; defaults to class name, but see
+also&nbsp; <a href="#addTypePrefix">addTypePrefix</a>)</li>
+        <li>boolean isLeaf (true if this MBean can not contain other
 MBeans)</li>
         <li>boolean isSingleton (true&nbsp; if only one MBean of this
 type is allowed as a child of&nbsp; another MBean)</li>
-        <li>&nbsp;boolean isInvariantMBeanInfo (true if the MBeanInfo
+        <li>&nbsp;boolean isMBeanInfoInvariant (true if the MBeanInfo
 can never change)</li>
         <li>String pathPart (value to use in AMX CLI commands: defaults
-to type)<br>
+to type)</li>
+        <li>String group() (value is the group for this mbean, defaults
+to "other")</li>
+        <li>String[] subTypes() (value is the list of allowable types
+for children of this bean)<br>
         </li>
       </ul>
 &nbsp;(This is just an application of @DescriptionKey, with a little
@@ -619,6 +624,12 @@ can be handled by:<br>
 This behaves exactly as if the annotations on DummyServant were on
 Servant, allowing the appropriate <br>
 annotation processing to take place.<br>
+<br>
+InheritedAttribute can also be used when it is desired to use a method
+inherited from a super class as<br>
+an attribute or operation.&nbsp; This is useful in the case where the
+superclass is a class that for whatever<br>
+reason cannot be modified with an annotation.<br>
 <h4>Debugging support</h4>
 Gmbal is a fairly complex system, and it is possible to apply it in
 ways that lead to incorrect results.<br>
@@ -684,8 +695,13 @@ error.</li>
 These rules are applied unless the ManagedAttribute or ManagedOperation
 annotation has a non-default id attribute, in which<br>
 case the id from the annotation is used.<br>
-<br>
 <h3>I18N support</h3>
+Gmbal supports I18N by supplying a ResourceBundle to the
+ManagedObjectManager.&nbsp; If this option is used, all values of<br>
+@Description annotations must be resource bundle keys.&nbsp; The
+appropriate ResourceBundle must then be associated with<br>
+the ManagedObjectManager when the ManagedObjectManager is created.<br>
+<br>
 <h3>OpenType mapping<br>
 </h3>
 Gmbal mostly follows the OpenType mapping rules for MXBeans (see the <a
@@ -717,13 +733,38 @@ the rules used for MXBeans).<br>
 <br>
 <h3>Metadata support<br>
 </h3>
-MBeanType<br>
-general Metadata and ModelMBeanInfo etc.<br>
-<br>
-<h3>AMX support on MBeans<br>
+Gmbal fully supports extensible metadata on MBeans by using the JMX
+ModelMBean Descriptor, which is available on JDK 5.<br>
+JDK 6 has applied Descriptor support to ALL MBean metadata, but gmbal
+must continue to support JDK 5 for now.<br>
+Gmbal supports the @DescriptorKey and @DescriptorFields annotations
+defined in JSR 255 for associating metadata<br>
+with MBeans.&nbsp; Gmbal also defines an annotation @MBeanType (which
+itself uses the meta-annotation @DescriptorKey)<br>
+in order to support the metadata needed by AMX.<br>
+<h3>AMX support on MBeans</h3>
+Gmbal will be fully compliant with all requirements and recommendations
+of the <a
+ href="https://glassfish.dev.java.net/nonav/v3/admin/planning/V3Changes/V3_AMX_SPI.html">GlassFish
+v3 AMX SPI</a>.<br>
+This includes:<br>
+<ul>
+  <li>Creating ObjectNames according to the parent/child
+hierarchy.&nbsp; Gmbal will never put anything in an ObjectName that is
+not part of the AMX specification.</li>
+  <li>Supporting the MBeanInfo Descriptor.&nbsp; This is handled in
+gmbal through the @MBeanType annotation.</li>
+  <li>All MBeans created using gmbal will include all of the attributes
+defined in section 4 of the AMX SPI spec.</li>
+  <li>Gmbal will only use Open data types.</li>
+  <li>Gmbal will suport all of the behavior requirements of section 5
+of the AMX SPI spec.&nbsp; This include support for
+AttributeChangeNotifdication.<br>
+  </li>
+</ul>
+<h3>Using Gmbal<br>
 </h3>
-<h3>Examples</h3>
-The basic usage of JMXA is as follows:<br>
+The basic usage of Gmbal is as follows:<br>
 <ol>
   <li>Add annotations to existing application objects (here application
 means anything you want to manage, part of GFv3 or not) to expose
@@ -745,10 +786,29 @@ with the mom.</li>
 the root object and any other remaining registered objects.</li>
 </ol>
 <h3>Handling Polymorphism</h3>
-<h3>How to create names for managed objects</h3>
-<h3><a name="What_if_you_cannot_add_an_annotation"></a>What if you
-cannot add an annotation?<br>
-</h3>
+There are cases where an attribute has a type defined by a base class
+or interface, but the actual implementation can be<br>
+one of several different classes.&nbsp; For example, the ORB has a
+TaggedComponent interface, representing part of the data in a<br>
+remote reference, and there are several concrete subclasses of
+TaggedComponent that are used.&nbsp; This is not a problem<br>
+for @ManagedObject classes, since they are reference by ObjectNames,
+and an ObjectName can reference any type of <br>
+MBean.&nbsp; But this does not work for @ManagedData, because
+@ManagedData is mapped to a CompositeData type, and<br>
+CompositeData does not support polymorphism.<br>
+<br>
+Gmbal supports a limit form of polymorphism to handle this case using
+the @IncludeSubclass annotation.&nbsp; @IncludeSubclass<br>
+gives the subclasses of a @ManagedData type which themselves can
+contribute attributes to the CompositeData for the<br>
+parent class.&nbsp; Gmbal generates a CompositeData type that contains
+the union of all fields in all of the subclasses. At runtime,<br>
+only those attributes actually present in a particular instance of the
+@ManagedData class are present in the <br>
+CompositeData for the instance.&nbsp; In this way, gmbal supports a
+limit form of polymorphism under a closed-world<br>
+assumption.<br>
 <h3>Issues with generic types</h3>
 This is best explained with an example.&nbsp; Suppose we have
 interfaces defined as follows:<br>
@@ -779,8 +839,10 @@ The only dependency that gmbal has is JDK 5.&nbsp; It does not require
 anything from JMX<br>
 that is not in JDK 5.&nbsp; It also has no dependencies on GlassFish
 v3&nbsp; or CORBA.<br>
-<br>
 <h2>Testing</h2>
+All tests for gmbal are written in Java using JUnit, and reside in the
+test directory in the project.<br>
+<br>
 <h2>Project Details</h2>
 The gmbal project is publicly available in a mercurial workspace at <a
  href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a><br>
