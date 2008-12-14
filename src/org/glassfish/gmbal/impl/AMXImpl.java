@@ -36,8 +36,6 @@
 
 package org.glassfish.gmbal.impl;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.MBeanException;
 import org.glassfish.gmbal.AMX;
 import org.glassfish.gmbal.generic.Algorithms;
@@ -53,7 +51,7 @@ import javax.management.Descriptor;
 import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
-import org.glassfish.gmbal.ManagedObjectManager;
+import org.glassfish.gmbal.GmbalException;
 
 /**
  *
@@ -77,7 +75,7 @@ public class AMXImpl implements AMX {
         try {
             desc = mmbi.getMBeanDescriptor();
         } catch (MBeanException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getMeta", ex ) ;
         }
         Map<String,Object> result = new HashMap<String,Object>() ;
         for (String key : desc.getFieldNames()) {

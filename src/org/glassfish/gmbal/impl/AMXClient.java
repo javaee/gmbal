@@ -81,9 +81,9 @@ public class AMXClient implements AMX, DynamicMBean {
         try {
             return type.cast( server.getAttribute( oname, name ) ) ;
         } catch (JMException exc) {
-            throw new GmbalException( exc ) ;
+            throw new GmbalException( "Exception in fetchAttribute", exc ) ;
         } catch (IOException exc) {
-            throw new GmbalException( exc ) ;
+            throw new GmbalException( "Exception in fetchAttribute", exc ) ;
         }
     }
 
@@ -111,17 +111,17 @@ public class AMXClient implements AMX, DynamicMBean {
             }
             return result ;
         } catch (MBeanException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getMeta", ex ) ;
         } catch (RuntimeOperationsException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getMeta", ex ) ;
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getMeta", ex ) ;
         } catch (IntrospectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getMeta", ex ) ;
         } catch (ReflectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getMeta", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getMeta", ex ) ;
         }
     }
 
@@ -154,13 +154,13 @@ public class AMXClient implements AMX, DynamicMBean {
                 "getContainer", args, sig );
             return makeAMXArray( onames ) ;
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getContained", ex ) ;
         } catch (MBeanException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getContained", ex ) ;
         } catch (ReflectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getContained", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getContained", ex ) ;
         }
     }
 
@@ -168,15 +168,15 @@ public class AMXClient implements AMX, DynamicMBean {
         try {
             return server.getAttribute(oname, attribute);
         } catch (MBeanException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
         } catch (AttributeNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
         } catch (ReflectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
         }
     }
 
@@ -184,17 +184,17 @@ public class AMXClient implements AMX, DynamicMBean {
         try {
             server.setAttribute(oname, attribute);
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
         } catch (AttributeNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
         } catch (InvalidAttributeValueException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
         } catch (MBeanException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
         } catch (ReflectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
         }
     }
 
@@ -202,11 +202,11 @@ public class AMXClient implements AMX, DynamicMBean {
         try {
             return server.getAttributes(oname, attributes);
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttributes", ex ) ;
         } catch (ReflectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttributes", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in getAttributes", ex ) ;
         }
     }
 
@@ -214,11 +214,11 @@ public class AMXClient implements AMX, DynamicMBean {
         try {
             return server.setAttributes(oname, attributes);
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttributes", ex ) ;
         } catch (ReflectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttributes", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in setAttributes", ex ) ;
         }
     }
 
@@ -227,9 +227,9 @@ public class AMXClient implements AMX, DynamicMBean {
         try {
             return server.invoke(oname, actionName, params, signature);
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in invoke", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in invoke", ex ) ;
         }
     }
 
@@ -237,13 +237,13 @@ public class AMXClient implements AMX, DynamicMBean {
         try {
             return server.getMBeanInfo(oname);
         } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in invoke", ex ) ;
         } catch (IntrospectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in invoke", ex ) ;
         } catch (ReflectionException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in invoke", ex ) ;
         } catch (IOException ex) {
-            throw new GmbalException( ex ) ;
+            throw new GmbalException( "Exception in invoke", ex ) ;
         }
     }
 }

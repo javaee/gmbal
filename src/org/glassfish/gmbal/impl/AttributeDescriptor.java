@@ -50,6 +50,7 @@ import org.glassfish.gmbal.generic.DumpToString;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Pair;
 import javax.management.MBeanException;
+import org.glassfish.gmbal.GmbalException;
     
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;

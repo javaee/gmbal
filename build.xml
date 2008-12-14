@@ -112,11 +112,13 @@
                 <instrpath>
                     <pathelement location="build/classes"/>
                 </instrpath>
-                <!-- add typelib or typeresolver once we start using one of them -->
+                <!-- include typelib or typeresolver once we start using one of them -->
                 <filter includes="org.glassfish.gmbal.*"/>
                 <filter includes="org.glassfish.gmbal.util.*"/>
                 <filter includes="org.glassfish.gmbal.impl.*"/>
                 <filter includes="org.glassfish.gmbal.generic.*"/>
+                <filter excludes="org.glassfish.gmbal.typelib.*"/>
+                <filter excludes="org.glassfish.gmbal.typeresolver.*"/>
             </instr>
         </emma>
     </target>
