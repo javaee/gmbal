@@ -73,9 +73,9 @@ public final class ManagedObjectManagerFactory {
         try {
             return cls.getDeclaredMethod( name, types ) ;
         } catch(NoSuchMethodException exc) {
-            throw new IllegalArgumentException( exc ) ;
+            throw new GmbalException( "Unexpected exception", exc ) ;
         } catch (SecurityException exc) {
-            throw new IllegalArgumentException( exc ) ;
+            throw new GmbalException( "Unexpected exception", exc ) ;
         }
     }
     

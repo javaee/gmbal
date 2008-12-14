@@ -65,6 +65,7 @@ public class MBeanTree {
     private Map<ObjectName,Object> objectNameMap ;
     private String domain ;
     private ObjectName rootParentName ;
+    private String rootParentSuffix ;
     private String typeString ; // What string is used for the type of the 
                                 // type name/value pair?
     private ManagedObjectManagerInternal mom ;
@@ -129,7 +130,38 @@ public class MBeanTree {
             throw new IllegalStateException( "Root has not yet been set" ) ;
         }   
     }
-    
+
+    private String getRootParentSuffix( final ObjectName rootParentName ) {
+        final String[] keys =
+            rootParentName.getKeyPropertyListString().split( "," ) ;
+
+        final StringBuilder res = new StringBuilder() ;
+        String typeValue = null ;
+        String nameValue = null ;
+        for (String str : keys) {
+            int index = str.indexOf( '=' ) ;
+            String key = str.substring( 0, index ) ;
+            String value = str.substring( index+1 ) ;
+            if (key.equals( "type" ) || key.equals( "j2eeType" ) ) {
+                typeValue = value ;
+            } else if (key.equals( "name" ) ) {
+                nameValue = value ;
+            } else {
+                res.append( ',' ) ;
+                res.append( key ) ;
+                res.append( '=' ) ;
+                res.append( value ) ;
+            }
+        }
+
+        if (typeValue == null || nameValue == null)
+            throw new GmbalException( "rootParentName " + rootParentName
+                + " is invalid: it is missing type or name" ) ;
+
+        final String result = typeValue + '=' + nameValue + res.toString() ;
+        return result ;
+    }
+
     public MBeanTree( final ManagedObjectManagerInternal mom,
         final String domain, 
         final ObjectName rootParentName,
@@ -138,6 +170,12 @@ public class MBeanTree {
         this.mom = mom ;
         this.domain = domain ;
         this.rootParentName = rootParentName ;
+        if (rootParentName == null) {
+            rootParentSuffix = null ;
+        } else {
+            rootParentSuffix = getRootParentSuffix( rootParentName ) ;
+        }
+
         this.typeString = typeString ;
         objectMap = new HashMap<Object,MBeanImpl>() ;
         objectNameMap = new HashMap<ObjectName,Object>() ;
@@ -173,35 +211,31 @@ public class MBeanTree {
         if (parent != null) {
             checkCorrectRoot( parent ) ;
         }
-        
+
         StringBuilder result = new StringBuilder() ;
+
         result.append( domain ) ;
         result.append( ":" ) ;
-        if (rootParentName != null) {
-            String rpDomain = rootParentName.getDomain() ;
-            String rootKVP = rootParentName.toString().substring( 
-                rpDomain.length() + 1 ) ;
-            result.append( rootKVP ) ;
-            result.append( "," ) ;
-        }
-        
-        if (parent != null) {
-            String restName = parent.restName() ;
-            if (notEmpty( restName )) {
-                result.append( restName ) ;
-                result.append( "," ) ;
-            }
-        }
-        
+
         result.append( typeString ) ;
         result.append( "=" ) ;
         result.append( type ) ;
+
         result.append( ',') ;
-        
         result.append( "name" ) ;
         result.append( "=" ) ;
         result.append( name ) ;
-        
+
+        if (parent != null) {
+            result.append( ',' ) ;
+            result.append( parent.restName() ) ;
+        }
+
+        if (rootParentSuffix != null) {
+            result.append( ',' ) ;
+            result.append( rootParentSuffix ) ;
+        }
+
         return new ObjectName( result.toString() ) ; 
     }
     

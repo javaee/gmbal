@@ -14,7 +14,7 @@
 <h1>Functional Specification</h1>
 <br>
 by Ken Cavanaugh<br>
-Spec version .20<br>
+Spec version .21<br>
 12/05/08<br>
 <br>
 <h2>Introduction</h2>
@@ -834,6 +834,32 @@ to instantiate them.&nbsp; Another way of looking at this is that
 annotating a generic interface or class with @ManagedData or<br>
 @ManagedObject is basically creating a template for creating the actual
 CompositeData or Open MBean.<br>
+<h3>Issues with recursive types</h3>
+CompositeData cannot be defined directly from class definitions that
+have recursive types.&nbsp; Here is an example of the problem:<br>
+<pre>@ManagedData<br>public interface A {<br>    @ManagedAttribute<br>    B getB() ;<br>}<br><br>@ManagedData<br>public interface B {<br>    @ManagedAttribute<br>    A getA() ;<br>}<br></pre>
+The problem here is that we need to construct an instance of
+CompositeType to represent the OpenType to which A and B are <br>
+mapped.&nbsp; But CompositeData is immutable, so in order to construct
+the CompositeType for A, we need the CompositeType of<br>
+B, which can't be constructed without using the CompositeType of
+A.&nbsp; So a direct mapping fails here, and gmbal will detect<br>
+this problem and throw an exception.<br>
+<br>
+The way to work around the problem is to add a level of indirection so
+that one of the classes refers to the other indirectly.<br>
+For example, support A has a convenient String name attribute we can
+use (which is a key for instances of A).&nbsp; <br>
+Then the above can be expressed as:<br>
+<pre>@ManagedData <br>public interface A {<br>    @ManagedAttribute<br>    String getName() ;<br><br>    @ManagedAttribute<br>    B getB() ;<br>}<br><br>@ManagedData<br>public interface B {<br>    @ManagedAttribute( id="b" ) <br>    String getARef() ; // returns getA().getName()<br><br>    A getA() ;<br>}<br></pre>
+In this way the relationship between A and B can still be represented
+in the management API without needing<br>
+recursive references between different data types that are represented
+with CompositeData.<br>
+<br>
+Note that it is possible to automate this to some extent, but I
+currently have no plans to extend gmbal to<br>
+automatically handle this problem.<br>
 <h2>Dependencies</h2>
 The only dependency that gmbal has is JDK 5.&nbsp; It does not require
 anything from JMX<br>
@@ -847,7 +873,7 @@ test directory in the project.<br>
 The gmbal project is publicly available in a mercurial workspace at <a
  href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a><br>
 Note that gmbal
-will NOT be build as part of the&nbsp; GFv3 build.&nbsp; This is
+will NOT be built as part of the&nbsp; GFv3 build.&nbsp; This is
 necessary because gmbal is also used outside
 of GFv3, and we need to avoid circular build dependencies (e.g. GFv3
 dependsOn CORBA dependsOn gmbal,

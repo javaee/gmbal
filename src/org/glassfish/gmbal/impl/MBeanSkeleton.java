@@ -339,7 +339,7 @@ public class MBeanSkeleton {
                 dputil.info( "annotatedMethod=", annotatedMethod ) ;
             }
             
-            // XXX Need an I18N description
+            // XXX I18N
             nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
                 mom, annotatedMethod, "name", "Name of this ManagedObject" ) ;            
         } finally {

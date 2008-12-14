@@ -96,7 +96,7 @@ public class AttributeDescriptor {
 
     private void checkType( AttributeType at ) {
         if (at != _atype) {
-            throw new RuntimeException( "Required AttributeType is " + at ) ;
+            throw new GmbalException( "Required AttributeType is " + at ) ;
         }
     }
 

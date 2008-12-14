@@ -683,9 +683,9 @@ public class JmxaTest extends TestCase {
         mom.createRoot( root ) ;
 
 	try {
-        mom.setRegistrationDebug(
-            ManagedObjectManager.RegistrationDebugLevel.NONE ) ;
-        System.out.println( mom.dumpSkeleton( root ) ) ;
+            // mom.setRegistrationDebug(
+                // ManagedObjectManager.RegistrationDebugLevel.NONE ) ;
+            //System.out.println( mom.dumpSkeleton( root ) ) ;
 
 	    ObjectName moeName = mom.getObjectName( root ) ;
 	    assertEquals( domain, moeName.getDomain() ) ;
@@ -774,7 +774,7 @@ public class JmxaTest extends TestCase {
     }
 
     private static final String ROOT_DOMAIN = "this.test" ;
-    private static final String ROOT_PARENT_NAME = ROOT_DOMAIN + ":foo=bar" ;
+    private static final String ROOT_PARENT_NAME = ROOT_DOMAIN + ":type=FruitBat,name=Sam,foo=bar" ;
     
     private static final String ROOT_TYPE = "RootType" ;
     
@@ -816,7 +816,7 @@ public class JmxaTest extends TestCase {
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
-            String expectedName = "this.test:foo=bar,type=RootType,name=MyRoot" ;
+            String expectedName = "this.test:type=RootType,name=MyRoot,FruitBat=Sam,foo=bar" ;
             ObjectName expectedObjectName = null ;
             try {
                 expectedObjectName = new ObjectName(expectedName);
@@ -845,7 +845,7 @@ public class JmxaTest extends TestCase {
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
-            String expectedName = "this.test:foo=bar,type=RootType,name=MyRoot" ;
+            String expectedName = "this.test:type=RootType,name=MyRoot,FruitBat=Sam,foo=bar" ;
             ObjectName expectedObjectName = null;
             try {
                 expectedObjectName = new ObjectName(expectedName);

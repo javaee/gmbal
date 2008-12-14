@@ -108,7 +108,7 @@ public class GenericConstructor<T> {
             } catch (Exception exc) {
                 constructor = null ;
                 Logger.getLogger("org.glassfish.gmbal.util").
-                    log(Level.FINE, "Error invoking constructor", exc );
+                    log(Level.WARNING, "Error invoking constructor", exc );
             }
         }
         

@@ -129,11 +129,11 @@ public class FacetAccessorImpl implements FacetAccessor {
             try {
                 result = method.invoke(target, args);
             } catch (IllegalAccessException ex) {
-                throw new RuntimeException( "Exception on invocation", ex ) ;
+                throw new GmbalException( "Exception on invocation", ex ) ;
             } catch (IllegalArgumentException ex) {
-                throw new RuntimeException( "Exception on invocation", ex ) ;
+                throw new GmbalException( "Exception on invocation", ex ) ;
             } catch (InvocationTargetException ex) {
-                throw new RuntimeException( "Exception on invocation", ex ) ;
+                throw new GmbalException( "Exception on invocation", ex ) ;
             }
         } catch (RuntimeException exc) {
             if (debug) {
