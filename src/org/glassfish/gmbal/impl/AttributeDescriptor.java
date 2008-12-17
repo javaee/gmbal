@@ -161,6 +161,9 @@ public class AttributeDescriptor {
     }
 
     private static String stripPrefix( String str, String prefix ) {
+        return str.substring( prefix.length() ) ;
+
+        /* old implementation that converted first char after prefix to lower case:
 	int prefixLength = prefix.length() ;
 	String first = str.substring( prefixLength, 
             prefixLength+1 ).toLowerCase() ;
@@ -169,6 +172,7 @@ public class AttributeDescriptor {
 	} else {
 	    return first + str.substring( prefixLength + 1 ) ;
 	}
+        */
     }
 
     private static String getDerivedId( String methodName, 
