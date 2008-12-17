@@ -252,7 +252,7 @@ The similarities include:<br>
 is the same, except that gmbal allows overriding the id.</li>
   <li><a href="dist/javadoc/org/glassfish/gmbal/ManagedOperation.html">@ManagedOperation</a>
 is the same, except that gmbal allows overriding the id.</li>
-  <li><a href="dist/javadoc/org/glassfish/gmbal/Descriptor.html">@DescriptorKey</a>
+  <li><a href="dist/javadoc/org/glassfish/gmbal/DescriptorKey.html">@DescriptorKey</a>
 is the same.</li>
   <li><a href="dist/javadoc/org/glassfish/gmbal/DescriptorFields.html">@DescriptorFields</a>
 is the same.</li>
@@ -437,7 +437,7 @@ from the name of the annotated method as discussed <a
  href="#4.1._Processing_of_method_names_for_IDs">here</a>, but the id
 may also be specified in the @<a
  href="dist/javadoc/org/glassfish/gmbal/ManagedAttribute.html">ManagedAttribute</a>
-and @<a href="dist/javadoc/org/glassfish/gmbal/ManagedOoperation.html">ManagedOperation</a>
+and @<a href="dist/javadoc/org/glassfish/gmbal/ManagedOperation.html">ManagedOperation</a>
 annotations, as well as in the @<a
  href="dist/javadoc/org/glassfish/gmbal/InheritedAttribute.html">InheritedAttribute</a>
 annotation.<br>
@@ -726,8 +726,6 @@ checked exceptions from getDeclaredMethod into unchecked
 exceptions.&nbsp; It is
 intended for use with the <a href="#addAnnotation">addAnnotation</a>
 method.<br>
-See also the <a href="#What_if_you_cannot_add_an_annotation">discussion</a>
-about adding annotations.<br>
 <h4><a name="3.1.2._create"></a>3.1.2. create</h4>
 There are two versions of create: createStandalone( String ) and
 createFederated( ObjectName ).&nbsp;
@@ -1148,7 +1146,7 @@ the root object and any other remaining registered objects.</li>
 </ol>
 Here is an example of typical code for using gmbal. All examples are
 taken from the experimental version of the GlassFish v3 ORB
-(availablein the <a
+(available in the <a
  href="https://kenai.com/hg/gf-corba-v3-mirror%7Ecorba-gmbal">experimental</a>
 ORB repository from the GFv3 ORB project on Kenai.com):<br>
 <br>
@@ -1190,9 +1188,9 @@ Grizzly must be able to run in as small a configuration as possible,
 but Grizzly would like to have MBeans available as an option.
 Consequentyl, the gmbal annotations and API (plus one small utility
 class) are defined in the gmbal-api <a href="#7._Project_Details">bundle</a>
-(about 12K).&nbsp; gmbal-api needed to be present in all cases, and all
+(about 13K).&nbsp; gmbal-api needed to be present in all cases, and all
 of the code in this example requires ONLY gmbal-api.&nbsp; If <a
- href="#7._Project_Details">gmbal-impl</a> (about 120K) is NOT
+ href="#7._Project_Details">gmbal-impl</a> (about 155K) is NOT
 available, ManagedObjectManagerFactory.<a href="#3.1.2._create">createStandalone</a>
 and <a href="#3.1.2._create">createFederated</a> will return null
 (corresponding to a null mom in the above code).<br>
@@ -1436,13 +1434,13 @@ The resulting OSGi bundles are currently (version 2.0.0-b001) sized at:<br>
     <tr>
       <td style="vertical-align: top;">gmbal-api<br>
       </td>
-      <td style="vertical-align: top;">12751 bytes<br>
+      <td style="vertical-align: top;">13410 bytes<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;">gmbal-impl<br>
       </td>
-      <td style="vertical-align: top;">123049 bytes<br>
+      <td style="vertical-align: top;">155067 bytes<br>
       </td>
     </tr>
   </tbody>
