@@ -175,6 +175,18 @@ public class WrapperGenerator {
         }
     }
 
+    private static class ShortFormatter extends Formatter {
+        @Override
+        public String format(LogRecord record) {
+            StringBuilder sb = new StringBuilder() ;
+            sb.append(record.getLevel().getLocalizedName());
+            sb.append(": ");
+            String message = formatMessage( record ) ;
+            sb.append(message);
+            return sb.toString();
+        }
+    }
+
     public static <T> T makeWrapper( final Class<T> cls ) {
         // Must have an interface to use a Proxy.
         if (!cls.isInterface()) {
@@ -189,7 +201,7 @@ public class WrapperGenerator {
             str = cls.getPackage().getName() ;
         }
         final String name = str ;
-        final Formatter formatter = new SimpleFormatter() ;
+        final Formatter formatter = new ShortFormatter() ;
 
         InvocationHandler inh = new InvocationHandler() {
             public Object invoke(Object proxy, Method method, Object[] args)
