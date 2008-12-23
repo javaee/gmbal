@@ -541,7 +541,7 @@ public class JmxaTest extends TestCase {
     public static final String MDE_ATTR_DESC_GET_STRING = "Description of ManagedDataExample string attribute" ;
     public static final String MDE_ATTR_ID_NAME = "name" ;
     public static final String MDE_ATTR_ID_DATE = "currentDate" ;
-    public static final String MDE_ATTR_ID_GET_STRING = "string" ;
+    public static final String MDE_ATTR_ID_GET_STRING = "String" ;
 
     @ManagedData
     @Description( MDE_DESCRIPTION )
@@ -699,10 +699,10 @@ public class JmxaTest extends TestCase {
 	    MBeanServer mbs = mom.getMBeanServer() ;
 
 	    // Validate attributes
-	    assertEquals( mbs.getAttribute( moeName, "num" ), 
+	    assertEquals( mbs.getAttribute( moeName, "Num" ),
                 Integer.valueOf( num ) ) ;
-	    assertEquals( mbs.getAttribute( moeName, "name" ), name ) ;
-	    Object obj = mbs.getAttribute( moeName, "mde" ) ;
+	    assertEquals( mbs.getAttribute( moeName, "Name" ), name ) ;
+	    Object obj = mbs.getAttribute( moeName, "Mde" ) ;
 	    assertTrue( obj instanceof CompositeData ) ;
 	    CompositeData compData = (CompositeData)obj ;
 	    assertEquals( root.getMde().name(), compData.get(
@@ -999,7 +999,7 @@ public class JmxaTest extends TestCase {
             System.out.println( mbi ) ;
             
             CompositeData person = (CompositeData) server.getAttribute( oname, 
-                "person" ) ;
+                "Person" ) ;
             assertEquals( person.get( "firstName" ), testPerson.firstName()) ;
             assertEquals( person.get( "lastName" ), testPerson.lastName() ) ;
             CompositeData address = (CompositeData) person.get("address" ) ;
