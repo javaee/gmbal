@@ -32,6 +32,10 @@ public class WrapperGeneratorTest extends TestCase {
         @Message( "This is a test" )
         @Log( level=LogLevel.WARNING, id=1 )
         IllegalArgumentException createTestException( @Chain Throwable thr ) ;
+
+        @Message( "first argument {0} is followed by {1}")
+        @Log( id=2 )
+        String makeMessage( int arg1, String arg2 ) ;
     }
 
     /**
@@ -41,10 +45,15 @@ public class WrapperGeneratorTest extends TestCase {
         System.out.println("makeWrapper");
         Class<TestInterface> cls = TestInterface.class ;
         TestInterface result = WrapperGenerator.makeWrapper(cls);
+
         Exception expectedCause = new Exception() ;
         Exception exc = result.createTestException( expectedCause ) ;
         assertTrue( exc instanceof IllegalArgumentException ) ;
         assertTrue( exc.getCause() == expectedCause ) ;
+
+        String msg = result.makeMessage( 10, "hello" ) ;
+        assertEquals( "INFO: EWT2: first argument 10 is followed by hello",
+            msg ) ;
     }
 
 }
