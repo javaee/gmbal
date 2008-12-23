@@ -248,20 +248,20 @@ annotations.&nbsp;
 <br>
 The similarities include:<br>
 <ul>
-  <li><a href="dist/javadoc/org/glassfish/gmbal/ManagedAttribute.html">@ManagedAttribute</a>
+  <li><a href="gmbal/javadoc/org/glassfish/gmbal/ManagedAttribute.html">@ManagedAttribute</a>
 is the same, except that gmbal allows overriding the id.</li>
-  <li><a href="dist/javadoc/org/glassfish/gmbal/ManagedOperation.html">@ManagedOperation</a>
+  <li><a href="gmbal/javadoc/org/glassfish/gmbal/ManagedOperation.html">@ManagedOperation</a>
 is the same, except that gmbal allows overriding the id.</li>
-  <li><a href="dist/javadoc/org/glassfish/gmbal/DescriptorKey.html">@DescriptorKey</a>
+  <li><a href="gmbal/javadoc/org/glassfish/gmbal/DescriptorKey.html">@DescriptorKey</a>
 is the same.</li>
-  <li><a href="dist/javadoc/org/glassfish/gmbal/DescriptorFields.html">@DescriptorFields</a>
+  <li><a href="gmbal/javadoc/org/glassfish/gmbal/DescriptorFields.html">@DescriptorFields</a>
 is the same.</li>
-  <li><a href="dist/javadoc/org/glassfish/gmbal/Description.html">@Description</a>
+  <li><a href="gmbal/javadoc/org/glassfish/gmbal/Description.html">@Description</a>
 is similar, but gmbal only has a value() attribute, while JSR 255 has
 key and bundleBaseName. Gmbal takes the approach that I18N support is
 handled by using keys on the annotation only, then providing a separate
 resource bundle which can be registered with the <a
- href="dist/javadoc/org/glassfish/gmbal/ManagedObjectManager.html">ManagedObjectManager</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/ManagedObjectManager.html">ManagedObjectManager</a>
 (see the discussion <a href="#MBeanServer_and_ResourceBundle">below</a>).<br>
   </li>
 </ul>
@@ -270,7 +270,7 @@ Differences:<br>
   <li>The packaging is necessarily different: org.glassfish.gmbal for
 gmbal, javax.management for JSR 255.</li>
   <li>Gmbal uses <a
- href="dist/javadoc/org/glassfish/gmbal/ManagedObject.html">@ManagedObject</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/ManagedObject.html">@ManagedObject</a>
 instead of @MBean (part of JSR 255) or <a
  href="http://java.sun.com/javase/6/docs/api/javax/management/MXBean.html">@MXBean</a>.</li>
   <li>Gmbal only supports attribute change notifications (so far), so
@@ -279,35 +279,35 @@ Gmbal.&nbsp; See "<a href="#3.2.3._register_and_registerAtRoot">register
 and registerAtRoot</a>" for a discussion on notification support.<br>
   </li>
   <li>Gmbal has an <a
- href="dist/javadoc/org/glassfish/gmbal/ManagedData.html">@ManagedData</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/ManagedData.html">@ManagedData</a>
 annotation to define the mapping of data types into CompositeData,
 while JSR 255 follows MXBeans and simply assumes that all methods that
 follow the JavaBeans patterns define read-only attributes.</li>
   <li>Gmbal supports an <a
- href="dist/javadoc/org/glassfish/gmbal/MBeanType.html">@MBeanType</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/MBeanType.html">@MBeanType</a>
 annotation, but this is really just an extension to the descriptor
 annotation mechanism borrowed from JMX ModelMBeans.&nbsp; The
 @MBeanType annotation is provided to support AMX-specific metadata.</li>
   <li>Gmbal includes <a
- href="dist/javadoc/org/glassfish/gmbal/ParameterNames.html">@ParameterNames</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/ParameterNames.html">@ParameterNames</a>
 to provide reasonable names for the arguments on MBean
 operations.&nbsp; JSR 255 does not currently have such a mechanism,
 because JDK 7 will have an extension to Java reflection that captures
 the argument names on methods.</li>
   <li>Gmbal includes <a
- href="dist/javadoc/org/glassfish/gmbal/ObjectNameKey.html">@ObjectNameKey</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/ObjectNameKey.html">@ObjectNameKey</a>
 to make it easy to define the value of the "name" field in the
 ObjectName. This makes registration of object as MBeans slightly
 simpler.</li>
   <li>Gmbal includes <a
- href="dist/javadoc/org/glassfish/gmbal/IncludeSubclass.html">@IncludeSubclass</a>,
+ href="gmbal/javadoc/org/glassfish/gmbal/IncludeSubclass.html">@IncludeSubclass</a>,
 which allows limited (and closed) polymorphism for CompositeData.&nbsp;
 This partially solves the problem of mapping a group of types sharing
 type Base that appear as (for example) attributes with type
 List&lt;Base&gt;.</li>
   <li>Gmbal includes <a
- href="dist/javadoc/org/glassfish/gmbal/InheritedAttribute.html">@InheritedAttribute</a>(<a
- href="dist/javadoc/org/glassfish/gmbal/InheritedAttributes.html">s</a>)
+ href="gmbal/javadoc/org/glassfish/gmbal/InheritedAttribute.html">@InheritedAttribute</a>(<a
+ href="gmbal/javadoc/org/glassfish/gmbal/InheritedAttributes.html">s</a>)
 to allow using methods inherited from super classes or super interfaces
 that cannot be annotated as attribute and operations.</li>
   <li>Gmbal is more limited currently in mapping OpenType -&gt; Java
@@ -393,8 +393,8 @@ either gmbal or JSR 255.<br>
 Gmbal supports a simple hierarchical model of management data as
 defined in JSR
 77 and AMX.<br>
-<img style="width: 730px; height: 507px;" alt="JMXA Class Diagram"
- src="JMXA.png"><br>
+<img style="width: 730px; height: 507px;" alt="Gmbal Class Diagram"
+ src="Gmbal.png"><br>
 The components of the data model are as follows:<br>
 <ul>
   <li>A ManagedObjectManager acts as a container for all state related
@@ -436,10 +436,10 @@ the standard JSR 77 MBeans.<br>
 from the name of the annotated method as discussed <a
  href="#4.1._Processing_of_method_names_for_IDs">here</a>, but the id
 may also be specified in the @<a
- href="dist/javadoc/org/glassfish/gmbal/ManagedAttribute.html">ManagedAttribute</a>
-and @<a href="dist/javadoc/org/glassfish/gmbal/ManagedOperation.html">ManagedOperation</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/ManagedAttribute.html">ManagedAttribute</a>
+and @<a href="gmbal/javadoc/org/glassfish/gmbal/ManagedOperation.html">ManagedOperation</a>
 annotations, as well as in the @<a
- href="dist/javadoc/org/glassfish/gmbal/InheritedAttribute.html">InheritedAttribute</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/InheritedAttribute.html">InheritedAttribute</a>
 annotation.<br>
   </li>
 </ul>
@@ -460,7 +460,7 @@ conversion between Java types and the corresponding OpenType is also
 not
 included here.<br>
 <h2>3. Interfaces</h2>
-Javadocs are <a href="dist/javadoc/index.html">available</a> as part
+Javadocs are <a href="gmbal/javadoc/index.html">available</a> as part
 of the
 gmbal project.&nbsp; <br>
 <br>

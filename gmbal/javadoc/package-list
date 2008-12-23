@@ -1,0 +1,6 @@
+org.glassfish.gmbal
+org.glassfish.gmbal.generic
+org.glassfish.gmbal.impl
+org.glassfish.gmbal.typelib
+org.glassfish.gmbal.typeresolver
+org.glassfish.gmbal.util
