@@ -75,7 +75,7 @@ public class AMXImpl implements AMX {
         try {
             desc = mmbi.getMBeanDescriptor();
         } catch (MBeanException ex) {
-            throw new GmbalException( "Exception in getMeta", ex ) ;
+            throw Exceptions.self.excForGetMeta( ex ) ;
         }
         Map<String,Object> result = new HashMap<String,Object>() ;
         for (String key : desc.getFieldNames()) {

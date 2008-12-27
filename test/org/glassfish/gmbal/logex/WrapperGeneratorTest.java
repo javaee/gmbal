@@ -29,6 +29,8 @@ public class WrapperGeneratorTest extends TestCase {
 
     @ExceptionWrapper( idPrefix="EWT" )
     public interface TestInterface {
+        TestInterface self = WrapperGenerator.makeWrapper( TestInterface.class ) ;
+
         @Message( "This is a test" )
         @Log( level=LogLevel.WARNING, id=1 )
         IllegalArgumentException createTestException( @Chain Throwable thr ) ;
@@ -36,24 +38,37 @@ public class WrapperGeneratorTest extends TestCase {
         @Message( "first argument {0} is followed by {1}")
         @Log( id=2 )
         String makeMessage( int arg1, String arg2 ) ;
+
+        @Log( level=LogLevel.INFO, id=3 )
+        String defaultMessage( int arg1, String arg2 ) ;
+
+        @Message( "A simple message with {0} and {1}" )
+        String simpleMessage( int first, String second ) ;
     }
 
     /**
      * Test of makeWrapper method, of class WrapperGenerator.
      */
-    public void testMakeWrapper() {
-        System.out.println("makeWrapper");
-        Class<TestInterface> cls = TestInterface.class ;
-        TestInterface result = WrapperGenerator.makeWrapper(cls);
-
+    public void testCreateTestException() {
         Exception expectedCause = new Exception() ;
-        Exception exc = result.createTestException( expectedCause ) ;
+        Exception exc = TestInterface.self.createTestException( expectedCause ) ;
         assertTrue( exc instanceof IllegalArgumentException ) ;
         assertTrue( exc.getCause() == expectedCause ) ;
+    }
 
-        String msg = result.makeMessage( 10, "hello" ) ;
-        assertEquals( "INFO: EWT2: first argument 10 is followed by hello",
+    public void testMakeMessage() {
+        String msg = TestInterface.self.makeMessage( 10, "hello" ) ;
+        assertEquals( "WARNING: EWT2: first argument 10 is followed by hello",
             msg ) ;
     }
 
+    public void testDefaultMessage() {
+        String dmsg = TestInterface.self.defaultMessage( 10, "hello" ) ;
+        assertEquals( "INFO: EWT3: defaultMessage arg0=10, arg1=hello", dmsg ) ;
+    }
+
+    public void testSimpleMessage( ) {
+        String smsg = TestInterface.self.simpleMessage( 10, "hello" ) ;
+        assertEquals( "A simple message with 10 and hello", smsg ) ;
+    }
 }

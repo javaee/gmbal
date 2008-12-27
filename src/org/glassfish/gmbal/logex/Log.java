@@ -27,7 +27,7 @@ public @interface Log {
      * 
      * @return The log level.
      */
-    LogLevel level() default LogLevel.INFO ;
+    LogLevel level() default LogLevel.WARNING ;
 
     /** The exception ID to be used.  This is used to construct the message
      * ID in the log message.

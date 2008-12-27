@@ -119,17 +119,17 @@ public class ImmutableDescriptor implements Descriptor {
      */
     public ImmutableDescriptor(Map<String, ?> fields) {
         if (fields == null) {
-            throw new IllegalArgumentException("Null Map");
+            throw Exceptions.self.nullMap() ;
         }
         SortedMap<String, Object> map =
                 new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
         for (Map.Entry<String, ?> entry : fields.entrySet()) {
             String name = entry.getKey();
             if (name == null || name.equals("")) {
-                throw new IllegalArgumentException("Empty or null field name");
+                throw Exceptions.self.badFieldName() ;
             }
             if (map.containsKey(name)) {
-                throw new IllegalArgumentException("Duplicate name: " + name);
+                throw Exceptions.self.duplicateFieldName( name ) ;
             }
             map.put(name, entry.getValue());
         }
@@ -170,7 +170,7 @@ public class ImmutableDescriptor implements Descriptor {
             }
         }
         if (bad) {
-            throw new InvalidObjectException("Bad names or values");
+            throw Exceptions.self.excForReadResolveImmutableDescriptor() ;
         }
 
         return this;
@@ -179,22 +179,21 @@ public class ImmutableDescriptor implements Descriptor {
     private static SortedMap<String, ?> makeMap(String[] fieldNames,
                                                 Object[] fieldValues) {
         if (fieldNames == null || fieldValues == null) {
-            throw new IllegalArgumentException("Null array parameter");
+            throw Exceptions.self.nullArrayParameter() ;
         }
         if (fieldNames.length != fieldValues.length) {
-            throw new IllegalArgumentException("Different size arrays");
+            throw Exceptions.self.differentSizeArrays() ;
         }
         SortedMap<String, Object> map =
                 new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
         for (int i = 0; i < fieldNames.length; i++) {
             String name = fieldNames[i];
             if (name == null || name.equals("")) {
-                throw new IllegalArgumentException("Empty or null field name");
+                throw Exceptions.self.badFieldName() ;
             }
             Object old = map.put(name, fieldValues[i]);
             if (old != null) {
-                throw new IllegalArgumentException("Duplicate field name: " +
-                                                   name);
+                throw Exceptions.self.duplicateFieldName( name ) ;
             }
         }
         return map;
@@ -202,7 +201,7 @@ public class ImmutableDescriptor implements Descriptor {
 
     private static SortedMap<String, ?> makeMap(String[] fields) {
         if (fields == null) {
-            throw new IllegalArgumentException("Null fields parameter");
+            throw Exceptions.self.nullFieldsParameter() ;
         }
         String[] fieldNames = new String[fields.length];
         String[] fieldValues = new String[fields.length];
@@ -210,8 +209,7 @@ public class ImmutableDescriptor implements Descriptor {
             String field = fields[i];
             int eq = field.indexOf('=');
             if (eq < 0) {
-                throw new IllegalArgumentException("Missing = character: " +
-                                                   field);
+                throw Exceptions.self.badFieldFormat( field ) ;
             }
             fieldNames[i] = field.substring(0, eq);
             // makeMap will catch the case where the name is empty
@@ -291,10 +289,7 @@ public class ImmutableDescriptor implements Descriptor {
                             equal = old.equals(v);
                         }
                         if (!equal) {
-                            final String msg =
-                                "Inconsistent values for descriptor field " +
-                                n + ": " + old + " :: " + v;
-                            throw new IllegalArgumentException(msg);
+                            throw Exceptions.self.excForUnion( n, old, v ) ;
                         }
                     }
                 }
@@ -561,10 +556,12 @@ public class ImmutableDescriptor implements Descriptor {
     public final void setFields(String[] fieldNames, Object[] fieldValues)
         throws RuntimeOperationsException {
         if (fieldNames == null || fieldValues == null) {
-            illegal("Null argument");
+            throw new RuntimeOperationsException(
+                Exceptions.self.nullArgument() ) ;
         }
         if (fieldNames.length != fieldValues.length) {
-            illegal("Different array sizes");
+            throw new RuntimeOperationsException(
+                Exceptions.self.differentSizeArrays() ) ;
         }
         for (int i = 0; i < fieldNames.length; i++) {
             checkIllegalFieldName(fieldNames[i]);
@@ -624,18 +621,14 @@ public class ImmutableDescriptor implements Descriptor {
 
     private static void checkIllegalFieldName(String name) {
         if (name == null || name.equals("")) {
-            illegal("Null or empty field name");
+            throw new RuntimeOperationsException(
+                Exceptions.self.badFieldName() ) ;
         }
     }
 
     private static void unsupported() {
         UnsupportedOperationException uoe =
-            new UnsupportedOperationException("Descriptor is read-only");
+            Exceptions.self.unsupportedOperation() ;
         throw new RuntimeOperationsException(uoe);
-    }
-
-    private static void illegal(String message) {
-        IllegalArgumentException iae = new IllegalArgumentException(message);
-        throw new RuntimeOperationsException(iae);
     }
 }

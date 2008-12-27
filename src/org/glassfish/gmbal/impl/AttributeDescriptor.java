@@ -97,7 +97,7 @@ public class AttributeDescriptor {
 
     private void checkType( AttributeType at ) {
         if (at != _atype) {
-            throw new GmbalException( "Required AttributeType is " + at ) ;
+            throw Exceptions.self.excForCheckType( at ) ;
         }
     }
 
@@ -231,7 +231,7 @@ public class AttributeDescriptor {
         final Method method, final String id, final String methodName, final String description ) {
 
         if (empty(methodName) && empty(id)) {
-            throw new IllegalArgumentException( "methodName and id must not both be null" ) ;
+            throw Exceptions.self.excForMakeFromInherited() ;
         }
 
         Pair<AttributeType,Type> ainfo = getTypeInfo( method ) ;
@@ -265,8 +265,7 @@ public class AttributeDescriptor {
 
         Pair<AttributeType,Type> ainfo = getTypeInfo( m ) ;
         if (ainfo == null) {
-            throw new IllegalArgumentException( 
-                m + " is not a valid attribute method" ) ;
+            throw Exceptions.self.excForMakeFromAnnotated( m ) ;
         }
 
         String actualId = empty(extId) ? 

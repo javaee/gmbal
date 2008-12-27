@@ -105,9 +105,7 @@ public class DescriptorIntrospector {
         for (String field : df.value()) {
             int eq = field.indexOf('=');
             if (eq < 0) {
-                throw new IllegalArgumentException(
-                        "@DescriptorFields string must contain '=': " +
-                        field);
+                throw Exceptions.self.excForAddDescriptorFieldsToMap( field ) ;
             }
             String name = field.substring(0, eq);
             String value = field.substring(eq + 1);
@@ -133,8 +131,7 @@ public class DescriptorIntrospector {
                     // anyway...
                     throw e;
                 } catch (Exception e) {
-                    // we don't expect this
-                    throw new UndeclaredThrowableException(e);
+                    throw Exceptions.self.excForAddAnnotationFieldsToMap( e ) ;
                 }
                 if (!key.omitIfDefault() ||
                         !equals(value, element.getDefaultValue())) {
@@ -149,10 +146,7 @@ public class DescriptorIntrospector {
             Map<String, Object> descriptorMap, String name, Object value) {
         Object oldValue = descriptorMap.put(name, value);
         if (oldValue != null && !equals(oldValue, value)) {
-            final String msg =
-                "Inconsistent values for descriptor field " + name +
-                " from annotations: " + value + " :: " + oldValue;
-            throw new IllegalArgumentException(msg);
+            throw Exceptions.self.excForAddToMap( name, value, oldValue ) ;
         }
     }
 
@@ -198,8 +192,7 @@ public class DescriptorIntrospector {
         if (Proxy.isProxyClass(c)) {
             c = c.getInterfaces()[0]; // array "can't be empty"
         }  // array "can't be empty"
-        throw new IllegalArgumentException("Illegal type for annotation " +
-                "element using @DescriptorKey: " + c.getName());
+        throw Exceptions.self.excForAnnotationToField( c.getName() ) ;
     }
 
     // This must be consistent with the check for duplicate field values in

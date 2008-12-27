@@ -10,11 +10,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ResourceBundle;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 /** Given an annotated interface, return a Proxy that implements that interface.
  * Interface must be annotated with @ExceptionWrapper( String idPrefix, String loggerName ).
@@ -187,6 +187,61 @@ public class WrapperGenerator {
         }
     }
 
+    private final static Formatter formatter = new ShortFormatter() ;
+
+    private static String handleMessageOnly( Method method, Logger logger,
+        Object[] messageParams ) {
+
+        // Just format the message: no exception ID or log level
+        // This code is adapted from java.util.logging.Formatter.formatMessage
+        String msg = (String)method.getAnnotation( Message.class ).value() ;
+        String transMsg ;
+        ResourceBundle catalog = logger.getResourceBundle() ;
+        try {
+            transMsg = catalog.getString( msg ) ;
+        } catch (Exception exc) {
+            transMsg = msg ;
+        }
+        if (transMsg.indexOf( "{0" ) > 0 ) {
+            return java.text.MessageFormat.format( transMsg, messageParams ) ;
+        } else {
+            return transMsg ;
+        }
+    }
+
+    private static Object handleFullLogging( Log log, Method method, Logger logger,
+        String idPrefix, Object[] messageParams, Throwable cause )  {
+
+        int logId = log.id() ;
+        Level level = log.level().getLevel() ;
+        Class<?> rtype = method.getReturnType() ;
+
+        final String msgString = getMessage( method, messageParams.length,
+            idPrefix, logId ) ;
+        LogRecord lrec = makeLogRecord( level, msgString,
+            messageParams, cause, logger ) ;
+
+        if (logger.isLoggable(level)) {
+            logger.log( lrec ) ;
+        }
+
+        if (rtype.equals( void.class ))
+            return null ;
+
+        String fullMessage = formatter.format( lrec ) ;
+
+        if (Exception.class.isAssignableFrom(rtype)) {
+            Exception exc = makeException( rtype, fullMessage ) ;
+            exc.initCause( cause ) ;
+            return exc ;
+        }  else if (String.class.isAssignableFrom(rtype)) {
+            return fullMessage ;
+        } else {
+            throw new RuntimeException( "Method " + method
+                + " has an illegal return type" ) ;
+        }
+    }
+
     public static <T> T makeWrapper( final Class<T> cls ) {
         // Must have an interface to use a Proxy.
         if (!cls.isInterface()) {
@@ -201,57 +256,35 @@ public class WrapperGenerator {
             str = cls.getPackage().getName() ;
         }
         final String name = str ;
-        final Formatter formatter = new ShortFormatter() ;
 
         InvocationHandler inh = new InvocationHandler() {
             public Object invoke(Object proxy, Method method, Object[] args)
                 throws Throwable {
 
-                Annotation[][] pannos = method.getParameterAnnotations() ;
+                final Annotation[][] pannos = method.getParameterAnnotations() ;
                 final int chainIndex = findAnnotatedParameter( pannos,
                     Chain.class ) ;
-                int numParams = pannos.length ;
                 Throwable cause = null ;
-                Object[] messageParams = getWithSkip( args, chainIndex ) ;
+                final Object[] messageParams = getWithSkip( args, chainIndex ) ;
                 if (chainIndex >= 0) {
-                    numParams-- ;
                     cause = (Throwable)args[chainIndex] ;
                 }
-                
-                Log log = method.getAnnotation( Log.class ) ;
+
+                final Logger logger = Logger.getLogger( name ) ;
+                final Class<?> rtype = method.getReturnType() ;
+                final Log log = method.getAnnotation( Log.class ) ;
+
                 if (log == null) {
-                    throw new IllegalArgumentException(
-                        "No @Log annotation present on "
-                        + cls.getName() + "." + method.getName() ) ;
-                }
-                int logId = log.id() ;
-                Level level = log.level().getLevel() ;
+                    if (!rtype.equals( String.class ) ) {
+                        throw new IllegalArgumentException(
+                            "No @Log annotation present on "
+                            + cls.getName() + "." + method.getName() ) ;
+                    }
 
-                Logger logger = Logger.getLogger( name ) ;
-                final String msgString = getMessage( method, numParams,
-                    idPrefix, logId ) ;
-                LogRecord lrec = makeLogRecord( level, msgString,
-                    messageParams, cause, logger ) ;
-
-                if (logger.isLoggable(level)) {
-                    logger.log( lrec ) ;
-                }
-
-                Class<?> rtype = method.getReturnType() ;
-                if (rtype.equals( void.class )) 
-                    return null ;
-
-                String fullMessage = formatter.format( lrec ) ;
-
-                if (Exception.class.isAssignableFrom(rtype)) {
-                    Exception exc = makeException( rtype, fullMessage ) ;
-                    exc.initCause( cause ) ;
-                    return exc ;
-                }  else if (String.class.isAssignableFrom(rtype)) {
-                    return fullMessage ;
+                    return handleMessageOnly( method, logger, messageParams ) ;
                 } else {
-                    throw new RuntimeException( "Method " + method 
-                        + " has an illegal return type" ) ;
+                    return handleFullLogging( log, method, logger, idPrefix,
+                        messageParams, cause ) ;
                 }
             }
         } ;

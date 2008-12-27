@@ -289,10 +289,10 @@ public abstract class TypeConverterImpl implements TypeConverter {
             } else if (type instanceof GenericArrayType) {
                 result = handleArrayType( (GenericArrayType)type, mom ) ;
             } else if (type instanceof TypeVariable) {
-                //throw new IllegalArgumentException( "TypeVariable " + type 
-                  //  + " not supported" ) ;
+                // XXX Evaluate this TypeVariable to its bound type.
                 result = handleAsString( Object.class ) ;
             } else if (type instanceof WildcardType) {
+                // XXX Usually we will want to evaluate this WildCard to its bound type.
                 // Just treat this the same as its bound type
                 final WildcardType wt = (WildcardType)type ;
                 final Type[] upperBounds = wt.getUpperBounds() ;
@@ -356,6 +356,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 result = handleEnum( cls ) ;
             } else {
                 // map to string
+                // XXX Perhaps changes this to act as if MXBean?
                 result = handleAsString( cls ) ;
             }
         } catch (RuntimeException exc) {
@@ -1057,6 +1058,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
                         }
                     } ;
                 } else {
+                    // XXX This loses all information about type evaluation:
+                    // instead, we want the class WITH the evaluate types.
                     result = handleClass( (Class<?>)type.getRawType(), mom ) ;
                 }
             }
