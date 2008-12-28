@@ -91,8 +91,7 @@ public class MBeanTree {
     
     public synchronized NotificationEmitter setRoot( Object root, String rootName ) {
         if (rootIsSet) {
-            throw new IllegalStateException( 
-                "Root has already been set: cannot set it again" ) ;
+            throw Exceptions.self.rootAlreadySet() ;
         } else {
             rootIsSet = true ;
         }
@@ -104,9 +103,7 @@ public class MBeanTree {
         try {
             oname = objectName(null, rootMB.type(), rootMB.name());
         } catch (MalformedObjectNameException ex) {
-            throw new IllegalArgumentException( 
-                "Could not construct ObjectName for root", 
-                ex ) ;            
+            throw Exceptions.self.noRootObjectName(ex) ;
         }
         rootMB.objectName( oname ) ;
         
@@ -115,8 +112,7 @@ public class MBeanTree {
         try {
             rootMB.register();
         } catch (JMException ex) {
-            throw new IllegalArgumentException( "Could not register root", 
-                ex ) ;
+            throw Exceptions.self.rootRegisterFail( ex ) ;
         }
         
         this.root = root ;
@@ -128,7 +124,7 @@ public class MBeanTree {
         if (rootIsSet) {
             return root ;
         } else {
-            throw new IllegalStateException( "Root has not yet been set" ) ;
+            throw Exceptions.self.rootNotSet() ;
         }   
     }
 
@@ -155,9 +151,9 @@ public class MBeanTree {
             }
         }
 
-        if (typeValue == null || nameValue == null)
-            throw new GmbalException( "rootParentName " + rootParentName
-                + " is invalid: it is missing type or name" ) ;
+        if (typeValue == null || nameValue == null) {
+            throw Exceptions.self.invalidRootParentName(rootParentName) ;
+        }
 
         final String result = typeValue + '=' + nameValue + res.toString() ;
         return result ;
@@ -201,8 +197,7 @@ public class MBeanTree {
             current = current.parent() ;
         } while (current != null) ;
         
-        throw new IllegalArgumentException( "Entity " + entity 
-            + " is not part of this EntityTree" ) ;
+        throw Exceptions.self.notPartOfThisTree(entity) ;
     }
     
     public synchronized ObjectName objectName( MBeanImpl parent,
@@ -256,13 +251,12 @@ public class MBeanTree {
         
         try { 
             if (parent == null) {
-                throw new IllegalArgumentException( "Parent cannot be null" ) ;
+                throw Exceptions.self.parentCannotBeNull() ;
             }
             
             MBeanImpl oldMB = objectMap.get( obj ) ;
             if (oldMB != null) {
-                String msg = "Object " + obj + " is already registered as " 
-                    + oldMB ;
+                String msg = Exceptions.self.objectAlreadyRegistered(obj, oldMB) ;
                 
                 if (mom.registrationDebug()) {
                     dputil.info( msg ) ;
@@ -275,7 +269,7 @@ public class MBeanTree {
 
             parentEntity = objectMap.get( parent ) ;
             if (parentEntity == null) {
-                String msg = "parent object " + parent + " not found" ;
+                String msg = Exceptions.self.parentNotFound(parent) ;
                 if (mom.registrationDebug()) {
                     dputil.info( msg ) ;
                 }
@@ -341,9 +335,9 @@ public class MBeanTree {
             try {
                 unregister(root);
             } catch (InstanceNotFoundException ex) {
-                throw new IllegalStateException( "Should not happen!", ex ) ;
+                throw Exceptions.self.shouldNotHappen( ex ) ;
             } catch (MBeanRegistrationException ex) {
-                throw new IllegalStateException( "Should not happen!", ex ) ;
+                throw Exceptions.self.shouldNotHappen( ex ) ;
             }
         }
         

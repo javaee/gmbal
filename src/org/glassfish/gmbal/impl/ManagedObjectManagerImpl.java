@@ -355,8 +355,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
         
         if (obj instanceof String) {
-            throw new IllegalArgumentException( "obj argument is a String: " 
-                + obj + " : was a call to registerAtRoot intended here?" ) ;
+            throw Exceptions.self.objStringWrongRegisterCall( (String)obj ) ;
         }
         
         // Construct the MBean
@@ -365,7 +364,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             return tree.register( parent, obj, mb) ;
     	} catch (JMException exc) {
-            throw new IllegalArgumentException( exc ) ;
+            throw Exceptions.self.exceptionInRegister(exc) ;
         } finally {
             if (registrationDebug()) {
                 dputil.exit() ;
@@ -396,7 +395,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         try {
             tree.unregister( obj ) ;
         } catch (JMException exc) {
-            throw new IllegalStateException( exc ) ;
+            throw Exceptions.self.exceptionInUnregister(exc) ;
         } finally {
             if (registrationDebug()) {
                 dputil.exit() ;
@@ -471,8 +470,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         Description desc = element.getAnnotation( Description.class ) ;
         String result ;
         if (desc == null) {
-            // XXX I18N
-            result = "No description available!" ;
+            result = Exceptions.self.noDescriptionAvailable() ;
         } else {
             result = desc.value() ;
         }
@@ -510,11 +508,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                     dputil.info( "Duplicate annotation") ;
                 }
                 
-                throw new IllegalArgumentException( "Cannot add annotation " 
-                    + " to element " + element 
-                    + ": an Annotation of type " 
-                    + annotation.getClass().getName() 
-                    + " is already present" ) ;
+                throw Exceptions.self.duplicateAnnotation( element, 
+                    annotation.getClass().getName()) ;
             }
 
             map.put( annotation.getClass(), annotation ) ;
@@ -634,9 +629,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         final InheritedAttributes ias = getAnnotation(cls,
                             InheritedAttributes.class);
                         if ((ia != null) && (ias != null)) {
-                            throw new IllegalArgumentException( "class " + cls
-                                + " contains both the InheritedAttribute and " 
-                                + " the InheritedAttributes annotations" ) ;
+                            throw Exceptions.self.badInheritedAttributeAnnotation(cls) ;
                         }
 
                         final List<InheritedAttribute> result = 

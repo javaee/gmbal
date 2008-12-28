@@ -88,8 +88,8 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         addFacet( obj ) ;
         addFacet( new AMXImpl( this ) ) ;
 
-        // XXX How do we make sure that construction of MBean skel and
-        // facet registration stay in sync?  The code is currently separated into
+        // Note that the construction of an MBean skeleton and
+        // facet registration must stay in sync.  The code is currently separated into
         // two places (here and call to new MBeanSkeleton( skel, skel )).
         // This will also be important for dealing with multiple upper bounds.
         this.server = server ;
@@ -161,9 +161,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         if (parent == null) {
             parent = entity ;
         } else {
-            throw new IllegalArgumentException(
-                "Cannot set parent to " + entity 
-                + " this node already has a parent" ) ;
+            throw Exceptions.self.nodeAlreadyHasParent(entity) ;
         }
     }
 

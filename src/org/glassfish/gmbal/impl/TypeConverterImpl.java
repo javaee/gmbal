@@ -155,7 +155,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} else if (ot instanceof CompositeType) {
 	    return CompositeData.class ;
 	} else {
-	    throw new IllegalArgumentException( "Unsupported OpenType " + ot ) ;
+            throw Exceptions.self.unsupportedOpenType( ot ) ;
 	}
     }
 
@@ -174,8 +174,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	    final Type rpt = pt.getRawType() ;
 	    return (Class)rpt ;
 	} else {
-	    throw new IllegalArgumentException( type 
-                + " cannot be converted into a Java class" ) ;
+            throw Exceptions.self.cannotConvertToJavaType(type) ;
 	}
     }
 
@@ -298,24 +297,15 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 final Type[] upperBounds = wt.getUpperBounds() ;
                 final Type[] lowerBounds = wt.getLowerBounds() ;
                 if (lowerBounds.length > 0) {
-                    //throw new IllegalArgumentException( "WildcardType " + type 
-                      //  + " with lower bounds is not supported" ) ;
                     result = handleAsString( Object.class ) ;
                 } else if (upperBounds.length == 0) {
-                    // throw new IllegalArgumentException( "WildcardType " + type 
-                       // + " with no bounds is not supported" ) ;
                     result = handleAsString( Object.class ) ;
                 } else if (upperBounds.length > 1) {
-                    // throw new IllegalArgumentException( "WildcardType " + type 
-                       // + " with multiple upper bounds is not supported" ) ;
                     result = handleAsString( Object.class ) ;
                 } else {
                     result = makeTypeConverter( upperBounds[0], mom ) ;
                 }
             } else {
-                // this should not happen
-                // throw new IllegalArgumentException( "Unknown kind of Type " 
-                   // + type ) ;
                 result = handleAsString( Object.class ) ;
             }
         } catch (RuntimeException exc) {
@@ -391,9 +381,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 @Override
                 public Object fromManagedEntity( final Object entity ) {
                     if (!(entity instanceof ObjectName)) {
-                        throw new IllegalArgumentException( 
-                            "Management entity " + entity 
-                            + " is not an ObjectName" ) ;
+                        throw Exceptions.self.entityNotObjectName( entity ) ;
                     }
 
                     final ObjectName oname = (ObjectName)entity ;
@@ -432,8 +420,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             try {
                 ot = new ArrayType( 1, cotype ) ;
             } catch (OpenDataException exc) {
-                throw new IllegalArgumentException( 
-                    "Arrays of arrays not supported: " + cotype, exc ) ;
+                throw Exceptions.self.noArrayOfArray() ;
             }
 
             final OpenType myManagedType = ot ;
@@ -511,8 +498,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             @SuppressWarnings("unchecked")
 	    public Object fromManagedEntity( final Object entity ) {
 		if (!(entity instanceof String)) {
-		    throw new IllegalArgumentException( entity 
-                        + " is not a String" ) ;
+                    throw Exceptions.self.notAString(entity) ;
                 }
 
 		return Enum.valueOf( cls, (String)entity ) ;
@@ -546,24 +532,18 @@ public abstract class TypeConverterImpl implements TypeConverter {
             @Override
 	    public Object fromManagedEntity( final Object entity ) {
 		if (cons == null) {
-                    throw new UnsupportedOperationException( 
-			"There is no <init>(String) constructor " 
-                        + "available to convert a String into a " 
-			+ cls ) ;
+                    throw Exceptions.self.noStringConstructor(cls);
                 }
                 
 		try {
                     final String str = (String) entity;
                     return cons.newInstance(str);
                 } catch (InstantiationException exc) {
-                    throw new IllegalArgumentException(
-                        "Error in converting from String to " + cls, exc);
+                    throw Exceptions.self.stringConversionError(cls, exc ) ;
                 } catch (IllegalAccessException exc) {
-                    throw new IllegalArgumentException(
-                        "Error in converting from String to " + cls, exc);                 
+                    throw Exceptions.self.stringConversionError(cls, exc ) ;
                 } catch (InvocationTargetException exc) {
-                    throw new IllegalArgumentException(
-                        "Error in converting from String to " + cls, exc); 
+                    throw Exceptions.self.stringConversionError(cls, exc ) ;
                 }
 	    }
 	} ;
@@ -670,7 +650,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 result = new CompositeType( 
                     name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
             } catch (OpenDataException exc) {
-                throw new IllegalArgumentException( exc ) ;
+                throw Exceptions.self.exceptionInMakeCompositeType(exc) ;
             }
         } catch (RuntimeException exc) {
             if (mom.registrationDebug()) {
@@ -735,7 +715,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                         try {
                             runResult = new CompositeDataSupport( myType, data ) ;
                         } catch (OpenDataException exc) {
-                            throw new IllegalArgumentException( exc ) ;
+                            throw Exceptions.self.exceptionInHandleManagedData(exc) ;
                         }
                     } finally {
                         if (mom.runtimeDebug()) {
@@ -776,8 +756,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         }
 
         public void remove() {
-            throw new UnsupportedOperationException( 
-                "Remove is not supported" ) ;
+            throw Exceptions.self.removeNotSupported() ;
         }
     }
 
@@ -785,28 +764,23 @@ public abstract class TypeConverterImpl implements TypeConverter {
     // place holder to detect recursive types.
     public static class TypeConverterPlaceHolderImpl implements TypeConverter {
         public Type getDataType() {
-            throw new UnsupportedOperationException( 
-                "Recursive types are not supported" ) ;
+            throw Exceptions.self.recursiveTypesNotSupported() ;
         }
 
         public OpenType getManagedType() {
-            throw new UnsupportedOperationException( 
-                "Recursive types are not supported" ) ;
+            throw Exceptions.self.recursiveTypesNotSupported() ;
         }
 
         public Object toManagedEntity( Object obj ) {
-            throw new UnsupportedOperationException( 
-                "Recursive types are not supported" ) ;
+            throw Exceptions.self.recursiveTypesNotSupported() ;
         }
 
         public Object fromManagedEntity( Object entity ) {
-            throw new UnsupportedOperationException( 
-                "Recursive types are not supported" ) ;
+            throw Exceptions.self.recursiveTypesNotSupported() ;
         }
 
         public boolean isIdentity() {
-            throw new UnsupportedOperationException( 
-                "Recursive types are not supported" ) ;
+            throw Exceptions.self.recursiveTypesNotSupported() ;
         }
     }
 
@@ -827,8 +801,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             try {
                 return new ArrayType( 1, ot ) ;
             } catch (OpenDataException exc) {
-                throw new IllegalArgumentException( 
-                    ot + " caused an OpenType exception", exc ) ;
+                throw Exceptions.self.openTypeInArrayTypeException( ot, exc) ;
             }
         }
 
@@ -912,13 +885,12 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             final String[] itemNames = new String[] { "key", "value" } ;
 
-            // XXX need to use message formatter
-            final String description = "row type for " + mapType ;
+            final String description = Exceptions.self.rowTypeDescription(
+                mapType) ;
 
-            // XXX need to use message formatter
             final String[] itemDescriptions = new String[] {
-                "Key of map " + mapType,
-                "Value of map " + mapType
+                Exceptions.self.keyFieldDescription(mapType),
+                Exceptions.self.valueFieldDescription(mapType)
             } ;
 
             final OpenType[] itemTypes = new OpenType[] {
@@ -926,19 +898,21 @@ public abstract class TypeConverterImpl implements TypeConverter {
             } ;
 
             try {
-                // XXX need to use message formatter
                 final CompositeType rowType = new CompositeType( mapType,
                     description, itemNames, itemDescriptions, itemTypes ) ;
 
                 final String[] keys = new String[] { "key" } ;
+                final String tableName =
+                    Exceptions.self.tableName( mapType ) ;
+                final String tableDescription = 
+                    Exceptions.self.tableDescription( mapType ) ;
 
-                // XXX need to use message formatter
-                final TabularType result = new TabularType( "Table:" + mapType, 
-                    "Table for map " + mapType, rowType, keys ) ;
+                final TabularType result = new TabularType( tableName,
+                    tableDescription, rowType, keys ) ;
 
                 return result ;
             } catch (OpenDataException exc) {
-                throw new IllegalArgumentException( exc ) ;
+                throw Exceptions.self.exceptionInMakeMapTabularType(exc) ;
             }
         }
 
@@ -968,7 +942,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
                 return result ;
             } catch (OpenDataException exc) {
-                throw new IllegalArgumentException( exc ) ;
+                throw Exceptions.self.excInMakeMapTabularDataToManagedEntity( 
+                    exc ) ;
             }
         }
     }
@@ -1001,8 +976,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             }
             
             if (args.length < 1) {
-                throw new IllegalArgumentException( type 
-                    + " must have at least 1 type argument" ) ;
+                throw Exceptions.self.paramTypeNeedsArgument(type) ;
             }
 
             final Type firstType = args[0] ;
@@ -1109,9 +1083,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     /* Convert from a ManagedEntity to a problem-domain Object.
      */
     public Object fromManagedEntity( Object entity ) {
-        throw new UnsupportedOperationException(
-            "Converting from managed type " + managedType + " to java type " 
-                + dataType + " is not supported." ) ;
+        throw Exceptions.self.openToJavaNotSupported(managedType, dataType) ;
     }
 
     /* Returns true if this TypeConverter is an identity transformation.

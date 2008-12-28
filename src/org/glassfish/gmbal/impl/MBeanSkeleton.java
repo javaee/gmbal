@@ -211,14 +211,13 @@ public class MBeanSkeleton {
         
         try {
             if ((setter == null) && (getter == null)) {
-                throw new IllegalArgumentException(
-                    "At least one of getter and setter must not be null" ) ;
+                throw Exceptions.self.notBothNull() ;
             }
 
             if ((setter != null) && (getter != null) 
                 && !setter.type().equals( getter.type() )) {
-                    throw new IllegalArgumentException( 
-                        "Getter and setter types do not match" ) ;
+
+                throw Exceptions.self.typesMustMatch() ;
             }
 
             AttributeDescriptor nonNullDescriptor =
@@ -327,11 +326,10 @@ public class MBeanSkeleton {
                 
                 if (annotatedMethod.getDeclaringClass().equals(
                     second.getDeclaringClass())) {
-                    
-                    throw new IllegalArgumentException( "Methods " 
-                        + annotatedMethod + " and " + second 
-                        + "are both annotated with @ObjectKeyName in class "
-                        + annotatedMethod.getDeclaringClass().getName() ) ;
+
+                    throw Exceptions.self.duplicateObjectNameKeyAttributes(
+                        annotatedMethod, second,
+                        annotatedMethod.getDeclaringClass().getName() ) ;
                 }
             } 
 
@@ -339,9 +337,9 @@ public class MBeanSkeleton {
                 dputil.info( "annotatedMethod=", annotatedMethod ) ;
             }
             
-            // XXX I18N
             nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
-                mom, annotatedMethod, "name", "Name of this ManagedObject" ) ;            
+                mom, annotatedMethod, "name", 
+                Exceptions.self.nameOfManagedObject() ) ;
         } finally {
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
@@ -425,10 +423,7 @@ public class MBeanSkeleton {
             }
             
             if (pna != null && pna.value().length != atcs.size()) {
-                // XXX I18N
-                throw new IllegalArgumentException( 
-                    "ParametersNames annotation must have the same number" 
-                    + " of arguments as the length of the method parameter list" );
+                throw Exceptions.self.parameterNamesLengthBad() ;
             }
 
             final MBeanParameterInfo[] paramInfo = 
@@ -583,8 +578,7 @@ public class MBeanSkeleton {
                 if (mom.runtimeDebug()) {
                     dputil.info( "Error in finding getter ", name ) ;
                 }
-                throw new AttributeNotFoundException( "Could not find attribute " 
-                    + name ) ;
+                throw Exceptions.self.couldNotFindAttribute( name ) ;
             }
             result = getter.get( fa, mom.runtimeDebug() ) ;
             return result ;
@@ -622,9 +616,7 @@ public class MBeanSkeleton {
                 if (mom.runtimeDebug()) {
                     dputil.info( "Could not find setter" ) ;
                 }
-                throw new AttributeNotFoundException( 
-                    "Could not find writable attribute " + name ) ;
-
+                throw Exceptions.self.couldNotFindWritableAttribute(name) ;
             }
 
             setter.set( fa, value, mom.runtimeDebug() ) ;
@@ -752,8 +744,7 @@ public class MBeanSkeleton {
                     dputil.info( "Operation not found" ) ;
                 }
                 
-                throw new IllegalArgumentException( 
-                    "Could not find operation named " + actionName ) ;
+                throw Exceptions.self.couldNotFindOperation(actionName) ;
             }
 
             final Operation op = opMap.get( signature ) ;
@@ -762,9 +753,8 @@ public class MBeanSkeleton {
                     dputil.info( "Cound not find signature" ) ;
                 }
                 
-                throw new IllegalArgumentException( 
-                    "Could not find operation named " + actionName 
-                    + " with signature " + Arrays.asList( sig ) ) ;
+                throw Exceptions.self.couldNotFindOperationAndSignature(
+                    actionName, signature ) ;
             }
 
             result = op.evaluate( fa, parameters ) ;
