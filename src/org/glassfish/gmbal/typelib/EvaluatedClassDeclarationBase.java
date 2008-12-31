@@ -51,10 +51,11 @@ public abstract class EvaluatedClassDeclarationBase extends EvaluatedDeclaration
         sb.append( " class " ) ;
         sb.append( name() ) ;
         handleList( sb, " inherits", 
-            Algorithms.map( inheritance(), new UnaryFunction<EvaluatedClassDeclaration,String>() { 
-                public String evaluate( EvaluatedClassDeclaration type ) {
-                   return type.name();
-                } } ) ) ;
+            Algorithms.map( inheritance(), 
+                new UnaryFunction<EvaluatedClassDeclaration,String>() { 
+                    public String evaluate( EvaluatedClassDeclaration type ) {
+                       return type.name();
+                    } } ) ) ;
     }
                     
     boolean myEquals( Object obj ) {

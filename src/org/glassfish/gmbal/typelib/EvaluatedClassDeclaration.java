@@ -44,6 +44,8 @@ public interface EvaluatedClassDeclaration extends EvaluatedDeclaration {
     void methods( List<EvaluatedMethodDeclaration> meths ) ;
 
     List<EvaluatedClassDeclaration> inheritance() ;
+
+    void inheritance( List<EvaluatedClassDeclaration> inh ) ;
         
     Class cls() ;
 }

@@ -116,11 +116,22 @@ public class DeclarationFactory {
     }
     
     public static EvaluatedClassDeclaration ecdecl( final int modifiers,
+        final String name, final Class cls ) {
+
+        return ecdecl( modifiers, name, 
+            new ArrayList<EvaluatedClassDeclaration>(),
+            new ArrayList<EvaluatedMethodDeclaration>(), cls ) ;
+    }
+
+    public static EvaluatedClassDeclaration ecdecl( final int modifiers,
         final String name, final List<EvaluatedClassDeclaration> inheritance,
         final List<EvaluatedMethodDeclaration> methods, final Class cls ) {
     
         return new EvaluatedClassDeclarationBase() {
-            private List<EvaluatedMethodDeclaration> myMethods ;
+            private List<EvaluatedMethodDeclaration> myMethods =
+                methods ;
+            private List<EvaluatedClassDeclaration> myInheritance = 
+                inheritance ;
             
             public <T extends Annotation> T annotation(Class<T> annotationType) {
                 if (cls == null) {
@@ -157,11 +168,15 @@ public class DeclarationFactory {
             }
 
             public List<EvaluatedClassDeclaration> inheritance() {
-                return inheritance ;
+                return myInheritance ;
             } ;
 
             public void methods(List<EvaluatedMethodDeclaration> meths) {
                 myMethods = meths ;
+            }
+
+            public void inheritance(List<EvaluatedClassDeclaration> inh) {
+                myInheritance = inh ;
             }
         } ;
     }
