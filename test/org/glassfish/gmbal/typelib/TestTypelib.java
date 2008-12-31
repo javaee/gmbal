@@ -28,8 +28,9 @@
  * @author Ken Cavanaugh
  */
 
-package org.glassfish.gmbal ;
+package org.glassfish.gmbal.typelib ;
 
+import org.glassfish.gmbal.typelib.TestTypelibDecls;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;

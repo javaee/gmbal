@@ -28,7 +28,7 @@
  * @author Ken Cavanaugh
  */
 
-package org.glassfish.gmbal ;
+package org.glassfish.gmbal.typelib ;
 
 import java.util.List;
 
