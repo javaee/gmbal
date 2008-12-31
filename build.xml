@@ -117,7 +117,7 @@
                 <filter includes="org.glassfish.gmbal.util.*"/>
                 <filter includes="org.glassfish.gmbal.impl.*"/>
                 <filter includes="org.glassfish.gmbal.generic.*"/>
-                <filter excludes="org.glassfish.gmbal.typelib.*"/>
+                <filter includes="org.glassfish.gmbal.typelib.*"/>
                 <filter excludes="org.glassfish.gmbal.typeresolver.*"/>
             </instr>
         </emma>
