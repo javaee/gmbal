@@ -73,6 +73,33 @@
     <property name="version"                        value="2.0.0-b001"/>
     <property name="repo.url"                       value="java-net:/maven2-repository/trunk/www/repository"/>
     <property name="file.url"                       value="file:/tmp/maven"/>
+    <property name="emma.dir"                       value="build/coverage"/>
+    <property name="emma.coverage.out.file"         value="${emma.dir}/coverage.ec"/>
+
+    <target name="-post-clean">
+        <delete dir="coverage"/>
+        <delete file="coverage.ec"/>
+    </target>
+
+    <target name="all" depends="clean,jar,emma-instr,test,test-report,emma-report,make-bundles"/>
+
+    <target name="findbugs-html" depends="-post-jar">
+        <property name="findbugs.home" value="lib/findbugs-1.3.3"/>
+        <property name="findbugs.dir" value="dist/findbugs"/>
+	<mkdir dir="${findbugs.dir}"/>
+	<exec executable="${findbugs.home}/bin/findbugs">
+	    <arg value="-textui"/>
+	    <arg value="-html"/>
+	    <arg value="-outputFile"/>
+	    <arg file="${findbugs.dir}/gmbal-fb.html"/>
+	    <arg value="-exclude"/>
+	    <arg file="findbugs-filter.xml"/>
+	    <arg value="-sourcepath"/>
+	    <arg path="src:test"/>
+	    <arg file="dist/gmbal.jar"/>
+	    <arg file="build/test"/>
+	</exec>
+    </target>
 
     <target name="findbugs-xml" depends="-post-jar">
         <property name="findbugs.home" value="lib/findbugs-1.3.3"/>
@@ -92,14 +119,14 @@
 	</exec>
     </target>
 
+    <path id="emma.lib" >
+        <pathelement location="lib/emma.jar"/>
+        <pathelement location="lib/emma_ant.jar"/>
+    </path>
+
     <!-- path element used by EMMA taskdef below: -->
     <target name="emma-init">
         <property name="emma-jar" value="lib/emma.jar"/>
-        <path id="emma.lib" >
-            <pathelement location="lib/emma.jar"/>
-            <pathelement location="lib/emma_ant.jar"/>
-        </path>
-        <property name="emma.dir" value="build/coverage"/>
         <property name="emma.classes.dir" value="${emma.dir}/classes"/>
         <property name="emma.metadata.file" value="${emma.dir}/coverage.em"/>
     </target>
@@ -133,9 +160,11 @@
                 <sourcepath>
                     <pathelement location="src"/>
                 </sourcepath>
+                <!--
                 <fileset dir=".">
                     <include name="coverage.ec"/>
                 </fileset>
+                -->
                 <fileset dir="${emma.dir}" >
                     <include name="*.ec" />
                     <include name="*.em" />
