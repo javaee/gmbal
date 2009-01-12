@@ -40,6 +40,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import javax.management.ObjectName;
+import org.glassfish.gmbal.generic.ObjectSet;
 
 /**
  *
@@ -80,7 +81,6 @@ public interface EvaluatedType {
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( long.class ) ;
     public static final EvaluatedClassDeclaration ELONGW          = 
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( Long.class ) ;
-    /** Some of these types are crashing: commented out for now
     public static final EvaluatedClassDeclaration EBIG_DECIMAL    = 
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( BigDecimal.class ) ;
     public static final EvaluatedClassDeclaration EBIG_INTEGER    = 
@@ -89,7 +89,6 @@ public interface EvaluatedType {
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( Date.class ) ;
     public static final EvaluatedClassDeclaration EOBJECT_NAME    = 
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( ObjectName.class ) ;
-     */
     public static final EvaluatedClassDeclaration ESTRING         =
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( String.class ) ;
     public static final EvaluatedClassDeclaration EOBJECT         =

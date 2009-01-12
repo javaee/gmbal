@@ -123,12 +123,12 @@ public class AMXClient implements AMX, DynamicMBean {
         }
     }
 
-    public AMX getContainer() {
+    public AMX getParent() {
         ObjectName res  = fetchAttribute( "getContainer", ObjectName.class ) ;
         return makeAMX( res ) ;
     }
 
-    public AMX[] getContained() {
+    public AMX[] getChildren() {
         ObjectName[] onames = fetchAttribute( "getContained", 
             ObjectName[].class ) ;
         return makeAMXArray( onames ) ;
@@ -142,24 +142,6 @@ public class AMXClient implements AMX, DynamicMBean {
         }
 
         return result ;
-    }
-
-    public AMX[] getContained(String type) {
-        String[] sig = { String.class.getName() } ;
-        Object[] args = { type } ;
-        try {
-            ObjectName[] onames = (ObjectName[]) server.invoke( oname,
-                "getContainer", args, sig );
-            return makeAMXArray( onames ) ;
-        } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        } catch (MBeanException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        } catch (ReflectionException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        } catch (IOException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        }
     }
 
     public Object getAttribute(String attribute) {

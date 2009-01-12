@@ -37,7 +37,6 @@
 package org.glassfish.gmbal;
 
 import org.glassfish.gmbal.generic.ObjectWriter;
-import java.util.List ;
 import java.util.Map;
 
 import javax.management.openmbean.ArrayType;
@@ -49,13 +48,16 @@ import javax.management.openmbean.TabularType;
 import org.glassfish.gmbal.generic.Triple ;
 
 import java.lang.reflect.Array;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeDataSupport;
 import javax.management.openmbean.SimpleType;
 import javax.management.openmbean.TabularData;
 import javax.management.openmbean.TabularDataSupport;
 import static javax.management.openmbean.SimpleType.* ;
-import static org.glassfish.gmbal.generic.Algorithms.* ;
 
 /**
  *
@@ -242,8 +244,29 @@ public class OpenMBeanTools {
             writer.endObject() ;
         }
     }
+
+    public static <K,V> Map<K,V> mkmap( List<K> keys, List<V> values ) {
+        Iterator<K> ikey = keys.iterator() ;
+        Iterator<V> ivalue = values.iterator() ;
+        Map<K,V> result = new HashMap<K,V>() ;
+        while (ikey.hasNext() && ivalue.hasNext()) {
+            result.put( ikey.next(), ivalue.next() ) ;
+        }
+        if (ikey.hasNext() != ivalue.hasNext()) {
+            throw new RuntimeException( "key and value lists have different lengths") ;
+        }
+        return result ;
+    }
+
+    public static <E> List<E> list( E... args ) {
+        return Arrays.asList( args ) ;
+    }
+
+    public static List<Object> listO( Object... args ) {
+        return Arrays.asList( args ) ;
+    }
     
-    public static Object compV( CompositeType ct, 
+    public static CompositeData compV( CompositeType ct,
         Map<String,Object> map ) {
         
         try {

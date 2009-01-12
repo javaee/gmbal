@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 public class TestGenericReflection {
+    // XXX finish this test or delete it!
+
     static class Test<S,T> {
         void m1( List<Map<S,T>> arg ) {
         }

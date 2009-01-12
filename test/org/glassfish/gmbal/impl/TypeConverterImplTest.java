@@ -8,13 +8,19 @@ package org.glassfish.gmbal.impl;
 import java.lang.reflect.Type;
 import javax.management.openmbean.OpenType;
 import junit.framework.TestCase;
+import org.glassfish.gmbal.ManagedObjectManager;
+import org.glassfish.gmbal.ManagedObjectManagerFactory;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.gmbal.typelib.TypeEvaluator;
 
 /**
  *
  * @author ken
  */
 public class TypeConverterImplTest extends TestCase {
-    
+    ManagedObjectManagerInternal mom ;
+
     public TypeConverterImplTest(String testName) {
         super(testName);
     }
@@ -22,11 +28,14 @@ public class TypeConverterImplTest extends TestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        mom = (ManagedObjectManagerInternal)ManagedObjectManagerFactory
+            .createStandalone( "TestDomain" ) ;
     }
 
     @Override
     protected void tearDown() throws Exception {
         super.tearDown();
+        mom.close();
     }
 
     /**
@@ -45,9 +54,9 @@ public class TypeConverterImplTest extends TestCase {
     /**
      * Test of getJavaClass method, of class TypeConverterImpl.
      */
-    public void testGetJavaClass_Type() {
+    public void testGetJavaClass_EvaluatedType() {
         System.out.println("getJavaClass");
-        Type type = null;
+        EvaluatedType type = null;
         Class expResult = null;
         Class result = TypeConverterImpl.getJavaClass(type);
         assertEquals(expResult, result);
@@ -55,123 +64,25 @@ public class TypeConverterImplTest extends TestCase {
         fail("The test case is a prototype.");
     }
 
-    /**
-     * Test of makeTypeConverter method, of class TypeConverterImpl.
-     */
-    public void testMakeTypeConverter() {
-        System.out.println("makeTypeConverter");
-        Type type = null;
-        ManagedObjectManagerInternal mom = null;
-        TypeConverter expResult = null;
-        TypeConverter result = TypeConverterImpl.makeTypeConverter(type, mom);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+    private TypeConverter getTypeConverter( Object obj ) {
+        Class<?> cls = obj.getClass() ;
+        EvaluatedClassDeclaration ecd = 
+            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(cls) ;
+        TypeConverter tc = mom.getTypeConverter(ecd) ;
+        return tc ; 
     }
 
-    /**
-     * Test of getDataType method, of class TypeConverterImpl.
-     */
-    public void testGetDataType() {
-        System.out.println("getDataType");
-        TypeConverterImpl instance = null;
-        Type expResult = null;
-        Type result = instance.getDataType();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+    private void doTest( TypeConverterTestData.TestData td ) {
+        TypeConverter tc = getTypeConverter( td.data() ) ;
+        assertEquals( td.otype(), tc.getManagedType() ) ;
+        Object mvalue = tc.toManagedEntity(td.data()) ;
+        assertEquals( td.ovalue(), mvalue ) ;
+        assertEquals( td.isIdentity(), tc.isIdentity() ) ;
+        Object jvalue = tc.fromManagedEntity( mvalue ) ;
+        assertEquals( td.data(), jvalue ) ;
     }
 
-    /**
-     * Test of getManagedType method, of class TypeConverterImpl.
-     */
-    public void testGetManagedType() {
-        System.out.println("getManagedType");
-        TypeConverterImpl instance = null;
-        OpenType expResult = null;
-        OpenType result = instance.getManagedType();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+    public void testData1() {
+        doTest( TypeConverterTestData.Data1TestData ) ;
     }
-
-    /**
-     * Test of toManagedEntity method, of class TypeConverterImpl.
-     */
-    public void testToManagedEntity() {
-        System.out.println("toManagedEntity");
-        Object obj = null;
-        TypeConverterImpl instance = null;
-        Object expResult = null;
-        Object result = instance.toManagedEntity(obj);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of fromManagedEntity method, of class TypeConverterImpl.
-     */
-    public void testFromManagedEntity() {
-        System.out.println("fromManagedEntity");
-        Object entity = null;
-        TypeConverterImpl instance = null;
-        Object expResult = null;
-        Object result = instance.fromManagedEntity(entity);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of isIdentity method, of class TypeConverterImpl.
-     */
-    public void testIsIdentity() {
-        System.out.println("isIdentity");
-        TypeConverterImpl instance = null;
-        boolean expResult = false;
-        boolean result = instance.isIdentity();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of toString method, of class TypeConverterImpl.
-     */
-    public void testToString() {
-        System.out.println("toString");
-        TypeConverterImpl instance = null;
-        String expResult = "";
-        String result = instance.toString();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /* Needed test cases:
-    Parameterized type
-        Collection
-        Iterable
-        Iterator
-        Enumeration
-        Map
-        Dictionary
-        Other
-    Array Type
-    Ignore TypeVariable and WildcardType: they will be remove after typelib integration
-    Default case (currently handleAsString: move to handle as in MXBean)
-    @ManagedObject
-    enum
-    MXBean behavior
-        OpenType(J) -> Java class J
-            CompositeData -> Java:
-                1. J has method public static J from( CompositeData cd )
-                2. public @ConstructorProperties constructor
-                3. J is a class with public no-arg constructor, and every getter
-                   has a setter
-                4. J is an interface with only getters
-        Need to fix the name of ManagedData attributes! (lower initial case)
-
-     */
 }

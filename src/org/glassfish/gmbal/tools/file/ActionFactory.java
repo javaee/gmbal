@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 2007-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -33,43 +33,64 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
+package org.glassfish.gmbal.tools.file ;
 
-package org.glassfish.gmbal.impl ;
+public class ActionFactory {
+    private final int verbose ;
+    private final boolean dryRun ;
 
-import java.lang.reflect.Type ;
+    public ActionFactory() {
+	this( 0, false ) ;
+    }
 
-import javax.management.openmbean.OpenType ;
-import org.glassfish.gmbal.typelib.EvaluatedType;
+    public ActionFactory( final int verbose ) {
+	this( verbose, false ) ;
+    }
 
-/** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, ObjectName, 
- * TabularData, or CompositeData.
- */
-public interface TypeConverter {
-    /** Java generic type of attribute in problem-domain Object.
-     * @return The Java type that this TypeConverter handles.
+    public ActionFactory( final int verbose, final boolean dryRun ) {
+	this.verbose = verbose ;
+	this.dryRun = dryRun ;
+    }
+
+    /** returns an action that returns true.  If verbose is true, the action
+     * also displays the FileWrapper that was passed to it.
      */
-    EvaluatedType getDataType() ;
+    public Scanner.Action getSkipAction() {
+	return new Scanner.Action() {
+            @Override
+	    public String toString() {
+		return "SkipAction" ;
+	    }
 
-    /** Open MBeans Open Type for management domain object.
-     * @return The OpenType that this TypeConverter handles.
-     */
-    OpenType getManagedType() ;
+	    public boolean evaluate( final FileWrapper fw ) {
+		if (verbose > 0)
+		    System.out.println( "SkipAction called on " + fw ) ;
+		
+		return true ;
+	    }
+	} ;
+    }
 
-    /** Convert from a problem-domain Object obj to a managed entity.
-     * @param obj The Java object to be converted to an open type.
-     * @return The resulting open type.
+    /** returns an action that returns false.  If verbose is true, the action
+     * also displays the FileWrapper that was passed to it.
      */
-    Object toManagedEntity( Object obj ) ;
+    public Scanner.Action getStopAction() {
+	return new Scanner.Action() {
+            @Override
+	    public String toString() {
+		return "StopAction" ;
+	    }
 
-    /** Convert from a ManagedEntity to a problem-domain Object.
-     * @param entity The managed entity to be converted to a java type.
-     * @return The resulting java type.
-     */
-    Object fromManagedEntity( Object entity ) ;
+	    public boolean evaluate( final FileWrapper fw ) {
+		if (verbose > 0)
+		    System.out.println( "StopAction called on " + fw ) ;
 
-    /** Returns true if this TypeConverter is an identity transformation.
-     * @return True if this TypeConverter is an identity transformation.
-     */
-    boolean isIdentity() ;
+		return false ;
+	    }
+	} ;
+    }
+
+    public Recognizer getRecognizerAction() {
+	return new Recognizer( verbose, dryRun ) ;
+    }
 }
-

@@ -110,7 +110,7 @@ public interface AMX {
      */
     @ManagedAttribute
     @Description( "The container that contains this MBean" )
-    public AMX getContainer();
+    public AMX getParent();
 
     /** Containment hierarchy:
         Get all AMX contained by this one, in no particular order.
@@ -120,15 +120,5 @@ public interface AMX {
      */
     @ManagedAttribute
     @Description( "All children of this AMX MBean")
-    public AMX[] getContained();
-
-    /** get all AMX of the specified types, in no particular order
-     * @param type The desired type of children.
-     * @return An array of children of the given type.
-     */
-    @ManagedOperation
-    @ParameterNames( "type" )
-    @Description( "get all AMX MBeans of the specified type that are children "
-        + "this AMX MBean")
-    public AMX[] getContained(final String type);
+    public AMX[] getChildren();
 }

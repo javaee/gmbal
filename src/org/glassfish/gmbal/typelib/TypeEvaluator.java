@@ -65,6 +65,8 @@ import java.util.WeakHashMap;
  * @author ken
  */
 public class TypeEvaluator {
+    // XXX need to use Exceptions for error reporting here.
+
     private static boolean DEBUG = false ;
     private static boolean DEBUG_EVALUATE = false ;
 
@@ -199,6 +201,8 @@ public class TypeEvaluator {
             Class decl, EvaluatedClassDeclaration newDecl ) {
             
             EvalMapKey key = new EvalMapKey( decl, bindings.getList() ) ;
+            newDecl.instantiations( bindings.getList() ) ;
+
             EvaluatedType result = evalClassMap.get( key ) ;
             if (result == null) {
                 evalClassMap.put( key, newDecl ) ;
@@ -396,7 +400,7 @@ public class TypeEvaluator {
             }
             
             try {
-                EvaluatedType result = null ;
+                EvaluatedType result ;
                 // ignore lower bounds
                 // Only support 1 upper bound
                 List<Type> ub = Arrays.asList( wt.getUpperBounds() ) ;

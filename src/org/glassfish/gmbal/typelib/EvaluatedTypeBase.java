@@ -37,7 +37,11 @@
 package org.glassfish.gmbal.typelib;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
+import org.glassfish.gmbal.generic.ObjectSet;
 
 /**
  *
@@ -76,28 +80,43 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
             sb.append( "Final " ) ;
         }
     }
-    
+    /*
     public static <T> void handleList( StringBuilder sb, List<T> list ) {
-        handleList( sb, null, list, null ) ;
+        handleList( sb, null, list, " ", null ) ;
     }
 
     public static <T> void handleList( StringBuilder sb, String start, 
         List<T> list ) {
         
-        handleList( sb, start, list, null ) ;
+        handleList( sb, start, list, " ", null ) ;
+    }
+     */
+
+    <S,T extends S> List<T> castList( List<S> list, Class<T> cls ) {
+        List<T> result = new ArrayList<T>() ;
+        for (S s : list) {
+            result.add( cls.cast(s) ) ;
+        }
+        return result ;
     }
 
-    public static <T> void handleList( StringBuilder sb, String start, 
-        List<T> list, String end ) {
+    public static <T extends EvaluatedTypeBase> void handleList(
+        StringBuilder sb, String start,
+        List<T> list, String sep, String end, ObjectSet set ) {
         
         if (list.size() > 0) {
             if (start != null) {
                 sb.append( start ) ;
             }
 
+            boolean first = true ;
             for (T t : list) {
-                sb.append( " " ) ;
-                sb.append( t.toString() ) ;
+                t.makeRepresentation( sb, set ) ;
+                if (first) {
+                    first = false ;
+                } else {
+                    sb.append( sep ) ;
+                }
             }
 
             if (end != null) {
@@ -109,9 +128,10 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
     @Override
     public synchronized String toString() {
         if (rep == null) {
+            ObjectSet set = new ObjectSet() ;
             StringBuilder sb = new StringBuilder() ;
             sb.append( "(" ) ;
-            makeRepresentation( sb ) ;
+            makeRepresentation( sb, set ) ;
             sb.append( ")" ) ;
             rep = sb.toString() ;
         }
@@ -119,20 +139,63 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
         return rep ;
     }
 
-    abstract void makeRepresentation( StringBuilder sb ) ;
+    abstract void makeRepresentation( StringBuilder sb, ObjectSet set ) ;
 
     @Override
     public boolean equals( Object obj ) {
+        ObjectSet set = new ObjectSet() ;
+        return equals( obj, set ) ;
+    }
+
+    public boolean equals( Object obj, ObjectSet set ) {
         if (this == obj) {
             return true ;
         }
         
         if (this.getClass().isAssignableFrom( obj.getClass() )) {
-            return myEquals( obj ) ;
+            if (set.contains( obj )) {
+                return true ;
+            } else {
+                set.add( obj ) ;
+                return myEquals( obj, set ) ;
+            }
         } else {
             return false ;
         }
     }
-    
-    abstract boolean myEquals( Object obj ) ;
+
+    boolean equalList( List<EvaluatedType> list1, List<EvaluatedType> list2,
+        ObjectSet set ) {
+        if (list1 == null) {
+            return list2 == null ;
+        } else {
+            Iterator<EvaluatedType> iter1 = list1.iterator() ;
+            Iterator<EvaluatedType> iter2 = list2.iterator() ;
+            while (iter1.hasNext() && iter2.hasNext()) {
+                EvaluatedTypeBase obj1 = (EvaluatedTypeBase)iter1.next() ;
+                EvaluatedTypeBase obj2 = (EvaluatedTypeBase)iter2.next() ;
+                if (!(set.contains( obj1 ))) {
+                    if (!obj1.equals( obj2, set )) {
+                        return false ;
+                    }
+                }
+            }
+
+            if (iter1.hasNext() != iter2.hasNext()) {
+                return false ;
+            }
+        }
+
+        return true ;
+    }
+
+    abstract boolean myEquals( Object obj, ObjectSet set ) ;
+
+    @Override
+    public int hashCode() {
+        ObjectSet set = new ObjectSet() ;
+        return hashCode( set ) ;
+    }
+
+    abstract int hashCode( ObjectSet map ) ;
 }

@@ -42,7 +42,6 @@ import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
 
-import java.lang.reflect.Method ;
 
 import java.util.Iterator ;
 import java.util.Map ;
@@ -78,13 +77,17 @@ import org.glassfish.gmbal.generic.Algorithms ;
 
 
 import org.glassfish.gmbal.impl.TypeConverter ;
-import org.glassfish.gmbal.generic.ClassAnalyzer ;
 import org.glassfish.gmbal.impl.ManagedObjectManagerInternal ;
 
 import javax.management.MBeanInfo;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.gmbal.typelib.TypeEvaluator;
 
 public class JmxaTest extends TestCase {
     //==============================================================================================
@@ -199,7 +202,13 @@ public class JmxaTest extends TestCase {
     //==============================================================================================
     // Tests for AnnotationUtil class
     //==============================================================================================
-   
+
+    private static EvaluatedClassAnalyzer getCA( Class<?> cls ) {
+        final EvaluatedClassDeclaration cdecl =
+            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(cls) ;
+        return new EvaluatedClassAnalyzer( cdecl ) ;
+    }
+
     public interface A {} 
     public interface B extends A {}
     public interface C extends A {}
@@ -224,47 +233,42 @@ public class JmxaTest extends TestCase {
 
 
     public void testGetInheritanceChain() {
-        ClassAnalyzer ca = new ClassAnalyzer( I.class ) ;
-        List<Class<?>> res = ca.findClasses( Algorithms.TRUE( Class.class ) ) ;
+        EvaluatedClassAnalyzer ca = getCA( I.class ) ;
+        List<EvaluatedClassDeclaration> res = ca.findClasses(
+            Algorithms.TRUE( EvaluatedClassDeclaration.class ) ) ;
 	System.out.println( "Inheritance chain for class " + I.class.getName() 
 	    + " is " + res ) ;
 
-	Map<Class,Integer> positions = new HashMap<Class,Integer>() ;
+	Map<EvaluatedClassDeclaration,Integer> positions =
+            new HashMap<EvaluatedClassDeclaration,Integer>() ;
 	int position = 0 ;
-	for (Class cls : res) {
+	for (EvaluatedClassDeclaration cls : res) {
 	    positions.put( cls, position++ ) ;
 	}
 
-	Integer firstIndex = positions.get( I.class ) ;
-	assertNotNull( "Index for top-level class " + I.class.getName() 
+        EvaluatedClassDeclaration idecl = getECD( I.class ) ;
+	Integer firstIndex = positions.get( idecl ) ;
+	assertNotNull( "Index for top-level class " + idecl.name()
 	    + " is null", firstIndex ) ;
-	assertTrue( "Index of top-level class " + I.class.getName() 
+	assertTrue( "Index of top-level class " + idecl.name()
 	    + " is " + firstIndex + " but should be 0",
             firstIndex == 0 ) ;
 
 	for (Class cls : cdata) {
-	    Integer cindex = positions.get( cls ) ;
-	    assertNotNull(  "Index for class " + cls.getName() + " is null", 
+            EvaluatedClassDeclaration ecd = getECD( cls ) ;
+	    Integer cindex = positions.get( ecd ) ;
+	    assertNotNull(  "Index for class " + ecd.name() + " is null",
                 cindex ) ;
 
-	    Class sclass = cls.getSuperclass() ;
-	    if (sclass != null) {
-		Integer superIndex = positions.get( sclass ) ;
-		assertNotNull( "Index for " + sclass.getName() + " is null",
-                    superIndex ) ;
-		assertTrue( "Class index = " + cindex 
-		    + ", superclass index = " + superIndex, cindex < superIndex ) ;
-	    }
-
-	    for (Class icls : cls.getInterfaces()) {
-		Integer iindex = positions.get( icls ) ;
-		assertNotNull( "Index of interface " + icls.getName() + " should not be null",
+            for (EvaluatedClassDeclaration sdecl : ecd.inheritance()) {
+                Integer iindex = positions.get( sdecl ) ;
+		assertNotNull( "Index of interface " + sdecl.name() + " should not be null",
                     iindex ) ;
-		assertTrue( "Index of class " + cls.getName() + " is " + cindex 
+		assertTrue( "Index of class " + ecd.name() + " is " + cindex
 		    + ": should be less than index of interface " 
-		    + icls.getName() + " which is " + iindex,
+		    + sdecl.name() + " which is " + iindex,
                     cindex < iindex ) ;
-	    }
+            }
 	}
     }
 
@@ -312,9 +316,28 @@ public class JmxaTest extends TestCase {
 	void setFooD( int arg ) ;
     }
 
-    private static Method getMethod( Class<?> cls, String name, Class... args) {
+    private static EvaluatedMethodDeclaration getMethod( Class<?> cls,
+        String name, Class... args) {
+
+        List<EvaluatedType> argDecls = Algorithms.map(
+            Arrays.asList( args ),
+            new UnaryFunction<Class,EvaluatedType>() {
+                public EvaluatedType evaluate( Class cls ) {
+                    return TypeEvaluator.getEvaluatedType( cls ) ;
+        } } ) ;
+
 	try {
-	    return cls.getDeclaredMethod( name, args ) ;
+            EvaluatedClassDeclaration ecd =
+                (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(cls) ;
+
+            for (EvaluatedMethodDeclaration emd : ecd.methods()) {
+                if (emd.name().equals( name )
+                    && emd.parameterTypes().equals( argDecls )) {
+                    return emd ;
+                }
+            }
+
+            return null ;
 	} catch (Exception exc) {
 	    fail( "getMethod() caught exception " + exc ) ;
 	    return null ;
@@ -322,23 +345,26 @@ public class JmxaTest extends TestCase {
     }
 
     public void testFindMethod() {
-        final ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
+        final EvaluatedClassAnalyzer ca = getCA( DD.class ) ;
 	final Predicate predicate = 
 	    new Predicate() {
 		public boolean evaluate( Object obj ) {
-                    Method method = (Method)obj ;
+                    EvaluatedMethodDeclaration method =
+                        (EvaluatedMethodDeclaration)obj ;
 
-		    return method.getName().equals("barA") &&
-			method.getReturnType() == int.class ;
+		    return method.name().equals("barA") &&
+			method.returnType() == EvaluatedType.EINT ;
 		}
 	    } ;
 
-	final Method expectedResult = getMethod( AA.class, "barA" ) ;
+	final EvaluatedMethodDeclaration expectedResult =
+            getMethod( AA.class, "barA" ) ;
 
         @SuppressWarnings("unchecked")
-	final List<Method> result = ca.findMethods( predicate ) ;
+	final List<EvaluatedMethodDeclaration> result =
+            ca.findMethods( predicate ) ;
         assertEquals( result.size(), 1 ) ;
-        Method resultMethod = result.get(0) ;
+        EvaluatedMethodDeclaration resultMethod = result.get(0) ;
 	assertEquals( expectedResult, resultMethod ) ;
     }
 
@@ -346,19 +372,23 @@ public class JmxaTest extends TestCase {
         ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
             ManagedObjectManagerFactory.createStandalone("master" ) ;
         try {
-            ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-            List<Method> methods = ca.findMethods( mom.forAnnotation( Test2.class,
-                Method.class) ) ;
-            Set<Method> methodSet = new HashSet<Method>( methods ) ;
+            EvaluatedClassAnalyzer ca = getCA( DD.class ) ;
+            List<EvaluatedMethodDeclaration> methods =
+                ca.findMethods( mom.forAnnotation( Test2.class,
+                EvaluatedMethodDeclaration.class) ) ;
+            Set<EvaluatedMethodDeclaration> methodSet =
+                new HashSet<EvaluatedMethodDeclaration>( methods ) ;
 
-            Method[] expectedMethods = { 
+            EvaluatedMethodDeclaration[] expectedMethods = {
                 getMethod( DD.class, "setFooD", int.class ),
                 getMethod( CC.class, "getFooC" ),
                 getMethod( AA.class, "barA" ),
                 getMethod( AA.class, "barA", int.class ) } ;
 
-            List<Method> expectedMethodList = Arrays.asList( expectedMethods ) ;
-            Set<Method> expectedMethodSet = new HashSet<Method>( expectedMethodList ) ;
+            List<EvaluatedMethodDeclaration> expectedMethodList =
+                Arrays.asList( expectedMethods ) ;
+            Set<EvaluatedMethodDeclaration> expectedMethodSet =
+                new HashSet<EvaluatedMethodDeclaration>( expectedMethodList ) ;
 
             assertEquals( expectedMethodSet, methodSet ) ;
         } finally {
@@ -366,16 +396,22 @@ public class JmxaTest extends TestCase {
         }
     }
 
+    private EvaluatedClassDeclaration getECD( Class<?> cls ) {
+        return (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( cls ) ;
+    }
+
     public void testGetClassAnnotations() throws IOException {
-        List<Class<?>> expectedResult = new ArrayList<Class<?>>() ;
-        expectedResult.add( CC.class ) ;
-        expectedResult.add( AA.class ) ;
+        List<EvaluatedClassDeclaration> expectedResult =
+            new ArrayList<EvaluatedClassDeclaration>() ;
+        expectedResult.add( getECD( CC.class ) ) ;
+        expectedResult.add( getECD( AA.class ) ) ;
         ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
             ManagedObjectManagerFactory.createStandalone("master" ) ;
         try {
-            ClassAnalyzer ca = new ClassAnalyzer( DD.class ) ;
-            List<Class<?>> classes = ca.findClasses( mom.forAnnotation( Test3.class,
-                Class.class ) ) ;
+            EvaluatedClassAnalyzer ca = getCA( DD.class ) ;
+            List<EvaluatedClassDeclaration> classes =
+                ca.findClasses( mom.forAnnotation( Test3.class,
+                EvaluatedClassDeclaration.class ) ) ;
 
             assertEquals( classes, expectedResult ) ;
         } finally {
@@ -383,13 +419,20 @@ public class JmxaTest extends TestCase {
         }
     }
 
-    private static Method getter_fooA = getMethod( AA.class, "getFooA" ) ;
-    private static Method setter_fooA = getMethod( AA.class, "setFooA", int.class ) ;
-    private static Method getter_barA = getMethod( AA.class, "barA" ) ;
-    private static Method setter_barA = getMethod( AA.class, "barA", int.class ) ; 
-    private static Method getter_something = getMethod( BB.class, "isSomething" ) ;
-    private static Method getter_fooC = getMethod( CC.class, "getFooC" ) ;
-    private static Method setter_fooD = getMethod( DD.class, "setFooD", int.class ) ;
+    private static EvaluatedMethodDeclaration getter_fooA =
+        getMethod( AA.class, "getFooA" ) ;
+    private static EvaluatedMethodDeclaration setter_fooA =
+        getMethod( AA.class, "setFooA", int.class ) ;
+    private static EvaluatedMethodDeclaration getter_barA =
+        getMethod( AA.class, "barA" ) ;
+    private static EvaluatedMethodDeclaration setter_barA =
+        getMethod( AA.class, "barA", int.class ) ;
+    private static EvaluatedMethodDeclaration getter_something =
+        getMethod( BB.class, "isSomething" ) ;
+    private static EvaluatedMethodDeclaration getter_fooC =
+        getMethod( CC.class, "getFooC" ) ;
+    private static EvaluatedMethodDeclaration setter_fooD =
+        getMethod( DD.class, "setFooD", int.class ) ;
 
     /*
     public void testIsSetterIsGetter() {
@@ -510,12 +553,13 @@ public class JmxaTest extends TestCase {
         try {
             for (Object[] data : primitiveTCTestData) {
                 Class cls = (Class)data[0] ;
+                EvaluatedClassDeclaration ecd = getECD( cls ) ;
                 SimpleType st = (SimpleType)data[1] ;
                 Object value = data[2] ;
 
-                TypeConverter tc = mom.getTypeConverter( cls ) ;
+                TypeConverter tc = mom.getTypeConverter( ecd ) ;
 
-                assertTrue( tc.getDataType() == cls ) ;
+                assertTrue( tc.getDataType() == ecd ) ;
                 assertTrue( tc.getManagedType() == st ) ;
                 assertTrue( tc.isIdentity() ) ;
 
@@ -735,8 +779,10 @@ public class JmxaTest extends TestCase {
                 .createStandalone( "ORBTest" ) ;
     
         try {
-            TypeConverter tc = mom.getTypeConverter( ManagedDataExample.class ) ;
-            assertTrue( tc.getDataType() == ManagedDataExample.class ) ;
+            EvaluatedClassDeclaration cdecl = 
+                getECD( ManagedDataExample.class ) ;
+            TypeConverter tc = mom.getTypeConverter( cdecl ) ;
+            assertTrue( tc.getDataType() == cdecl ) ;
 
             OpenType otype = tc.getManagedType() ;
             assertTrue( otype instanceof CompositeType ) ;
@@ -779,7 +825,7 @@ public class JmxaTest extends TestCase {
     private static final String ROOT_TYPE = "RootType" ;
     
     @ManagedObject
-    @MBeanType( pathPart=ROOT_TYPE, isLeaf=false )
+    @AMXMetadata( pathPart=ROOT_TYPE, isLeaf=false )
     public static class RootObject {
         private int value ;
         
@@ -792,7 +838,7 @@ public class JmxaTest extends TestCase {
     }
     
     @ManagedObject
-    @MBeanType( pathPart=ROOT_TYPE, isLeaf=false )
+    @AMXMetadata( pathPart=ROOT_TYPE, isLeaf=false )
     public static class NamedRootObject extends RootObject{
         String name ;
         
@@ -821,7 +867,7 @@ public class JmxaTest extends TestCase {
             try {
                 expectedObjectName = new ObjectName(expectedName);
             } catch (MalformedObjectNameException ex) {
-                fail( "Could not create ObjectName" ) ;
+                fail( "Could not create ObjectName: ex="  + ex ) ;
             } 
             
             assertEquals( expectedObjectName, rootObjectName ) ;
@@ -846,11 +892,11 @@ public class JmxaTest extends TestCase {
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
             String expectedName = "this.test:type=RootType,name=MyRoot,FruitBat=Sam,foo=bar" ;
-            ObjectName expectedObjectName = null;
+            ObjectName expectedObjectName = null ;
             try {
                 expectedObjectName = new ObjectName(expectedName);
             } catch (MalformedObjectNameException ex) {
-                fail( "Could not create ObjectName" ) ;
+                fail( "Could not create ObjectName: ex=" + ex ) ;
             } 
             
             assertEquals( expectedObjectName, rootObjectName ) ;
@@ -953,7 +999,7 @@ public class JmxaTest extends TestCase {
     private static final String NMD_TYPE = "NestedManagedDataTest" ;
     
     @ManagedObject
-    @MBeanType( pathPart=NMD_TYPE )
+    @AMXMetadata( pathPart=NMD_TYPE )
     @Description( "Nested Managed Data test")
     public static class NestedManagedDataTest {
         Person person ;
@@ -989,7 +1035,7 @@ public class JmxaTest extends TestCase {
             try {
                 expectedObjectName = new ObjectName(expectedName);
             } catch (MalformedObjectNameException ex) {
-                fail( "Could not create ObjectName" ) ;
+                fail( "Could not create ObjectName: ex=" + ex ) ;
             } 
             
             assertEquals( expectedObjectName, oname ) ;

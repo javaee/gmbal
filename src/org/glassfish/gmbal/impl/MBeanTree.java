@@ -183,10 +183,6 @@ public class MBeanTree {
         return objectMap.get( obj ) ;
     }
     
-    private boolean notEmpty( String str ) {
-        return str != null && str.length() > 0 ;
-    }
-    
     private void checkCorrectRoot( MBeanImpl entity ) {
         MBeanImpl current = entity ;
         do {
