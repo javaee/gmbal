@@ -36,7 +36,7 @@
 
 package org.glassfish.gmbal.impl ;
 
-import org.glassfish.gmbal.MBeanType;
+import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.generic.ClassAnalyzer;
 import java.util.List ;
 import java.util.Arrays ;
@@ -75,6 +75,7 @@ import org.glassfish.gmbal.generic.DumpToString ;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import javax.management.Descriptor;
 import javax.management.JMException;
+import javax.management.modelmbean.DescriptorSupport;
 import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
@@ -87,7 +88,7 @@ public class MBeanSkeleton {
 
     private Descriptor descriptor ;
     private final String type ;
-    private MBeanType mbeanType ;
+    private AMXMetadata mbeanType ;
     @DumpToString
     private final AtomicLong sequenceNumber ;
     private final ModelMBeanInfoSupport mbInfo ;
@@ -140,7 +141,7 @@ public class MBeanSkeleton {
             mbeanOperationInfoList.addAll( second.mbeanOperationInfoList ) ;
             mbeanOperationInfoList.addAll( first.mbeanOperationInfoList ) ;
 
-        descriptor = ImmutableDescriptor.union( first.descriptor,
+        descriptor = DescriptorUtility.union( first.descriptor,
             second.descriptor ) ;
 
         mbInfo = makeMbInfo( first.mbInfo.getDescription() ) ;
@@ -192,7 +193,7 @@ public class MBeanSkeleton {
         map.put( "name", dname ) ;
 	map.put( "displayName", dname ) ;
 
-        return new ImmutableDescriptor( map ) ;
+        return DescriptorUtility.makeDescriptor( map ) ;
     }
 
     @Override
@@ -225,15 +226,15 @@ public class MBeanSkeleton {
 
             String name = nonNullDescriptor.id() ;
             String description = nonNullDescriptor.description() ;
-            Descriptor desc = ImmutableDescriptor.EMPTY_DESCRIPTOR ;
+            Descriptor desc = DescriptorUtility.EMPTY_DESCRIPTOR ;
             if (getter != null) {
-                desc = ImmutableDescriptor.union( desc,
+                desc = DescriptorUtility.union( desc,
                     DescriptorIntrospector.descriptorForElement(
                         getter.method() ) );
             }
 
             if (setter != null) {
-                desc = ImmutableDescriptor.union( desc,
+                desc = DescriptorUtility.union( desc,
                     DescriptorIntrospector.descriptorForElement(
                         setter.method() ) );
             }
@@ -493,7 +494,7 @@ public class MBeanSkeleton {
         }
     }
     
-    private String getTypeName( final MBeanType mbt, 
+    private String getTypeName( final AMXMetadata mbt,
         final Class<?> cls ) {
         
         String result ;
@@ -506,10 +507,10 @@ public class MBeanSkeleton {
         return result ;
     }
 
-    @MBeanType
+    @AMXMetadata
     private static class DefaultMBeanTypeHolder{} 
-    private static MBeanType defaultMBeanType = 
-        DefaultMBeanTypeHolder.class.getAnnotation( MBeanType.class ) ;
+    private static AMXMetadata defaultMBeanType =
+        DefaultMBeanTypeHolder.class.getAnnotation( AMXMetadata.class ) ;
     private static final Descriptor DEFAULT_CLASS_DESCRIPTOR =
         DescriptorIntrospector.descriptorForElement(
             DefaultMBeanTypeHolder.class ) ;
@@ -520,7 +521,7 @@ public class MBeanSkeleton {
         dputil = new DprintUtil( getClass() ) ;
         this.mom = mom ;
         
-        mbeanType = annotatedClass.getAnnotation( MBeanType.class ) ;
+        mbeanType = annotatedClass.getAnnotation( AMXMetadata.class ) ;
         if (mbeanType == null) {
             mbeanType = defaultMBeanType ;
         }
@@ -560,7 +561,7 @@ public class MBeanSkeleton {
         }
     }
 
-    public MBeanType getMBeanType() {
+    public AMXMetadata getMBeanType() {
         return mbeanType ;
     }
     

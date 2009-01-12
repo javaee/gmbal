@@ -66,7 +66,7 @@ import org.glassfish.gmbal.Description ;
 import org.glassfish.gmbal.IncludeSubclass ;
 import org.glassfish.gmbal.InheritedAttribute ;
 import org.glassfish.gmbal.InheritedAttributes ;
-import org.glassfish.gmbal.MBeanType;
+import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.ManagedAttribute;
 import org.glassfish.gmbal.ManagedObjectManager;
 import org.glassfish.gmbal.generic.DprintUtil;
@@ -179,7 +179,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     @ManagedObject
-    @MBeanType( pathPart="GMBALROOT")
+    @AMXMetadata( pathPart="GMBALROOT")
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
         // No methods: will simply implement an AMX container

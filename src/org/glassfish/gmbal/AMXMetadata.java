@@ -53,7 +53,7 @@ import java.lang.annotation.RetentionPolicy ;
 @Documented 
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface MBeanType {
+public @interface AMXMetadata {
     /** True if only one MBean of this type may be created inside the same
      * parent container
      *

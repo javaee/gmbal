@@ -70,7 +70,7 @@ public class DescriptorIntrospector {
 
     public static Descriptor descriptorForElement(final AnnotatedElement elmt) {
         if (elmt == null) {
-            return ImmutableDescriptor.EMPTY_DESCRIPTOR;
+            return DescriptorUtility.EMPTY_DESCRIPTOR;
         }
         final Annotation[] annots = elmt.getAnnotations();
         return descriptorForAnnotations(annots);
@@ -82,7 +82,7 @@ public class DescriptorIntrospector {
 
     public static Descriptor descriptorForAnnotations(Annotation[] annots) {
         if (annots.length == 0) {
-            return ImmutableDescriptor.EMPTY_DESCRIPTOR;
+            return DescriptorUtility.EMPTY_DESCRIPTOR;
         }
         Map<String, Object> descriptorMap = new HashMap<String, Object>();
         for (Annotation a : annots) {
@@ -94,9 +94,9 @@ public class DescriptorIntrospector {
         }
 
         if (descriptorMap.isEmpty()) {
-            return ImmutableDescriptor.EMPTY_DESCRIPTOR;
+            return DescriptorUtility.EMPTY_DESCRIPTOR;
         } else {
-            return new ImmutableDescriptor(descriptorMap);
+            return DescriptorUtility.makeDescriptor(descriptorMap);
         }
     }
 
