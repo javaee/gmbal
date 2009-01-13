@@ -809,8 +809,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return runDebugFlag ;
     }
     
-    public synchronized void filterPrefix( String arg ) {
-        typePrefixes.add( arg ) ;
+    public synchronized void stripPrefix( String... args ) {
+        for (String str : args) {
+            typePrefixes.add( str ) ;
+        }
     }
     
     public synchronized <T extends AnnotatedElement> Predicate<T> forAnnotation( 

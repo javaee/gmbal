@@ -812,7 +812,7 @@ public class JmxaTest extends TestCase {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
             new ObjectName( ROOT_PARENT_NAME ) ) ;
         mom.createRoot( rootObject, rootName ) ;
-        mom.filterPrefix("org.glassfish.gmbal");
+        mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
@@ -841,7 +841,7 @@ public class JmxaTest extends TestCase {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
             new ObjectName( ROOT_PARENT_NAME ) ) ;
         mom.createRoot( rootObject ) ;
-        mom.filterPrefix("org.glassfish.gmbal");
+        mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
@@ -978,7 +978,7 @@ public class JmxaTest extends TestCase {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             ROOT_DOMAIN ) ;
         mom.createRoot() ;
-        mom.filterPrefix("org.glassfish.gmbal");
+        mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             mom.registerAtRoot( nmdt ) ;
