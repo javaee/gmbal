@@ -1077,10 +1077,30 @@ public abstract class TypeConverterImpl implements TypeConverter {
         return false ;
     }
     
-    @Override
+    private String displayOpenType( OpenType otype ) {
+        if (otype instanceof SimpleType) {
+            SimpleType stype = (SimpleType)otype ;
+            return "SimpleType(" + otype.getTypeName() + ")" ;
+        } else if (otype instanceof ArrayType) {
+            ArrayType atype = (ArrayType)otype ;
+            return "ArrayType(" + displayOpenType( atype.getElementOpenType() )
+                + "," + atype.getDimension() + ")" ;
+        } else if (otype instanceof CompositeType) {
+            CompositeType ctype = (CompositeType)otype ;
+            return "CompositeType(" + ctype.getTypeName() + ")" ;
+        } else if (otype instanceof TabularType) {
+            TabularType ttype = (TabularType)otype ;
+            return "TabularType(" + ttype.getTypeName() + ","
+                + "rowType=" + ttype.getRowType()
+                + "indexNames=" + ttype.getIndexNames() + ")" ;
+        } else {
+            return "UNKNOWN(" + otype + ")" ;
+        }
+    }
+
     public String toString() {
         return "TypeConverter[dataType=" + dataType 
-            + ",managedType=" + managedType + "]" ;
+            + ",managedType=" + displayOpenType( managedType ) + "]" ;
     }
 }
 

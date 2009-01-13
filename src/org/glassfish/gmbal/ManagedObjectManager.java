@@ -142,13 +142,10 @@ public interface ManagedObjectManager extends Closeable {
     
     /** Add a type prefix to strip from type names, to shorten the names for
      * a better presentation to the user.
-     * <P>Note that these type prefixes are NOT available for the root
-     * object passed on the create call.  The root object is best handled
-     * with an explicit type, if the default class name is not desired.
      *
      * @param str Class package name to strip from type name
      */
-    void addTypePrefix( String str ) ;
+    void filterPrefix( String str ) ;
     
     /** Return the domain name that was used when this ManagedObjectManager
      * was created.

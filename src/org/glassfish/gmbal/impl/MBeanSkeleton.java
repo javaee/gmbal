@@ -47,8 +47,13 @@ import java.util.HashSet ;
 import java.util.Iterator ;
 import java.util.concurrent.atomic.AtomicLong ;
 
+import java.lang.reflect.Method ;
+import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type ;
 
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
 import javax.management.Attribute ;
 import javax.management.AttributeList ;
 import javax.management.MBeanException ;
@@ -73,6 +78,7 @@ import org.glassfish.gmbal.generic.DumpToString ;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import javax.management.Descriptor;
 import javax.management.JMException;
+import javax.management.modelmbean.DescriptorSupport;
 import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
@@ -349,14 +355,30 @@ public class MBeanSkeleton {
             }
         }
     }
-    
+    private static final Permission accessControlPermission =
+        new ReflectPermission( "suppressAccessChecks" ) ;
+
     private Pair<Operation,ModelMBeanOperationInfo> makeOperation(
         final EvaluatedMethodDeclaration m ) {
 	
         if (mom.registrationFineDebug()) {
             dputil.enter( "makeOperation", "m=", m ) ;
         }
-        
+
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman != null) {
+            sman.checkPermission( accessControlPermission ) ;
+        }
+
+        AccessController.doPrivileged(
+            new PrivilegedAction<Method>() {
+                public Method run() {
+                    m.setAccessible(true);
+                    return m ;
+                }
+            }
+        ) ;
+
         try {
             final String desc = mom.getDescription( m ) ;
             final EvaluatedType rtype = m.returnType() ;

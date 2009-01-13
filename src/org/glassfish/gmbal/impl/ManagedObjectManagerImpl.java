@@ -815,7 +815,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return runDebugFlag ;
     }
     
-    public synchronized void addTypePrefix( String arg ) {
+    public synchronized void filterPrefix( String arg ) {
         typePrefixes.add( arg ) ;
     }
     

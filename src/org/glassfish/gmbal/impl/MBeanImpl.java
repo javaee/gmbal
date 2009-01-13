@@ -202,14 +202,14 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     }
  
     private void restNameHelper( StringBuilder sb, MBeanImpl mb ) {
+        if (mb.parent() != null) {
+            restNameHelper( sb, mb.parent() ) ;
+        } 
+
         sb.append( mb.type() ) ;
         sb.append( '=' ) ;
         sb.append( mb.name() ) ;
-
-        if (mb.parent() != null) {
-            sb.append( ',' ) ;
-            restNameHelper( sb, mb.parent() ) ;
-        } 
+        sb.append( ',' ) ;
     }
 
     public synchronized String restName() {
