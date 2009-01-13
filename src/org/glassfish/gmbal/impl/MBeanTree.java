@@ -66,7 +66,7 @@ public class MBeanTree {
     private Map<ObjectName,Object> objectNameMap ;
     private String domain ;
     private ObjectName rootParentName ;
-    private String rootParentSuffix ;
+    private String rootParentPrefix ;
     private String typeString ; // What string is used for the type of the 
                                 // type name/value pair?
     private ManagedObjectManagerInternal mom ;
@@ -128,7 +128,7 @@ public class MBeanTree {
         }   
     }
 
-    private String getRootParentSuffix( final ObjectName rootParentName ) {
+    private String getRootParentPrefix( final ObjectName rootParentName ) {
         final String[] keys =
             rootParentName.getKeyPropertyListString().split( "," ) ;
 
@@ -144,10 +144,10 @@ public class MBeanTree {
             } else if (key.equals( "name" ) ) {
                 nameValue = value ;
             } else {
-                res.append( ',' ) ;
                 res.append( key ) ;
                 res.append( '=' ) ;
                 res.append( value ) ;
+                res.append( ',' ) ;
             }
         }
 
@@ -155,7 +155,7 @@ public class MBeanTree {
             throw Exceptions.self.invalidRootParentName(rootParentName) ;
         }
 
-        final String result = typeValue + '=' + nameValue + res.toString() ;
+        final String result = res + typeValue + '=' + nameValue ;
         return result ;
     }
 
@@ -168,9 +168,9 @@ public class MBeanTree {
         this.domain = domain ;
         this.rootParentName = rootParentName ;
         if (rootParentName == null) {
-            rootParentSuffix = null ;
+            rootParentPrefix = null ;
         } else {
-            rootParentSuffix = getRootParentSuffix( rootParentName ) ;
+            rootParentPrefix = getRootParentPrefix( rootParentName ) ;
         }
 
         this.typeString = typeString ;
@@ -209,9 +209,17 @@ public class MBeanTree {
         }
 
         StringBuilder result = new StringBuilder() ;
-
         result.append( domain ) ;
         result.append( ":" ) ;
+
+        if (rootParentPrefix != null) {
+            result.append( rootParentPrefix ) ;
+            result.append( ',' ) ;
+        }
+
+        if (parent != null) {
+            result.append( parent.restName() ) ;
+        }
 
         result.append( typeString ) ;
         result.append( "=" ) ;
@@ -221,16 +229,6 @@ public class MBeanTree {
         result.append( "name" ) ;
         result.append( "=" ) ;
         result.append( name ) ;
-
-        if (parent != null) {
-            result.append( ',' ) ;
-            result.append( parent.restName() ) ;
-        }
-
-        if (rootParentSuffix != null) {
-            result.append( ',' ) ;
-            result.append( rootParentSuffix ) ;
-        }
 
         return new ObjectName( result.toString() ) ; 
     }

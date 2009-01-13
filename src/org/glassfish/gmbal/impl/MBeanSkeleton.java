@@ -49,8 +49,12 @@ import java.util.Iterator ;
 import java.util.concurrent.atomic.AtomicLong ;
 
 import java.lang.reflect.Method ;
+import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type ;
 
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
 import javax.management.Attribute ;
 import javax.management.AttributeList ;
 import javax.management.MBeanException ;
@@ -347,14 +351,31 @@ public class MBeanSkeleton {
             }
         }
     }
-    
+
+    private static final Permission accessControlPermission =
+        new ReflectPermission( "suppressAccessChecks" ) ;
+
     private Pair<Operation,ModelMBeanOperationInfo> makeOperation(
         final Method m ) {
 	
         if (mom.registrationFineDebug()) {
             dputil.enter( "makeOperation", "m=", m ) ;
         }
-        
+
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman != null) {
+            sman.checkPermission( accessControlPermission ) ;
+        }
+
+        AccessController.doPrivileged(
+            new PrivilegedAction<Method>() {
+                public Method run() {
+                    m.setAccessible(true);
+                    return m ;
+                }
+            }
+        ) ;
+
         try {
             final String desc = mom.getDescription( m ) ;
             final Type rtype = m.getGenericReturnType() ;

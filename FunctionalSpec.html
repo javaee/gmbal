@@ -173,7 +173,7 @@ a[href] {
 <h1>GlassFish MBean Annotation Library (gmbal)</h1>
 <h1>Functional Specification</h1>
 by Ken Cavanaugh<br>
-Spec version .40<span style="background-color: rgb(250, 255, 221);"></span><br>
+Spec version .41<span style="background-color: rgb(250, 255, 221);"></span><br>
 12/17/08<span style="background-color: rgb(255, 249, 200);"></span><br>
 <h2>1. Introduction</h2>
 <p>The GlassFish MBean Annotation Library (gmbal, pronounced as in
@@ -656,7 +656,7 @@ inherited attributes<br>
       <ul>
         <li>String pathPart (the type to use in an ObjectName or in an
 admin CLI path expression:&nbsp; defaults to class name, but see
-also&nbsp; <a href="#addTypePrefix">addTypePrefix</a>)</li>
+also&nbsp; <a href="#filterPrefix">filterPrefix</a>)</li>
         <li>boolean isLeaf (true if this MBean can not contain other
 MBeans)</li>
         <li>boolean isSingleton (true&nbsp; if only one MBean of this
@@ -838,7 +838,7 @@ is the
 implementation object passed to a register method, NOT the internally
 created
 dynamic MBean (which is not directly provided).<br>
-<h4>3.2.6. <a name="addTypePrefix"></a>addTypePrefix</h4>
+<h4>3.2.6. <a name="filterPrefix"></a>filterPrefix</h4>
 A type prefix is simply a prefix of a fully qualified Java class name.
 By
 default, the MBean ObjectName type field is set to the full qualified
@@ -1152,7 +1152,7 @@ ORB repository from the GFv3 ORB project on Kenai.com):<br>
 <br>
 First, from the
 com.sun.corba.se.spi.orb.ORB.createORBManagedObjectManager method:<br>
-<pre>    // mom is declared the ORB object, which stays around the entire time the ORB is in use.<br>    // Here I am using createStandalone.  This needs to be replaced with a call to createFederated<br>    // when running in GlassFish v3.  This will be driven through the ORB configuration.<br>    mom = ManagedObjectManagerFactory.createStandalone( "com.sun.corba" ) ;<br>    // Here I am using the guaranteed to be unique ORB id as the name of the topmost ORB mbean.<br>    mom.createRoot( this, getUniqueOrbId() ) ;<br><br>    // The ORB already has a system for setting debug options, so I just extended it for gmbal.<br>    if (mbeanFineDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.FINE ) ;<br>    } else if (mbeanDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;<br>    } else {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NONE ) ;<br>    }<br><br>    mom.setRuntimeDebug( mbeanRuntimeDebugFlag ) ;<br><br>    // Here I add all of the package prefixes that I do NOT want to see in ObjectNames.<br>    // The longest match is stripped from the class name to create the default value for the<br>    // type.<br>    mom.addTypePrefix( "com.sun.corba.se" ) ;<br>    mom.addTypePrefix( "com.sun.corba.se.spi" ) ;<br>    mom.addTypePrefix( "com.sun.corba.se.impl" ) ;<br>    mom.addTypePrefix( "com.sun.corba.se.spi.orbutil" ) ;<br>    mom.addTypePrefix( "com.sun.corba.se.impl.orbutil" ) ;<br></pre>
+<pre>    // mom is declared the ORB object, which stays around the entire time the ORB is in use.<br>    // Here I am using createStandalone.  This needs to be replaced with a call to createFederated<br>    // when running in GlassFish v3.  This will be driven through the ORB configuration.<br>    mom = ManagedObjectManagerFactory.createStandalone( "com.sun.corba" ) ;<br>    // Here I am using the guaranteed to be unique ORB id as the name of the topmost ORB mbean.<br>    mom.createRoot( this, getUniqueOrbId() ) ;<br><br>    // The ORB already has a system for setting debug options, so I just extended it for gmbal.<br>    if (mbeanFineDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.FINE ) ;<br>    } else if (mbeanDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;<br>    } else {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NONE ) ;<br>    }<br><br>    mom.setRuntimeDebug( mbeanRuntimeDebugFlag ) ;<br><br>    // Here I add all of the package prefixes that I do NOT want to see in ObjectNames.<br>    // The longest match is stripped from the class name to create the default value for the<br>    // type.<br>    mom.filterPrefix( "com.sun.corba.se" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.spi" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.impl" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.spi.orbutil" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.impl.orbutil" ) ;<br></pre>
 <p>In order to integrate the ORB with GlassFish v3, there is quite a
 bit of GlassFish v3-specific code that initializes the ORB. This code
 will need to be placed in an appropriate OSGi bundle (either in the EJB

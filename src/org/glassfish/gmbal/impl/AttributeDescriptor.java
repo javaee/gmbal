@@ -38,8 +38,12 @@ package org.glassfish.gmbal.impl ;
 
 
 import java.lang.reflect.Method ;
+import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type ;
 
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
 import javax.management.ReflectionException ;
 
 
@@ -67,11 +71,27 @@ public class AttributeDescriptor {
     @DumpIgnore
     private DprintUtil dputil = new DprintUtil( getClass() ) ;
 
+    private static final Permission accessControlPermission =
+        new ReflectPermission( "suppressAccessChecks" ) ;
+
     private AttributeDescriptor( final ManagedObjectManagerInternal mom, 
         final Method method, final String id, 
         final String description, final AttributeType atype, final Type type ) {
     
-        this._method = method ;
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman != null) {
+            sman.checkPermission( accessControlPermission ) ;
+        }
+
+        this._method = AccessController.doPrivileged(
+            new PrivilegedAction<Method>() {
+                public Method run() {
+                    method.setAccessible(true);
+                    return method ;
+                }
+            }
+        ) ;
+
         this._id = id ;
         this._description = description ;
         this._atype = atype ;
