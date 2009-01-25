@@ -92,9 +92,19 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
      * @return The inherited attributes.
      */
     List<InheritedAttribute> getInheritedAttributes( EvaluatedClassAnalyzer ca ) ;
-    
+
+    /** Used in getAttributes to indicate type of Attribute being considered.
+     * This matters because JMX (unforunately) defines different rules for
+     * converting method names to attribute ids in MBeans and in CompositeData:
+     * for MBeans, an initial get or set is stripped, leaving an ID with an
+     * initial upper case letter; for CompositeData, JMX follows the JavaBeans
+     * conventions, and converts the first letter of the ID to lower case.
+     * Since getAttributes is used in both cases, it needs to know the difference.
+     */
+    public enum AttributeDescriptorType { MBEAN_ATTR, COMPOSITE_DATA_ATTR }
+
     Pair<Map<String,AttributeDescriptor>,Map<String,AttributeDescriptor>>
-        getAttributes( EvaluatedClassAnalyzer ca ) ;
+        getAttributes( EvaluatedClassAnalyzer ca, AttributeDescriptorType adt ) ;
     
     <K,V> void putIfNotPresent( final Map<K,V> map,
         final K key, final V value ) ;

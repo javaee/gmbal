@@ -7,9 +7,7 @@ package org.glassfish.gmbal.impl;
 
 import java.io.InvalidObjectException;
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import javax.management.AttributeNotFoundException;
@@ -24,7 +22,6 @@ import org.glassfish.gmbal.logex.Log;
 import org.glassfish.gmbal.logex.Message;
 import org.glassfish.gmbal.logex.WrapperGenerator;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
-import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 

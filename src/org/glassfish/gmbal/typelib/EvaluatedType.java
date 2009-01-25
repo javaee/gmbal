@@ -40,7 +40,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import javax.management.ObjectName;
-import org.glassfish.gmbal.generic.ObjectSet;
 
 /**
  *

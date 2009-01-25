@@ -56,4 +56,16 @@ public @interface Description {
      * resource bundle is specified, the value is used directly in the MBean info class.
      */
     String value() ;
+
+    /** Optional key to use in a resource bundle for this description. If present,
+     * a gmbal tool will generate a resource bundle that contains key=value taken
+     * from the description annotation.
+     * <p>
+     * If this key is not present, the default key is given by the class name, 
+     * if this annotation appears on a class, or the class name.method name if 
+     * this annotation appears on a method.  It is an error to use the default
+     * value for more than one method of the same name, except for setters and getters.
+     * 
+     */
+    String key() default "" ;
 }

@@ -223,6 +223,9 @@ public class FileWrapper implements Closeable {
 		dataRead = fis.read( buffer ) ;
 	    }
 	} finally {
+            // FindBugs complains that this may leak fis, but that is actually
+            // not possible: if fis is not null, it will be closed.  But findbugs
+            // can't determine that.
 	    if (fis != null)
 		fis.close() ;
 	    if (fos != null)

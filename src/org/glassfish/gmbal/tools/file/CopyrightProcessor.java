@@ -44,7 +44,6 @@ import java.io.File ;
 import java.io.FileInputStream;
 import java.io.IOException ;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import org.glassfish.gmbal.generic.UnaryFunction;
@@ -102,8 +101,7 @@ public class CopyrightProcessor {
     //  SHELL
     //  SHELL_SCRIPT
     //  IGNORE
-    // Each class has suffixes and file names
-    // Specified in a property file:
+    // Each class has suffixes and file names specified in a property file:
     // cptool.<CLASS>.suffixes is a comma separated list (no spaces) of filename suffixes
     // cptool.<CLASS>.filenames is a comma separated list of specific filenames
 
@@ -489,16 +487,20 @@ public class CopyrightProcessor {
             makeCopyrightBlockCommentBlock( copyrightText,
                 JAVA_COMMENT_START, JAVA_COMMENT_PREFIX, " " + JAVA_COMMENT_END,
                 JAVA_FORMAT_TAG ) ;
+
         final Block xmlCopyrightText =
             makeCopyrightBlockCommentBlock( copyrightText,
                 XML_COMMENT_START, XML_COMMENT_PREFIX, XML_COMMENT_END,
                 XML_FORMAT_TAG ) ;
+
         final Block javaLineCopyrightText =
             makeCopyrightLineCommentBlock( copyrightText, JAVA_LINE_PREFIX,
             JAVA_LINE_FORMAT_TAG ) ;
+
         final Block schemeCopyrightText =
             makeCopyrightLineCommentBlock( copyrightText, SCHEME_PREFIX,
             SCHEME_FORMAT_TAG ) ;
+
         final Block shellCopyrightText =
             makeCopyrightLineCommentBlock( copyrightText, SHELL_PREFIX,
             SHELL_FORMAT_TAG ) ;
@@ -515,36 +517,56 @@ public class CopyrightProcessor {
         // Create the BlockParserCalls needed for the actions
         BlockParserCall javaBlockParserCall = makeBlockCommentParser(
             JAVA_COMMENT_START, JAVA_COMMENT_END ) ;
+
         BlockParserCall xmlBlockParserCall = makeBlockCommentParser(
             XML_COMMENT_START, XML_COMMENT_END ) ;
 
-        BlockParserCall javaLineParserCall = makeLineCommentParser( JAVA_LINE_PREFIX ) ;
-        BlockParserCall schemeLineParserCall = makeLineCommentParser( SCHEME_PREFIX ) ;
-        BlockParserCall shellLineParserCall = makeLineCommentParser( SHELL_PREFIX ) ;
+        BlockParserCall javaLineParserCall =
+            makeLineCommentParser( JAVA_LINE_PREFIX ) ;
 
-        addToProcMap( new FileProcessing( "JAVA", makeCopyrightBlockAction( javaCopyrightText,
-            javaBlockParserCall, args.startyear(), JAVA_AFTER_FIRST_BLOCK ) )
+        BlockParserCall schemeLineParserCall =
+            makeLineCommentParser( SCHEME_PREFIX ) ;
+
+        BlockParserCall shellLineParserCall =
+            makeLineCommentParser( SHELL_PREFIX ) ;
+
+        // Create the default mappings from suffixes and file names to 
+        // actions.
+        addToProcMap( new FileProcessing( "JAVA",
+            makeCopyrightBlockAction( javaCopyrightText,
+                javaBlockParserCall,
+                args.startyear(), JAVA_AFTER_FIRST_BLOCK ) )
             .suffixes( "c", "h", "java", "sjava", "idl" ) ) ;
 
-        addToProcMap( new FileProcessing( "XML", makeCopyrightBlockAction( xmlCopyrightText,
-            xmlBlockParserCall, args.startyear(), XML_AFTER_FIRST_BLOCK ) )
+        addToProcMap( new FileProcessing( "XML",
+            makeCopyrightBlockAction( xmlCopyrightText,
+                xmlBlockParserCall,
+                args.startyear(), XML_AFTER_FIRST_BLOCK ) )
             .suffixes( "htm", "html", "xml", "dtd" ) ) ;
 
-        addToProcMap( new FileProcessing( "SCHEME", makeCopyrightBlockAction( schemeCopyrightText,
-            schemeLineParserCall, args.startyear(), SCHEME_AFTER_FIRST_BLOCK ) )
+        addToProcMap( new FileProcessing( "SCHEME",
+            makeCopyrightBlockAction( schemeCopyrightText,
+                schemeLineParserCall,
+                args.startyear(), SCHEME_AFTER_FIRST_BLOCK ) )
             .suffixes( "mc", "mcd", "scm", "vthought" ) ) ;
 
-        addToProcMap( new FileProcessing( "JAVA_LINE", makeCopyrightBlockAction( javaLineCopyrightText,
-            javaLineParserCall, args.startyear(), JAVA_LINE_AFTER_FIRST_BLOCK ) ) 
+        addToProcMap( new FileProcessing( "JAVA_LINE",
+            makeCopyrightBlockAction( javaLineCopyrightText,
+                javaLineParserCall,
+                args.startyear(), JAVA_LINE_AFTER_FIRST_BLOCK ) )
             .suffixes( "tdesc", "policy", "secure" ) ) ;
 
-        addToProcMap( new FileProcessing( "SHELL", makeCopyrightBlockAction( shellCopyrightText,
-            shellLineParserCall, args.startyear(), SHELL_AFTER_FIRST_BLOCK ) ) 
+        addToProcMap( new FileProcessing( "SHELL",
+            makeCopyrightBlockAction( shellCopyrightText,
+                shellLineParserCall,
+                args.startyear(), SHELL_AFTER_FIRST_BLOCK ) )
             .suffixes( "config", "properties", "prp", "data", "txt", "text" )
             .fileNames( "Makefile" ) ) ;
 
-        addToProcMap( new FileProcessing( "SHELL_SCRIPT", makeCopyrightBlockAction( shellCopyrightText,
-            shellLineParserCall, args.startyear(), SHELL_SCRIPT_AFTER_FIRST_BLOCK ) ) 
+        addToProcMap( new FileProcessing( "SHELL_SCRIPT",
+            makeCopyrightBlockAction( shellCopyrightText,
+                shellLineParserCall,
+                args.startyear(), SHELL_SCRIPT_AFTER_FIRST_BLOCK ) )
             .suffixes( "ksh", "sh" ) ) ;
 
         addToProcMap( new FileProcessing( "IGNORE", af.getSkipAction() )
@@ -553,6 +575,16 @@ public class CopyrightProcessor {
                 "cvsignore", "hgignore", "list", "old", "orig", "rej",
                 "swp", "swo", "class", "o", "css" )
             .fileNames( "NORENAME", "errorfile" ) ) ;
+    }
+
+    private static List<String> getProp( final Properties props,
+        final String name, final List<String> defaultValue ) {
+        String str = props.getProperty(name) ;
+        if (str == null) {
+            return defaultValue ;
+        } else {
+            return Arrays.asList( str.split( "," ) ) ;
+        }
     }
 
     private static Arguments args ;
@@ -571,7 +603,7 @@ public class CopyrightProcessor {
 
             // override any defaults from the config file
             Properties props = new Properties() ;
-            if (args.configFile().exists()) {
+            if ((args.configFile() != null) && args.configFile().exists()) {
                 try {
                     InputStream is = new FileInputStream( args.configFile()) ;
                     props.load(is) ;
@@ -589,16 +621,19 @@ public class CopyrightProcessor {
             for (Map.Entry<String,FileProcessing> entry : procMap.entrySet()) {
                 String name = entry.getKey() ;
 
-                // XXX fetch suffixes and fileNames from props, if present
-
                 FileProcessing fp = entry.getValue() ;
                 Scanner.Action action = fp.action() ;
 
-                for (String str : fp.suffixes()) {
+                List<String> suffixes = getProp( props,
+                    "cptool." + name + ".suffixes", fp.suffixes() ) ;
+                List<String> fileNames = getProp( props, 
+                    "cptool." + name + ".filenames", fp.fileNames() ) ;
+
+                for (String str : suffixes) {
                     recognizer.addKnownSuffix( str, action ) ;
                 }
 
-                for (String str : fp.fileNames()) {
+                for (String str : fileNames) {
                     recognizer.addKnownName( str, action ) ;
                 }
             }

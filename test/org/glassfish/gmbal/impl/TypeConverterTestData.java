@@ -101,8 +101,11 @@ public class TypeConverterTestData {
         private final List<String> list ;
 
         @ManagedAttribute 
+        @Description( VALUE_DESC )
         public int value() { return value ; }
 
+        @ManagedAttribute
+        @Description( LIST_DESC )
         public List<String> getList() { return list ; }
 
         public Data1( int value, String... args ) {
@@ -125,7 +128,7 @@ public class TypeConverterTestData {
         compV( DATA1_OTYPE,
             mkmap(
                 list( "list", "value" ),
-                listO( 21, data1List ) ) ) ;
+                listO( data1List, 21 ) ) ) ;
 
     public static final TestData Data1TestData = new TestData( data1,
         DATA1_OTYPE, data1Open ) ;

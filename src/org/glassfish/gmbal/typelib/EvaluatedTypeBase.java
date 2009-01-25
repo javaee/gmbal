@@ -38,7 +38,6 @@ package org.glassfish.gmbal.typelib;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import org.glassfish.gmbal.generic.ObjectSet;
@@ -111,12 +110,12 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
 
             boolean first = true ;
             for (T t : list) {
-                t.makeRepresentation( sb, set ) ;
                 if (first) {
                     first = false ;
                 } else {
                     sb.append( sep ) ;
                 }
+                t.makeRepresentation( sb, set ) ;
             }
 
             if (end != null) {
@@ -130,9 +129,7 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
         if (rep == null) {
             ObjectSet set = new ObjectSet() ;
             StringBuilder sb = new StringBuilder() ;
-            sb.append( "(" ) ;
             makeRepresentation( sb, set ) ;
-            sb.append( ")" ) ;
             rep = sb.toString() ;
         }
 
@@ -142,6 +139,9 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
     abstract void makeRepresentation( StringBuilder sb, ObjectSet set ) ;
 
     @Override
+    // Note that findbugs flags this as a "strange equals method".
+    // But that is intentional, because this equals method must deal
+    // with circular structures.
     public boolean equals( Object obj ) {
         ObjectSet set = new ObjectSet() ;
         return equals( obj, set ) ;

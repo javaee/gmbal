@@ -286,7 +286,7 @@ public class TestTypelib extends TestCase {
     }
 
     public static class WildcardTSuperSub extends WildcardTSuper<Integer> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.LIST_OBJECT ;
     }
 
     public static class SuperMap<K, V> {
@@ -338,6 +338,12 @@ public class TestTypelib extends TestCase {
         }
     }
 
+    private static class DumpTestCase extends TestCase {
+        public void runTest() {
+            TypeEvaluator.dumpEvalClassMap();
+        }
+    }
+
     private static final Comparator<Class<?>> classNameComparator =
             new ClassNameComparator();
 
@@ -348,6 +354,7 @@ public class TestTypelib extends TestCase {
         for (Class<?> n : nested) {
             main.addTest( new TypelibTestCase( n )) ;
         }
+        main.addTest( new DumpTestCase() ) ;
 
         return main ;
     }

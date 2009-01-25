@@ -200,6 +200,7 @@ public class WrapperGenerator {
         try {
             transMsg = catalog.getString( msg ) ;
         } catch (Exception exc) {
+            // Ignore exc: hard to report here.
             transMsg = msg ;
         }
         if (transMsg.indexOf( "{0" ) >= 0 ) {

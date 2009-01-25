@@ -53,8 +53,9 @@ import org.glassfish.gmbal.GmbalException;
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
  *
- * XXX Need to get some benchmarks for registration cost.
- * XXX Do we need to enable/disable MBean registration with MBeanServer.
+ * XXX Need to get some benchmarks for registration cost.  This should help
+ * to determine whether we need to enable/disable MBean registration with the
+ * MBeanServer.
  *
  * @author ken
  */

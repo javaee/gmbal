@@ -46,7 +46,7 @@ public abstract class EvaluatedArrayTypeBase extends EvaluatedTypeBase
     implements EvaluatedArrayType {
         
     void makeRepresentation( StringBuilder sb, ObjectSet set ) {
-        sb.append( componentType().toString() ) ;
+        ((EvaluatedTypeBase)componentType()).makeRepresentation( sb, set ) ;
         sb.append( "[]" ) ;
     }
    

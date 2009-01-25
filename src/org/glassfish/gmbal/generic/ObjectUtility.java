@@ -441,6 +441,7 @@ public final class ObjectUtility {
 		}
 	    }
 	} catch (Exception exc2) {
+            // Just ignore the exception here
 	    result.append( obj.toString() ) ;
 	}
     }

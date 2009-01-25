@@ -145,7 +145,7 @@ public interface ManagedObjectManager extends Closeable {
      *
      * @param str Class package name to strip from type name
      */
-    void filterPrefix( String str ) ;
+    void stripPrefix( String... str ) ;
     
     /** Return the domain name that was used when this ManagedObjectManager
      * was created.

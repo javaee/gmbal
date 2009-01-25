@@ -49,7 +49,6 @@ import java.util.concurrent.atomic.AtomicLong ;
 
 import java.lang.reflect.Method ;
 import java.lang.reflect.ReflectPermission;
-import java.lang.reflect.Type ;
 
 import java.security.AccessController;
 import java.security.Permission;
@@ -66,7 +65,7 @@ import javax.management.NotificationBroadcasterSupport ;
 import javax.management.AttributeChangeNotification ;
 
 import org.glassfish.gmbal.generic.BinaryFunction ;
-import org.glassfish.gmbal.ObjectNameKey ;
+import org.glassfish.gmbal.NameValue ;
 import org.glassfish.gmbal.ManagedOperation ;
 import org.glassfish.gmbal.ParameterNames ;
 
@@ -78,7 +77,6 @@ import org.glassfish.gmbal.generic.DumpToString ;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import javax.management.Descriptor;
 import javax.management.JMException;
-import javax.management.modelmbean.DescriptorSupport;
 import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
@@ -279,7 +277,8 @@ public class MBeanSkeleton {
         try {
             Pair<Map<String,AttributeDescriptor>,
                 Map<String,AttributeDescriptor>> amap =
-                mom.getAttributes( ca ) ;
+                mom.getAttributes( ca,
+                    ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR ) ;
 
             getters.putAll( amap.first() ) ;
             setters.putAll( amap.second() ) ;
@@ -320,14 +319,14 @@ public class MBeanSkeleton {
         
         try {
             final List<EvaluatedMethodDeclaration> annotatedMethods =
-                ca.findMethods( mom.forAnnotation( ObjectNameKey.class,
+                ca.findMethods( mom.forAnnotation( NameValue.class,
                     EvaluatedMethodDeclaration.class )) ;
             
             if (annotatedMethods.size() == 0) {
                 return ;
             }
             
-            // If there are two methods with @ObjectNameKey in the same
+            // If there are two methods with @NameValue in the same
             // class, we have an error.
             EvaluatedMethodDeclaration annotatedMethod = annotatedMethods.get(0) ;
             if (annotatedMethods.size() > 1) {
@@ -347,8 +346,9 @@ public class MBeanSkeleton {
             }
             
             nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
-                mom, annotatedMethod, "name", 
-                Exceptions.self.nameOfManagedObject() ) ;
+                mom, annotatedMethod, "Name",
+                Exceptions.self.nameOfManagedObject(),
+                ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR ) ;
         } finally {
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
@@ -373,8 +373,8 @@ public class MBeanSkeleton {
         AccessController.doPrivileged(
             new PrivilegedAction<Method>() {
                 public Method run() {
-                    m.setAccessible(true);
-                    return m ;
+                    m.method().setAccessible(true);
+                    return m.method() ;
                 }
             }
         ) ;
@@ -535,9 +535,6 @@ public class MBeanSkeleton {
     private static class DefaultMBeanTypeHolder{} 
     private static AMXMetadata defaultMBeanType =
         DefaultMBeanTypeHolder.class.getAnnotation( AMXMetadata.class ) ;
-    private static final Descriptor DEFAULT_CLASS_DESCRIPTOR =
-        DescriptorIntrospector.descriptorForElement(
-            DefaultMBeanTypeHolder.class ) ;
 
     public MBeanSkeleton( final EvaluatedClassDeclaration annotatedClass,
         final EvaluatedClassAnalyzer ca,

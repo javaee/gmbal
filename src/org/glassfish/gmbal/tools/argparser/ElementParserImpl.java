@@ -57,7 +57,7 @@ public class ElementParserImpl implements ElementParser {
     }
 
     public String[] describe() {
-	return description ;
+	return description.clone() ;
     }
 
     private static class ResultData extends
@@ -196,60 +196,92 @@ public class ElementParserImpl implements ElementParser {
 	return sb.toString() ;
     }
 
+    private static class BooleanParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            return Boolean.valueOf( str ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> booleanParser =
+        new BooleanParser() ;
+
+    private static class ByteParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            return Byte.valueOf( str ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> byteParser =
+        new ByteParser() ;
+
+    private static class CharParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            if (str.length() != 1)
+                throw new RuntimeException( "String \"" + str
+                    + "\" cannot be converted to a Character" ) ;
+            return Character.valueOf( str.charAt(0) ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> charParser =
+        new CharParser() ;
+
+    private static class ShortParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            return Short.valueOf( str ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> shortParser =
+        new ShortParser() ;
+
+    private static class IntegerParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            return Integer.valueOf( str ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> integerParser =
+        new IntegerParser() ;
+
+    private static class LongParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            return Long.valueOf( str ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> longParser =
+        new LongParser() ;
+
+    private static class FloatParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            return Float.valueOf( str ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> floatParser =
+        new FloatParser() ;
+
+    private static class DoubleParser implements UnaryFunction<String,Object> {
+        public Object evaluate( String str ) {
+            return Double.valueOf( str ) ;
+        }
+    } ;
+    private static final UnaryFunction<String,Object> doubleParser =
+        new DoubleParser() ;
+
     private UnaryFunction<String,Object> getPrimitiveParser( Class type ) {
 	UnaryFunction<String,Object> lfunc = null ;
 
 	if (type == boolean.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    return Boolean.valueOf( str ) ;
-		}
-	    } ;
+            lfunc = booleanParser ;
 	} else if (type == byte.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    return Byte.valueOf( str ) ;
-		}
-	    } ;
+	    lfunc = byteParser ;
 	} else if (type == char.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    if (str.length() != 1)
-			throw new RuntimeException( "String \"" + str 
-			    + "\" cannot be converted to a Character" ) ;
-		    return Character.valueOf( str.charAt(0) ) ;
-		}
-	    } ;
+	    lfunc = charParser ;
 	} else if (type == short.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    return Short.valueOf( str ) ;
-		}
-	    } ;
+            lfunc = shortParser ;
 	} else if (type == int.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    return Integer.valueOf( str ) ;
-		}
-	    } ;
+            lfunc = integerParser ;
 	} else if (type == long.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    return Long.valueOf( str ) ;
-		}
-	    } ;
+            lfunc = longParser ;
 	} else if (type == float.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    return Float.valueOf( str ) ;
-		}
-	    } ;
+            lfunc = floatParser ;
 	} else if (type == double.class) {
-	    lfunc = new UnaryFunction<String,Object>() {
-		public Object evaluate( String str ) {
-		    return Double.valueOf( str ) ;
-		}
-	    } ;
+            lfunc = doubleParser ;
 	} 
 
 	return lfunc ;
@@ -281,6 +313,7 @@ public class ElementParserImpl implements ElementParser {
 			+ "(String) constructor threw exception: " 
 			+ e1.getTargetException(), e1 ) ;
 		} catch (Exception e2) {
+                    // Catch all for several checked exceptions: ignore findbugs
 		    throw new RuntimeException( "Exception " + e2 
 			+ " occured in calling constructor " 
 			+ type.getName() + "(String)", e2 ) ;

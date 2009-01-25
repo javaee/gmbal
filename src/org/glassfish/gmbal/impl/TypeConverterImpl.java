@@ -378,7 +378,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             final Pair<Map<String,AttributeDescriptor>,
                 Map<String,AttributeDescriptor>> ainfos =
-                    mom.getAttributes( ca ) ;
+                    mom.getAttributes( ca,
+                        ManagedObjectManagerInternal.AttributeDescriptorType
+                            .COMPOSITE_DATA_ATTR ) ;
 
             result = ainfos.first().values() ;
         } catch (RuntimeException exc) {
@@ -1080,7 +1082,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private String displayOpenType( OpenType otype ) {
         if (otype instanceof SimpleType) {
             SimpleType stype = (SimpleType)otype ;
-            return "SimpleType(" + otype.getTypeName() + ")" ;
+            return "SimpleType(" + stype.getTypeName() + ")" ;
         } else if (otype instanceof ArrayType) {
             ArrayType atype = (ArrayType)otype ;
             return "ArrayType(" + displayOpenType( atype.getElementOpenType() )

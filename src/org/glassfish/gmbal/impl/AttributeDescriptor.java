@@ -38,11 +38,13 @@ package org.glassfish.gmbal.impl ;
 
 
 import java.lang.reflect.Method ;
+import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type ;
 
 import java.security.AccessController;
 import java.security.Permission;
 import java.security.PrivilegedAction;
+import java.util.List;
 import javax.management.ReflectionException ;
 
 
@@ -86,9 +88,9 @@ public class AttributeDescriptor {
         }
 
         this._method = AccessController.doPrivileged(
-            new PrivilegedAction<Method>() {
-                public Method run() {
-                    method.setAccessible(true);
+            new PrivilegedAction<EvaluatedMethodDeclaration>() {
+                public EvaluatedMethodDeclaration run() {
+                    method.method().setAccessible(true);
                     return method ;
                 }
             }
@@ -198,20 +200,44 @@ public class AttributeDescriptor {
         */
     }
 
+    private static String lowerInitialCharacter( final String arg ) {
+        if (arg == null || arg.length() == 0) {
+            return arg ;
+        }
+
+        char initChar = Character.toLowerCase( arg.charAt(0) ) ;
+        String rest = arg.substring(1) ;
+        return initChar + rest ;
+    }
+
     private static String getDerivedId( String methodName, 
-        Pair<AttributeType,EvaluatedType> ainfo ) {
+        final Pair<AttributeType,EvaluatedType> ainfo,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt) {
+
         String result = methodName ;
-        
+        boolean needLowerCase = adt ==
+            ManagedObjectManagerInternal.AttributeDescriptorType
+                .COMPOSITE_DATA_ATTR ;
+
         if (ainfo.first() == AttributeType.GETTER) {
             if (startsWithNotEquals( methodName, "get" )) {
                 result = stripPrefix( methodName, "get" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
             } else if (ainfo.second().equals( EvaluatedType.EBOOLEAN ) &&
                 startsWithNotEquals( methodName, "is" )) {
                 result = stripPrefix( methodName, "is" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
             }
         } else {
             if (startsWithNotEquals( methodName, "set" )) {
                 result = stripPrefix( methodName, "set" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
             }
         }
         
@@ -255,7 +281,8 @@ public class AttributeDescriptor {
     public static AttributeDescriptor makeFromInherited(
         final ManagedObjectManagerInternal mom,
         final EvaluatedMethodDeclaration method, final String id,
-        final String methodName, final String description ) {
+        final String methodName, final String description,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
 
         if (empty(methodName) && empty(id)) {
             throw Exceptions.self.excForMakeFromInherited() ;
@@ -266,7 +293,7 @@ public class AttributeDescriptor {
             return null ;
         }
 
-        final String derivedId = getDerivedId( method.name(), ainfo ) ;
+        final String derivedId = getDerivedId( method.name(), ainfo, adt ) ;
 
         if (empty( methodName )) { // We know !empty(id) at this point
             if (!derivedId.equals( id )) {
@@ -289,7 +316,8 @@ public class AttributeDescriptor {
     public static AttributeDescriptor makeFromAnnotated( 
         final ManagedObjectManagerInternal mom, 
         final EvaluatedMethodDeclaration m, final String extId,
-        final String description ) {
+        final String description,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
 
         Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( m ) ;
         if (ainfo == null) {
@@ -297,7 +325,7 @@ public class AttributeDescriptor {
         }
 
         String actualId = empty(extId) ? 
-            getDerivedId( m.name(), ainfo ) : extId ;
+            getDerivedId( m.name(), ainfo, adt ) : extId ;
 
         return new AttributeDescriptor( mom, m, actualId, description,
             ainfo.first(), ainfo.second() ) ;

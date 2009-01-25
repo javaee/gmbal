@@ -585,7 +585,7 @@ public class JmxaTest extends TestCase {
     public static final String MDE_ATTR_DESC_GET_STRING = "Description of ManagedDataExample string attribute" ;
     public static final String MDE_ATTR_ID_NAME = "name" ;
     public static final String MDE_ATTR_ID_DATE = "currentDate" ;
-    public static final String MDE_ATTR_ID_GET_STRING = "String" ;
+    public static final String MDE_ATTR_ID_GET_STRING = "string" ;
 
     @ManagedData
     @Description( MDE_DESCRIPTION )
@@ -842,7 +842,7 @@ public class JmxaTest extends TestCase {
     public static class NamedRootObject extends RootObject{
         String name ;
         
-        @ObjectNameKey
+        @NameValue
         public String getMyName() { return name ; }
         
         public NamedRootObject( String name, int num ) {
@@ -858,7 +858,7 @@ public class JmxaTest extends TestCase {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
             new ObjectName( ROOT_PARENT_NAME ) ) ;
         mom.createRoot( rootObject, rootName ) ;
-        mom.addTypePrefix("org.glassfish.gmbal");
+        mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
@@ -887,7 +887,7 @@ public class JmxaTest extends TestCase {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
             new ObjectName( ROOT_PARENT_NAME ) ) ;
         mom.createRoot( rootObject ) ;
-        mom.addTypePrefix("org.glassfish.gmbal");
+        mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
@@ -1024,7 +1024,7 @@ public class JmxaTest extends TestCase {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             ROOT_DOMAIN ) ;
         mom.createRoot() ;
-        mom.addTypePrefix("org.glassfish.gmbal");
+        mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             mom.registerAtRoot( nmdt ) ;

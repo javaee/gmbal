@@ -36,9 +36,6 @@
 package org.glassfish.gmbal.typelib ;
 
 import java.lang.reflect.AnnotatedElement;
-import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.ObjectSet;
-import org.glassfish.gmbal.generic.UnaryFunction;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;

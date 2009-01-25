@@ -86,7 +86,6 @@ import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
 
 /* Implementation notes:
- * XXX Do we need to support an @Notification annotation as in JSR 255?
  * XXX Test attribute change notification.
  */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
@@ -104,11 +103,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
     
-    private Comparator<String> revComp = new Comparator<String>() {
+    private static final class StringComparator implements Comparator<String> {
         public int compare(String o1, String o2) {
             return - o1.compareTo( o2 ) ;
         }
     } ;
+    private Comparator<String> revComp = new StringComparator() ;
     
     // Maintain the list of typePrefixes in reversed sorted order, so that
     // we strip the longest prefix first.
@@ -168,7 +168,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
 
-    public ObjectName getRootParentName() {
+    public synchronized ObjectName getRootParentName() {
         return tree.getRootParentName() ;
     }
 
@@ -376,11 +376,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     
-    public NotificationEmitter registerAtRoot(Object obj, String name) {
+    public synchronized NotificationEmitter registerAtRoot(Object obj, String name) {
         return register( tree.getRoot(), obj, name ) ;
     }
 
-    public NotificationEmitter registerAtRoot(Object obj) {
+    public synchronized NotificationEmitter registerAtRoot(Object obj) {
         return register( tree.getRoot(), obj, null ) ;
     }
     
@@ -658,32 +658,41 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    private class ADHolder extends Holder<AttributeDescriptor> 
-        implements Predicate<InheritedAttribute> {
+    private class ADHolder implements Predicate<InheritedAttribute> {
         
         private final EvaluatedMethodDeclaration method ;
-        
-        public ADHolder(  final EvaluatedMethodDeclaration method ) {
+        private final ManagedObjectManagerInternal.AttributeDescriptorType adt ;
+        private AttributeDescriptor content ;
+
+        public ADHolder(  final EvaluatedMethodDeclaration method,
+            ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
             this.method = method ;
+            this.adt = adt ;
         }
         
         public boolean evaluate( InheritedAttribute ia ) {
             AttributeDescriptor ad = AttributeDescriptor.makeFromInherited( 
                 ManagedObjectManagerImpl.this, method,
-                ia.id(), ia.methodName(), ia.description() ) ;
+                ia.id(), ia.methodName(), ia.description(), adt ) ;
             boolean result = ad != null ;
             if (result) {
-                content( ad ) ;
+                content = ad ;
             }
             
             return result ;
         }
+
+        public AttributeDescriptor content() {
+            return content ;
+        }
     }
     
     private AttributeDescriptor getAttributeDescriptorIfInherited( 
-        final EvaluatedMethodDeclaration method, final List<InheritedAttribute> ias ) {
+        final EvaluatedMethodDeclaration method, 
+        final List<InheritedAttribute> ias,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
         
-        ADHolder adh = new ADHolder( method ) ;
+        ADHolder adh = new ADHolder( method, adt ) ;
         Algorithms.find( ias, adh ) ;
         return adh.content() ;
     }
@@ -718,7 +727,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     // is all setters, and the second is all getters.  Only the most derived version is present.
     public synchronized Pair<Map<String,AttributeDescriptor>,
         Map<String,AttributeDescriptor>>
-        getAttributes( EvaluatedClassAnalyzer ca ) {
+        getAttributes( 
+            final EvaluatedClassAnalyzer ca,
+            final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
 
         if (registrationDebug()) {
             dputil.enter( "getAttributes" ) ;
@@ -742,7 +753,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         ManagedAttribute.class ) ;
                     AttributeDescriptor ad ;
                     if (ma == null) {
-                        ad = getAttributeDescriptorIfInherited( method, ias ) ;
+                        ad = getAttributeDescriptorIfInherited( method, ias,
+                            adt ) ;
                     } else {
                         Description desc = getAnnotation( method, Description.class ) ;
                         String description ;
@@ -753,7 +765,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         }
 
                         ad = AttributeDescriptor.makeFromAnnotated( ManagedObjectManagerImpl.this,
-                            method, ma.id(), description ) ;
+                            method, ma.id(), description, adt ) ;
                     }
                     
                     if (ad != null) {
@@ -815,8 +827,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return runDebugFlag ;
     }
     
-    public synchronized void filterPrefix( String arg ) {
-        typePrefixes.add( arg ) ;
+    public synchronized void stripPrefix( String... args ) {
+        for (String str : args) {
+            typePrefixes.add( str ) ;
+        }
     }
     
     public synchronized <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(

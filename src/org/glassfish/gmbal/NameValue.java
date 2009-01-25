@@ -48,5 +48,5 @@ import java.lang.annotation.RetentionPolicy ;
 @Documented 
 @Target(ElementType.METHOD) 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ObjectNameKey {
+public @interface NameValue {
 }

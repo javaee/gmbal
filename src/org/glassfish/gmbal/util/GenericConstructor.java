@@ -79,6 +79,7 @@ public class GenericConstructor<T> {
                 type = (Class<T>)Class.forName( typeName ) ;
                 constructor = type.getDeclaredConstructor(signature);
             } catch (Exception exc) {
+                // Catch all for several checked exceptions: ignore findbugs
                 Logger.getLogger( "org.glassfish.gmbal.util" ).log( Level.FINE,
                     "Failure in getConstructor", exc ) ;
             }

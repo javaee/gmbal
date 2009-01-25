@@ -82,6 +82,29 @@ public class TypeEvaluator {
     private static Map<EvalMapKey,EvaluatedClassDeclaration> evalClassMap =
         new WeakHashMap<EvalMapKey,EvaluatedClassDeclaration>() ;
 
+    public static void dumpEvalClassMap() {
+        System.out.println( "TypeEvaluator: dumping eval class map") ;
+        int numSystem = 0 ;
+        int total = 0 ;
+
+        for (Map.Entry<EvalMapKey,EvaluatedClassDeclaration> entry
+            : evalClassMap.entrySet() ) {
+
+            System.out.println( "\tKey:" + entry.getKey() + "=>\n" ) ;
+            System.out.println( "\t\t" + entry.getValue() ) ;
+
+            String name = entry.getKey().first().getName() ;
+            if (!name.startsWith("org.glassfish.gmbal" )) {
+                numSystem++ ;
+            }
+            total ++ ;
+        }
+
+        System.out.printf( 
+            "\nEvalClassMap contains %d entries, %d of which are system classes\n",
+            total, numSystem ) ;
+    }
+
     /** Given any generic java type, evaluate all of its type bounds and
      * return an evaluated type.
      * 
@@ -494,12 +517,6 @@ public class TypeEvaluator {
         }
     }
 
-    public static void displayEvaluatedType( PrintStream ps, EvaluatedType et ) {
-        Printer printer = new Printer( ps ) ;
-        Visitor<Object> visitor = new VisitorDisplayImpl( printer ) ;
-        et.accept( visitor ) ;
-    }
-
     public static class IdentitySetImpl {
         private IdentityHashMap<Object,Object> map = 
             new IdentityHashMap<Object,Object>() ;
@@ -510,45 +527,6 @@ public class TypeEvaluator {
 
         public void add( Object arg ) {
             map.put( arg, null ) ;
-        }
-    }
-
-    public static class VisitorDisplayImpl implements Visitor<Object> {
-        private Printer pr ;
-        private IdentitySetImpl visited = new IdentitySetImpl() ;
-
-        public VisitorDisplayImpl( Printer printer ) {
-            this.pr = printer ;
-        }
-
-        public Object visitEvaluatedType( EvaluatedType et ) {
-            return null ;
-        }
-        
-        public Object visitEvaluatedArrayType( EvaluatedArrayType eat ) {
-            pr.nl().p( "EvaluatedArrayType" ).in() ;
-            pr.nl().p( "componentType:" ).in() ;
-            eat.componentType().accept( this ) ;
-            pr.out().out() ;
-            return null ;
-        }
-        
-        public Object visitEvaluatedDeclaration( EvaluatedDeclaration ed ) {
-            return null ;
-        }
-        
-        public Object visitEvaluatedClassDeclaration( EvaluatedClassDeclaration ecd ) {
-            pr.nl().p( "EvaluatedClassDeclaration" ).in() ;
-            pr.nl().p( ecd.toString() ).in() ;
-            for (EvaluatedMethodDeclaration emd : ecd.methods()) {
-                pr.nl().p( "Method:" ).p( emd.toString() ) ;
-            }
-            pr.out().out() ;
-            return null ;
-        }
-        
-        public Object visitEvaluatedMethodDeclaration( EvaluatedMethodDeclaration emd ) {
-            return null ;
         }
     }
 }

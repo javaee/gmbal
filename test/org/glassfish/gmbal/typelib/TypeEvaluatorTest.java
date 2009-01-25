@@ -5,8 +5,6 @@
 
 package org.glassfish.gmbal.typelib;
 
-import java.io.PrintStream;
-import java.lang.reflect.Type;
 import junit.framework.Test;
 import junit.framework.TestCase;
 
@@ -18,6 +16,11 @@ public class TypeEvaluatorTest extends TestCase {
     
     public TypeEvaluatorTest(String testName) {
         super(testName);
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        super.tearDown();
     }
 
     public static Test suite() {
