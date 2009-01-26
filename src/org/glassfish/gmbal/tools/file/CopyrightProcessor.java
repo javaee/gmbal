@@ -44,6 +44,7 @@ import java.io.File ;
 import java.io.FileInputStream;
 import java.io.IOException ;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import org.glassfish.gmbal.generic.UnaryFunction;
@@ -114,8 +115,8 @@ public class CopyrightProcessor {
         public FileProcessing( String name, Scanner.Action action ) {
             this.name = name ;
             this.action = action ;
-            this.suffixes = null ;
-            this.fileNames = null ;
+            this.suffixes = new ArrayList<String>() ;
+            this.fileNames = new ArrayList<String>() ;
         }
 
         String name() {
@@ -485,8 +486,8 @@ public class CopyrightProcessor {
 
         final Block javaCopyrightText =
             makeCopyrightBlockCommentBlock( copyrightText,
-                JAVA_COMMENT_START, JAVA_COMMENT_PREFIX, " " + JAVA_COMMENT_END,
-                JAVA_FORMAT_TAG ) ;
+                JAVA_COMMENT_START + " ", JAVA_COMMENT_PREFIX + " ",
+                " " + JAVA_COMMENT_END + " ", JAVA_FORMAT_TAG ) ;
 
         final Block xmlCopyrightText =
             makeCopyrightBlockCommentBlock( copyrightText,

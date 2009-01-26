@@ -61,8 +61,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.management.ObjectName;
+import javax.management.openmbean.ArrayType;
 import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
+import javax.management.openmbean.TabularType;
+import org.glassfish.gmbal.ManagedObjectManager;
+import org.glassfish.gmbal.typelib.EvaluatedType;
 
 /** General object related utilities.  This class must not depend on
  * generated log wrappers.
@@ -243,13 +248,21 @@ public final class ObjectUtility {
         { Date.class, toStringPrinter },
         { ObjectName.class, toStringPrinter },
         { CompositeData.class, toStringPrinter },
+        { CompositeType.class, toStringPrinter },
         { TabularData.class, toStringPrinter },
+        { TabularType.class, toStringPrinter },
+        { ArrayType.class, toStringPrinter },
         { Class.class, toStringPrinter },
         { Method.class, toStringPrinter },
         { Thread.class, toStringPrinter },
         { AtomicInteger.class, toStringPrinter },
         { AtomicLong.class, toStringPrinter },
         { AtomicBoolean.class, toStringPrinter },
+        
+        // Types from upper layers!
+        // XXX Add an SPI to register special handling of classes
+        { EvaluatedType.class, toStringPrinter },
+        { ManagedObjectManager.class, toStringPrinter },
 
 	{ Properties.class, propertiesPrinter },
 	{ Collection.class, collectionPrinter },

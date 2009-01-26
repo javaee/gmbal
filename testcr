@@ -1,12 +1,11 @@
 #! /bin/sh
-export CNAME; set CNAME=org.glassfish.gmbal.tools.file.CopyrightProcessor 
+export CNAME; CNAME=org.glassfish.gmbal.tools.file.CopyrightProcessor 
 export ARGS
-set ARGS = -validate false 
-set ARGS = ${ARGS} -verbose true
-set ARGS = ${ARGS} -dryrun true
-set ARGS = ${ARGS} -roots .
-set ARGS = ${ARGS} -skipdirs ARCHIVE,LEGAL,build,dist,lib,nbproject,make,gmbal 
-set ARGS = ${ARGS} -copyright legal/header-template.txt 
-set ARGS = ${ARGS} -startyear 2008
-echo "ARGS=" ${ARGS}
-#java -classpath dist/gmbal.jar ${CNAME} ${ARGS}
+ARGS="-validate false"
+ARGS="${ARGS} -verbose 1"
+ARGS="${ARGS} -dryrun false"
+ARGS="${ARGS} -roots ../copyrightTest"
+ARGS="${ARGS} -skipdirs ARCHIVE,legal,build,dist,lib,nbproject,make,javadoc,.hg"
+ARGS="${ARGS} -copyright legal/header-template.txt "
+ARGS="${ARGS} -startyear 2008"
+java -classpath dist/gmbal.jar ${CNAME} ${ARGS}
