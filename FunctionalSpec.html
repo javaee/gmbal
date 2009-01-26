@@ -284,10 +284,10 @@ annotation to define the mapping of data types into CompositeData,
 while JSR 255 follows MXBeans and simply assumes that all methods that
 follow the JavaBeans patterns define read-only attributes.</li>
   <li>Gmbal supports an <a
- href="gmbal/javadoc/org/glassfish/gmbal/MBeanType.html">@MBeanType</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/MBeanType.html">@AMXMetadata</a>
 annotation, but this is really just an extension to the descriptor
 annotation mechanism borrowed from JMX ModelMBeans.&nbsp; The
-@MBeanType annotation is provided to support AMX-specific metadata.</li>
+@AMXMetadata annotation is provided to support AMX-specific metadata.</li>
   <li>Gmbal includes <a
  href="gmbal/javadoc/org/glassfish/gmbal/ParameterNames.html">@ParameterNames</a>
 to provide reasonable names for the arguments on MBean
@@ -295,7 +295,7 @@ operations.&nbsp; JSR 255 does not currently have such a mechanism,
 because JDK 7 will have an extension to Java reflection that captures
 the argument names on methods.</li>
   <li>Gmbal includes <a
- href="gmbal/javadoc/org/glassfish/gmbal/ObjectNameKey.html">@ObjectNameKey</a>
+ href="gmbal/javadoc/org/glassfish/gmbal/ObjectNameKey.html">@NameValue</a>
 to make it easy to define the value of the "name" field in the
 ObjectName. This makes registration of object as MBeans slightly
 simpler.</li>
@@ -385,8 +385,9 @@ project, which
 also allows the use of annotations to define MBeans. SpoonJMX uses
 @ManagedResource to define an MBean class.&nbsp; It
 uses @ManagedAttribute and @ManagedOperation as in the other
-systems.&nbsp; SpoonJMX defines the @ObjectNameKey annotation,
-which I have adopted for use in gmbal as well.&nbsp; SpoonJMX also
+systems.&nbsp; SpoonJMX defines a @ObjectKeyName annotation,
+which I have adopted for use in gmbal as well under the name of
+@NameValue.&nbsp; SpoonJMX also
 defines more attributes on the annotations than
 either gmbal or JSR 255.<br>
 <h2>2. The Management Data Model</h2>
@@ -540,6 +541,8 @@ an attribute either in ManagedData or ManagedObject<br>
       </td>
       <td style="vertical-align: top;">String id (defaults to value
 from Method name)<br>
+Impact impact (defaults to UNKNOW; Impact enum corresponds to
+MBeanOperationInfo impact values)<br>
       </td>
       <td style="vertical-align: top;">Method<br>
       </td>
@@ -553,6 +556,9 @@ an operation in ManagedObject <br>
       <td style="vertical-align: top;">@Description<br>
       </td>
       <td style="vertical-align: top;">String value<br>
+      <br>
+String key (the key to use in a generated resource bundle; default ""
+means to derive key from name of annotated element)<br>
       </td>
       <td style="vertical-align: top;">Class, Interface, or Method<br>
       </td>
@@ -579,7 +585,7 @@ included only on instances of the appropriate type<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">@ObjectNameKey<br>
+      <td style="vertical-align: top;">@NameValue<br>
       </td>
       <td style="vertical-align: top;">none<br>
       </td>
@@ -650,7 +656,7 @@ inherited attributes<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">@MBeanType<br>
+      <td style="vertical-align: top;">@AMXMetadata<br>
       </td>
       <td style="vertical-align: top;">
       <ul>
@@ -773,12 +779,12 @@ an MBean
 from the Object using the annotations on its class. The createRoot(
 Object )
 method will derive the name from the object itself by calling the
-@ObjectNameKey method from the class.&nbsp; If no such method is
+@NameValue method from the class.&nbsp; If no such method is
 available, the
 name is set to the type value.&nbsp; The second method allows the name
 to specified
 explicitly.&nbsp; This can be useful in case where either
-@ObjectNameKey is not
+@NameValue is not
 used, or there are multiple ManagedObjectManager instances with the
 same root
 type that share the same parent.&nbsp; In this case, it is essential
@@ -800,7 +806,7 @@ There are two forms of register: register( Object parent, Object obj )
 and
 register( Object parent, Object obj, String name ).&nbsp; The first
 form obtains
-the name from obj (either via @ObjectNameKey, or by default using the
+the name from obj (either via @NameValue, or by default using the
 type),
 the second allows explicit specification.&nbsp; The returned result is
 an instance
@@ -1063,22 +1069,23 @@ support to ALL MBean metadata, but gmbal must
 continue to support JDK 5 for now. Gmbal supports the @DescriptorKey
 and @DescriptorFields annotations defined in
 JSR 255 for associating metadata with MBeans.&nbsp; Gmbal also defines
-an annotation @MBeanType (which itself uses
+an annotation @AMXMetadata (which itself uses
 the meta-annotation @DescriptorKey) in order to support the metadata
 needed by AMX.<br>
 <br>
-@MBeanType can be used most easily on a simple MBean which cannot have
+@AMXMetadata can be used most easily on a simple MBean which cannot
+have
 children:<br>
-<pre>@MBeanType<br>public interface MyBean1 { ... }<br></pre>
+<pre>@AMXMetadata<br>public interface MyBean1 { ... }<br></pre>
 <p>In this case, MyBean1 is a singleton (only one of this type may
 appear in the same parent), its MBean info never changes, the proxy
 interface name defaults to a generic implementation, the group is
 other, and MyBean1 is a leaf (may not have children).&nbsp; Note that
-the @MBeanType annotation is not needed at all in this case. <br>
+the @AMXMetadata annotation is not needed at all in this case. <br>
 </p>
 <p>Something like<br>
 </p>
-<pre>@MBeanType( isSingleton=false, pathPart=Widget, isLeaf=false )<br>public interface MyBean2 { ... }<br></pre>
+<pre>@AMXMetadata( isSingleton=false, pathPart=Widget, isLeaf=false )<br>public interface MyBean2 { ... }<br></pre>
 <p>defines an AMX MBean which is not a singleton, and is also not a
 leaf, so it may contain any other MBeans as chilcren.&nbsp; Also, the
 type will be set to Widget in the ObjectName created for an instance of
@@ -1106,7 +1113,7 @@ This includes:<br>
 hierarchy.&nbsp; Gmbal will never put anything in an ObjectName that is
 not part of the AMX specification.</li>
   <li>Supporting the MBeanInfo Descriptor.&nbsp; This is handled in
-gmbal through the @MBeanType annotation.</li>
+gmbal through the @AMXMetadata annotation.</li>
   <li>All MBeans created using gmbal will include all of the attributes
 defined in section 4.0 "Attributes" of the AMX SPI <a
  href="https://glassfish.dev.java.net/nonav/v3/admin/planning/V3Changes/V3_AMX_SPI.html">spec</a>.</li>
@@ -1174,14 +1181,14 @@ Timer, TimerGroup, TimerFactory, StatsEventHandler among others),
 instances of which are registered as MBeans. Each of these classes
 extends a base interface called Named defined as follows:<br>
 </p>
-<pre>public interface Named {<br>    /** Return the TimerFactory that created this Named.<br>     */<br>    @ManagedAttribute<br>    @Description( "TimerFactory that created this Timer or TimerGroup" ) <br>    TimerFactory factory() ;<br><br>    /** A short name for this Controllable.<br>     */<br>    @ManagedAttribute<br>    @ObjectNameKey<br>    @Description( "Name of this Timer or TimerGroup" ) <br>    String name() ;<br>}<br></pre>
+<pre>public interface Named {<br>    /** Return the TimerFactory that created this Named.<br>     */<br>    @ManagedAttribute<br>    @Description( "TimerFactory that created this Timer or TimerGroup" ) <br>    TimerFactory factory() ;<br><br>    /** A short name for this Controllable.<br>     */<br>    @ManagedAttribute<br>    @NameValue<br>    @Description( "Name of this Timer or TimerGroup" ) <br>    String name() ;<br>}<br></pre>
 <p>Note that the name() attribute carries the @ObjectKeyName
 attribute.&nbsp; This simplifies the registration which takes place in
 TimerFactoryImpl.&nbsp; The TimerFactoryImpl contains all of the
 factory methods for creating the various timer interfaces mentioned
 previously. TimerFactoryImpl defines several private methods as follows:<br>
 </p>
-<pre>    private void manage( Named obj ) {<br>        // Note that no extra parameters are needed here, because Named.getName<br>        // is an ObjectNameKey.<br>        if (mom != null)  {<br>            // System.out.println( "Registering " + obj ) ;<br>            mom.registerAtRoot( obj ) ;<br>        }<br>    }<br><br>    private void manage( Named parent, Named obj ) {<br>        // Note that no extra parameters are needed here, because Named.getName<br>        // is an ObjectNameKey.<br>        if (mom != null)  {<br>            // System.out.println( "Registering " + obj ) ;<br>            mom.register( parent, obj ) ;<br>        }<br>    }<br><br>    private void unmanage( Named obj ) {<br>        if (mom != null) <br>            mom.unregister( obj ) ;<br>    }<br></pre>
+<pre>    private void manage( Named obj ) {<br>        // Note that no extra parameters are needed here, because Named.getName<br>        // is an NameValue.<br>        if (mom != null)  {<br>            // System.out.println( "Registering " + obj ) ;<br>            mom.registerAtRoot( obj ) ;<br>        }<br>    }<br><br>    private void manage( Named parent, Named obj ) {<br>        // Note that no extra parameters are needed here, because Named.getName<br>        // is an NameValue.<br>        if (mom != null)  {<br>            // System.out.println( "Registering " + obj ) ;<br>            mom.register( parent, obj ) ;<br>        }<br>    }<br><br>    private void unmanage( Named obj ) {<br>        if (mom != null) <br>            mom.unregister( obj ) ;<br>    }<br></pre>
 <p>These methods support the case where no ManagedObjectManager (mom)
 is present, which may be a useful pattern in other cases. For example,
 Grizzly must be able to run in as small a configuration as possible,
@@ -1232,7 +1239,7 @@ follows:<br>
 <pre>@ManagedObject<br>@IncludeSubclass( { Timer.class, TimerGroup.class, TimerFactory.class } ) <br>public interface Controllable extends Named {<br>&nbsp;&nbsp;&nbsp; /** A longer description giving some details of the meaning of this<br>&nbsp;&nbsp;&nbsp;&nbsp; * Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "The purpose of the Timer or TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; String description() ;<br><br>&nbsp;&nbsp;&nbsp; /** A small id for this controllable.&nbsp; Each controllable created from<br>&nbsp;&nbsp;&nbsp;&nbsp; * the same TimerFactory will have a unique ID.&nbsp; All ids will be small<br>&nbsp;&nbsp;&nbsp;&nbsp; * integers starting at 0 (so indexing tables by timer ID is supported).<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "An internal identifier for the Timer or TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; int id() ;<br><br>&nbsp;&nbsp;&nbsp; /** Return an unmodifiable set of the contents of this Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; * May always be empty for some subclasses of Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "Set of Timers or TimerGroups contained in a TimerGroup" )<br>&nbsp;&nbsp;&nbsp; Set&lt;? extends Controllable&gt; contents() ;<br><br>&nbsp;&nbsp;&nbsp; /** Enable this controllable.&nbsp; All Timers that are either enabled, or<br>&nbsp;&nbsp;&nbsp;&nbsp; * reachable via contents() from an enabled Controllable are activated,<br>&nbsp;&nbsp;&nbsp;&nbsp; * and will cause TimerEvents to be generated when passed to the<br>&nbsp;&nbsp;&nbsp;&nbsp; * TimerEventController enter and exit methods.<br>&nbsp;&nbsp;&nbsp;&nbsp; */ <br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "Enable this Timer, or all Timers and TimerGroups contained in this TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; void enable() ;<br><br>&nbsp;&nbsp;&nbsp; /** Disable this controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "Disable this Timer, or all Timers and TimerGroups contained in this TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; void disable() ;<br><br>&nbsp;&nbsp;&nbsp; /** Return true if enable() was called, otherwise false if enable() was never<br>&nbsp;&nbsp;&nbsp;&nbsp; * called, or disable() was last called.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "True if this Timer or TimerGroup is enabled" ) <br>&nbsp;&nbsp;&nbsp; boolean isEnabled() ;<br>}<br></pre>
 <p>Because TimerGroup extends Controllable extends Named, the
 TimerGroup inherits the name() attribute which is annotated with
-@ObjectNameKey. This means that the result of calling timerGroup.name()
+@NameValue. This means that the result of calling timerGroup.name()
 is used as the value of the name attribute in the ObjectName for the
 MBean constructed for timerGroup.<br>
 </p>
