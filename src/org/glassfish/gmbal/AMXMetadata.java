@@ -69,6 +69,14 @@ public @interface AMXMetadata {
     @DescriptorKey( AMX.META_PATH_PART )
     String pathPart() default "" ;
 
+
+    /** An explicit type to use for the MBean.  The default is derived from
+     * the class name.
+     * @return The type for this MBean.
+     */
+    @DescriptorKey( AMX.META_TYPE )
+    String type() default "" ;
+
     /** True if the MBeanInfo is invariant, that is, has the same
      * value for the lifetime of the MBean.  This may be used as a hint
      * to clients that the MBeanInfo can be cached.
@@ -76,15 +84,14 @@ public @interface AMXMetadata {
      * @return True if the MBeanInfo is invariant.
      */
     @DescriptorKey( AMX.META_MBEANINFO_INVARIANT )
-    boolean isMBeanInfoInvariant() default true ;
+    boolean immutableInfo() default true ;
 
     /** Defines the name of the interface to use when generating a proxy
      * for this class.  Defaults to a generic interface.
-     * XXX Is there a default code generation pattern we expect to use here?
      * @return
      */
     @DescriptorKey( AMX.META_PROXY_INTERFACE_NAME )
-    String proxyInterfaceName() default "" ;
+    String interfaceClassName() default "" ;
 
     /** String denoting classification of MBean.  Predefined values are
      * configuration, monitoring, jsr77, utility, and other.

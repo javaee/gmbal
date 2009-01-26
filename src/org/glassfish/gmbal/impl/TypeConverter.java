@@ -39,6 +39,7 @@ package org.glassfish.gmbal.impl ;
 import java.lang.reflect.Type ;
 
 import javax.management.openmbean.OpenType ;
+import org.glassfish.gmbal.typelib.EvaluatedType;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, ObjectName, 
  * TabularData, or CompositeData.
@@ -47,7 +48,7 @@ public interface TypeConverter {
     /** Java generic type of attribute in problem-domain Object.
      * @return The Java type that this TypeConverter handles.
      */
-    Type getDataType() ;
+    EvaluatedType getDataType() ;
 
     /** Open MBeans Open Type for management domain object.
      * @return The OpenType that this TypeConverter handles.

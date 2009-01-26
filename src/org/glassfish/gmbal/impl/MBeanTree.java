@@ -53,8 +53,9 @@ import org.glassfish.gmbal.GmbalException;
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
  *
- * XXX Need to get some benchmarks for registration cost.
- * XXX Do we need to enable/disable MBean registration with MBeanServer.
+ * XXX Need to get some benchmarks for registration cost.  This should help
+ * to determine whether we need to enable/disable MBean registration with the
+ * MBeanServer.
  *
  * @author ken
  */
@@ -183,10 +184,6 @@ public class MBeanTree {
         return objectMap.get( obj ) ;
     }
     
-    private boolean notEmpty( String str ) {
-        return str != null && str.length() > 0 ;
-    }
-    
     private void checkCorrectRoot( MBeanImpl entity ) {
         MBeanImpl current = entity ;
         do {
@@ -209,9 +206,9 @@ public class MBeanTree {
         }
 
         StringBuilder result = new StringBuilder() ;
+
         result.append( domain ) ;
         result.append( ":" ) ;
-
         if (rootParentPrefix != null) {
             result.append( rootParentPrefix ) ;
             result.append( ',' ) ;

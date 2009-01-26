@@ -36,6 +36,9 @@
 
 package org.glassfish.gmbal.typelib;
 
+import java.util.List;
+import org.glassfish.gmbal.generic.ObjectSet;
+
 /**
  *
  * @author ken
@@ -53,26 +56,30 @@ public abstract class EvaluatedMethodDeclarationBase
         throw new IllegalArgumentException( "Operation not permitted" ) ;
     }
 
-    void makeRepresentation( StringBuilder sb ) {
+    void makeRepresentation( StringBuilder sb, ObjectSet set ) {
         handleModifier( sb, modifiers() ) ;
         sb.append( " " ) ;
         sb.append( returnType().toString() ) ;
         sb.append( " " ) ;
         sb.append( name() ) ;
-        sb.append( "(" ) ;
-        handleList( sb, parameterTypes() ) ;
-        sb.append( ")" ) ;
+        handleList( sb, "(", 
+            castList( parameterTypes(), EvaluatedTypeBase.class ),
+            ",", ")", set ) ;
     }
             
-    public boolean myEquals( Object obj ) {
+    public boolean myEquals( Object obj, ObjectSet set ) {
         EvaluatedMethodDeclaration other = (EvaluatedMethodDeclaration)obj ;
-        return returnType().equals( other.returnType() ) 
-            && parameterTypes().equals( other.parameterTypes() )
-            && name().equals( other.name() ) ;
+        if (!((EvaluatedTypeBase)returnType()).myEquals( other.returnType(), set )
+            || !name().equals( other.name() ) )  {
+
+            return false ;
+        }
+        
+        return equalList( parameterTypes(), other.parameterTypes(), set ) ;
     }
     
     @Override
-    public int hashCode() {
+    public int hashCode( ObjectSet set ) {
         return returnType().hashCode() ^
             parameterTypes().hashCode() ^
             name().hashCode() ;

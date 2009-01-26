@@ -36,6 +36,8 @@
 
 package org.glassfish.gmbal.typelib;
 
+import org.glassfish.gmbal.generic.ObjectSet;
+
 /**
  *
  * @author ken
@@ -43,18 +45,19 @@ package org.glassfish.gmbal.typelib;
 public abstract class EvaluatedArrayTypeBase extends EvaluatedTypeBase 
     implements EvaluatedArrayType {
         
-    void makeRepresentation( StringBuilder sb ) {
-        sb.append( "Array " ) ;
-        sb.append( componentType().toString() ) ;
+    void makeRepresentation( StringBuilder sb, ObjectSet set ) {
+        ((EvaluatedTypeBase)componentType()).makeRepresentation( sb, set ) ;
+        sb.append( "[]" ) ;
     }
    
-    boolean myEquals( Object obj ) {
+    boolean myEquals( Object obj, ObjectSet set ) {
         EvaluatedArrayType other = (EvaluatedArrayType)obj ;
-        return componentType().equals( other.componentType() ) ;
+        return ((EvaluatedTypeBase)componentType()).myEquals(
+            (EvaluatedTypeBase)other.componentType(), set ) ;
     }
     
-    public int hashCode() {
-        return componentType().hashCode() ;
+    public int hashCode( ObjectSet set ) {
+        return ((EvaluatedTypeBase)componentType()).hashCode( set ) * 37 ;
     }
 
     @Override

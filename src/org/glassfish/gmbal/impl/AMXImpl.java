@@ -84,7 +84,7 @@ public class AMXImpl implements AMX {
         return result ;
     }
 
-    public AMX getContainer() {
+    public AMX getParent() {
         MBeanImpl parent = mbean.parent() ;
         if (parent != null) {
             return parent.facet( AMX.class, false ) ;
@@ -99,7 +99,7 @@ public class AMXImpl implements AMX {
         }
     }
 
-    public AMX[] getContained() {
+    public AMX[] getChildren() {
         List<AMX> children = getContained( mbean.children().keySet() ) ;
         return children.toArray( new AMX[children.size()] ) ;
     }
@@ -120,7 +120,7 @@ public class AMXImpl implements AMX {
         return result ;
    }
 
-    public AMX[] getContained(String type) {
+    private AMX[] getContained(String type) {
         Collection<AMX> children = Algorithms.map( mbean.children().get( type ),
             extract ).values() ;
         return children.toArray( new AMX[children.size()] ) ;

@@ -35,8 +35,7 @@
  */
 package org.glassfish.gmbal.typelib ;
 
-import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.UnaryFunction;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -112,6 +111,10 @@ public class DeclarationFactory {
                     return Arrays.asList( method.getAnnotations() ) ;
                 }
             }
+
+            public AnnotatedElement element() {
+                return method ;
+            }
         } ;
     }
     
@@ -132,6 +135,7 @@ public class DeclarationFactory {
                 methods ;
             private List<EvaluatedClassDeclaration> myInheritance = 
                 inheritance ;
+            private List<EvaluatedType> instantiations = null ;
             
             public <T extends Annotation> T annotation(Class<T> annotationType) {
                 if (cls == null) {
@@ -177,6 +181,18 @@ public class DeclarationFactory {
 
             public void inheritance(List<EvaluatedClassDeclaration> inh) {
                 myInheritance = inh ;
+            }
+
+            public AnnotatedElement element() {
+                return cls ;
+            }
+
+            public List<EvaluatedType> instantiations() {
+                return this.instantiations ;
+            }
+
+            public void instantiations(List<EvaluatedType> arg) {
+                this.instantiations = arg ;
             }
         } ;
     }

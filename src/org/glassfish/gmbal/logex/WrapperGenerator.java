@@ -200,9 +200,10 @@ public class WrapperGenerator {
         try {
             transMsg = catalog.getString( msg ) ;
         } catch (Exception exc) {
+            // Ignore exc: hard to report here.
             transMsg = msg ;
         }
-        if (transMsg.indexOf( "{0" ) > 0 ) {
+        if (transMsg.indexOf( "{0" ) >= 0 ) {
             return java.text.MessageFormat.format( transMsg, messageParams ) ;
         } else {
             return transMsg ;
@@ -215,8 +216,10 @@ public class WrapperGenerator {
         int logId = log.id() ;
         Level level = log.level().getLevel() ;
         Class<?> rtype = method.getReturnType() ;
+        final int numParams =
+            (messageParams == null) ? 0 : messageParams.length ;
 
-        final String msgString = getMessage( method, messageParams.length,
+        final String msgString = getMessage( method, numParams,
             idPrefix, logId ) ;
         LogRecord lrec = makeLogRecord( level, msgString,
             messageParams, cause, logger ) ;

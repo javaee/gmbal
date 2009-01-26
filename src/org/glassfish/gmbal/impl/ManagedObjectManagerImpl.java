@@ -36,7 +36,6 @@
 
 package org.glassfish.gmbal.impl ;
 
-import org.glassfish.gmbal.generic.ClassAnalyzer;
 import java.util.ResourceBundle ;
 import java.util.Map ;
 import java.util.HashMap ;
@@ -46,13 +45,11 @@ import java.util.ArrayList ;
 
 import java.io.IOException ;
 
-import java.lang.reflect.Type ;
-import java.lang.reflect.AnnotatedElement ;
-
 import java.lang.annotation.Annotation ;
 
 import java.lang.management.ManagementFactory ;
 
+import java.lang.reflect.AnnotatedElement;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -77,30 +74,27 @@ import org.glassfish.gmbal.generic.UnaryFunction;
 import org.glassfish.gmbal.generic.FacetAccessor ;
 import org.glassfish.gmbal.generic.FacetAccessorImpl;
 import org.glassfish.gmbal.generic.Holder;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.gmbal.typelib.TypeEvaluator;
 
 /* Implementation notes:
- * XXX Do we need to support an @Notification annotation as in JSR 255?
  * XXX Test attribute change notification.
- * XXX Can we automate the handling of recursive types?
- * Yes, but I'm not sure if it's worthwhile.  Basic idea is to introduce more annotations:
- * @Key is used on a method that returns a value unique per instance of the class 
- * (like @ObjectNameKey, although support of multiple keys is questionable here)
- * Then @ManagedAttributes that are also annotated with @Map are mapped to the value
- * returned from the @Key field of the returned value.  Details are definitely needed 
- * here.
  */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private String domain ;
     private ResourceBundle resourceBundle ;
     private MBeanServer server ; 
     private MBeanTree tree ;
-    private final Map<Class<?>,MBeanSkeleton> skeletonMap ;
-    private final Map<Type,TypeConverter> typeConverterMap ;
+    private final Map<EvaluatedClassDeclaration,MBeanSkeleton> skeletonMap ;
+    private final Map<EvaluatedType,TypeConverter> typeConverterMap ;
     private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
     
     @DumpIgnore
@@ -109,11 +103,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
     
-    private Comparator<String> revComp = new Comparator<String>() {
+    private static final class StringComparator implements Comparator<String> {
         public int compare(String o1, String o2) {
             return - o1.compareTo( o2 ) ;
         }
     } ;
+    private Comparator<String> revComp = new StringComparator() ;
     
     // Maintain the list of typePrefixes in reversed sorted order, so that
     // we strip the longest prefix first.
@@ -128,8 +123,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ManagedObjectManagerImpl() {
         this.resourceBundle = null ;
         this.server = ManagementFactory.getPlatformMBeanServer() ;
-        this.skeletonMap = new WeakHashMap<Class<?>,MBeanSkeleton>() ;
-        this.typeConverterMap = new WeakHashMap<Type,TypeConverter>() ;
+        this.skeletonMap = 
+            new WeakHashMap<EvaluatedClassDeclaration,MBeanSkeleton>() ;
+        this.typeConverterMap = new WeakHashMap<EvaluatedType,TypeConverter>() ;
         this.addedAnnotations = 
             new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
     }
@@ -152,8 +148,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
     }
 
-    private static final TypeConverter recursiveTypeMarker = 
-        new TypeConverterImpl.TypeConverterPlaceHolderImpl() ;
 
     public void close() throws IOException {
         if (registrationDebug()) {
@@ -174,10 +168,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
 
-    public ObjectName getRootParentName() {
+    public synchronized ObjectName getRootParentName() {
         return tree.getRootParentName() ;
     }
-    
+
     @ManagedObject
     @AMXMetadata( pathPart="GMBALROOT")
     @Description( "Dummy class used when no root is specified" ) 
@@ -201,7 +195,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return tree.getRoot() ;
     }
     
-    public synchronized MBeanSkeleton getSkeleton( Class<?> cls ) {
+    public synchronized MBeanSkeleton getSkeleton( EvaluatedClassDeclaration cls ) {
         if (registrationDebug()) {
             dputil.enter( "getSkeleton", cls ) ;
         }
@@ -216,10 +210,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                     dputil.info( "creating new Skeleton" ) ;
                 }
                 
-                Pair<Class<?>,ClassAnalyzer> pair = getClassAnalyzer( 
-                    cls, ManagedObject.class ) ;
-                Class<?> annotatedClass = pair.first() ;
-                ClassAnalyzer ca = pair.second() ;
+                Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer> pair = 
+                    getClassAnalyzer( cls, ManagedObject.class ) ;
+                EvaluatedClassDeclaration annotatedClass = pair.first() ;
+                EvaluatedClassAnalyzer ca = pair.second() ;
 
                 result = skeletonMap.get( annotatedClass ) ;
 
@@ -243,7 +237,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
 
-    public synchronized TypeConverter getTypeConverter( Type type ) {
+    public synchronized TypeConverter getTypeConverter( EvaluatedType type ) {
         if (registrationFineDebug()) {
             dputil.enter( "getTypeConverter", type ) ;
         }
@@ -260,7 +254,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
                 // Store a TypeConverter impl that throws an exception when 
                 // acessed.  Used to detect recursive types.
-                typeConverterMap.put( type, recursiveTypeMarker ) ;
+                typeConverterMap.put( type, 
+                    new TypeConverterImpl.TypeConverterPlaceHolderImpl( type ) ) ;
 
                 result = TypeConverterImpl.makeTypeConverter( type, this ) ;
 
@@ -308,7 +303,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
         try {
             final Class<?> cls = obj.getClass() ;
-            final MBeanSkeleton skel = getSkeleton( cls ) ;
+            final EvaluatedClassDeclaration cdecl = 
+                (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(cls) ;
+            final MBeanSkeleton skel = getSkeleton( cdecl ) ;
 
             String type = skel.getType() ;
             if (registrationDebug()) {
@@ -379,11 +376,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     
-    public NotificationEmitter registerAtRoot(Object obj, String name) {
+    public synchronized NotificationEmitter registerAtRoot(Object obj, String name) {
         return register( tree.getRoot(), obj, name ) ;
     }
 
-    public NotificationEmitter registerAtRoot(Object obj) {
+    public synchronized NotificationEmitter registerAtRoot(Object obj) {
         return register( tree.getRoot(), obj, null ) ;
     }
     
@@ -466,8 +463,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return resourceBundle ;
     }
     
-    public synchronized String getDescription( AnnotatedElement element ) {
-        Description desc = element.getAnnotation( Description.class ) ;
+    public synchronized String getDescription( EvaluatedDeclaration element ) {
+        Description desc = element.annotation( Description.class ) ;
         String result ;
         if (desc == null) {
             result = Exceptions.self.noDescriptionAvailable() ;
@@ -519,10 +516,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
         }
     }
-       
+
     @SuppressWarnings({"unchecked"})
-    public synchronized <T extends Annotation> T getAnnotation( AnnotatedElement element,
-        Class<T> type ) {
+    public synchronized <T extends Annotation> T getAnnotation( 
+        EvaluatedDeclaration element, Class<T> type ) {
         
         if (registrationFineDebug()) {
             dputil.enter( "getAnnotation", "element=", element,
@@ -530,14 +527,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
         
         try {
-            T result = element.getAnnotation( type ) ;
+            T result = element.annotation( type ) ;
             if (result == null) {
                 if (registrationFineDebug()) {
                     dputil.info( 
                         "No annotation on element: trying addedAnnotations map" ) ;
                 }
 
-                Map<Class, Annotation> map = addedAnnotations.get( element );
+                Map<Class, Annotation> map = addedAnnotations.get( 
+                    element.element() );
                 if (map != null) {
                     result = (T)map.get( type ) ;
                 } 
@@ -555,8 +553,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public synchronized Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( 
-        final Class<?> cls, 
+    public synchronized Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer>
+        getClassAnalyzer( final EvaluatedClassDeclaration cls,
         final Class<? extends Annotation> annotationClass ) {
 
         if (registrationDebug()) {
@@ -565,24 +563,28 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
         
         try {
-            ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
+            EvaluatedClassAnalyzer ca = new EvaluatedClassAnalyzer( cls ) ;
 
-            final Class<?> annotatedClass = Algorithms.getFirst( 
-                ca.findClasses( forAnnotation( annotationClass, Class.class ) ),
+            final EvaluatedClassDeclaration annotatedClass = Algorithms.getFirst(
+                ca.findClasses( forAnnotation( annotationClass, 
+                    EvaluatedClassDeclaration.class ) ),
                 "No " + annotationClass.getName() + " annotation found on" 
-                    + "ClassAnalyzer " + ca ) ;
+                    + "EvaluatedClassAnalyzer " + ca ) ;
 
             if (registrationDebug()) {
                 dputil.info( "annotatedClass = " + annotatedClass ) ;
             }
     
-            final List<Class<?>> classes = new ArrayList<Class<?>>() ;
+            final List<EvaluatedClassDeclaration> classes =
+                new ArrayList<EvaluatedClassDeclaration>() ;
             classes.add( annotatedClass ) ;
-            final IncludeSubclass incsub = annotatedClass.getAnnotation( 
+            final IncludeSubclass incsub = annotatedClass.annotation(
                 IncludeSubclass.class ) ;
             if (incsub != null) {
                 for (Class<?> klass : incsub.value()) {
-                    classes.add( klass ) ;
+                    EvaluatedClassDeclaration ecd = 
+                        (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(klass) ;
+                    classes.add( ecd ) ;
                     if (registrationDebug()) {
                         dputil.info( "included subclass: " + klass ) ;
                     }
@@ -592,12 +594,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             if (classes.size() > 1) {
                 if (registrationDebug()) {
                     dputil.info( 
-                        "Getting new ClassAnalyzer for included subclasses" ) ;
+                        "Getting new EvaluatedClassAnalyzer for included subclasses" ) ;
                 }
-                ca = new ClassAnalyzer( classes ) ;
+                ca = new EvaluatedClassAnalyzer( classes ) ;
             }
 
-            return new Pair<Class<?>,ClassAnalyzer>( annotatedClass, ca ) ;
+            return new Pair<EvaluatedClassDeclaration,
+                 EvaluatedClassAnalyzer>( annotatedClass, ca ) ;
         } finally {
             if (registrationDebug()) {
                 dputil.exit() ;
@@ -606,24 +609,27 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized List<InheritedAttribute> getInheritedAttributes( 
-        final ClassAnalyzer ca ) {        
+        final EvaluatedClassAnalyzer ca ) {
         
         if (registrationDebug()) {
             dputil.enter( "getInheritedAttributes", "ca=", ca ) ;
         }
         
         try {
-            final Predicate<Class> pred = Algorithms.or( 
-                forAnnotation( InheritedAttribute.class, Class.class ),
-                forAnnotation( InheritedAttributes.class, Class.class ) ) ;
+            final Predicate<EvaluatedClassDeclaration> pred = Algorithms.or(
+                forAnnotation( InheritedAttribute.class, 
+                    EvaluatedClassDeclaration.class ),
+                forAnnotation( InheritedAttributes.class, 
+                    EvaluatedClassDeclaration.class ) ) ;
 
             // Construct list of classes annotated with InheritedAttribute or
             // InheritedAttributes.
-            final List<Class<?>> iaClasses = ca.findClasses( pred ) ;
+            final List<EvaluatedClassDeclaration> iaClasses =
+                ca.findClasses( pred ) ;
 
             List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
-                new UnaryFunction<Class<?>,List<InheritedAttribute>>() {
-                    public List<InheritedAttribute> evaluate( Class<?> cls ) {
+                new UnaryFunction<EvaluatedClassDeclaration,List<InheritedAttribute>>() {
+                    public List<InheritedAttribute> evaluate( EvaluatedClassDeclaration cls ) {
                         final InheritedAttribute ia = getAnnotation(cls,
                             InheritedAttribute.class);
                         final InheritedAttributes ias = getAnnotation(cls,
@@ -652,32 +658,41 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    private class ADHolder extends Holder<AttributeDescriptor> 
-        implements Predicate<InheritedAttribute> {
+    private class ADHolder implements Predicate<InheritedAttribute> {
         
-        private final Method method ;
-        
-        public ADHolder(  final Method method ) {
+        private final EvaluatedMethodDeclaration method ;
+        private final ManagedObjectManagerInternal.AttributeDescriptorType adt ;
+        private AttributeDescriptor content ;
+
+        public ADHolder(  final EvaluatedMethodDeclaration method,
+            ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
             this.method = method ;
+            this.adt = adt ;
         }
         
         public boolean evaluate( InheritedAttribute ia ) {
             AttributeDescriptor ad = AttributeDescriptor.makeFromInherited( 
                 ManagedObjectManagerImpl.this, method,
-                ia.id(), ia.methodName(), ia.description() ) ;
+                ia.id(), ia.methodName(), ia.description(), adt ) ;
             boolean result = ad != null ;
             if (result) {
-                content( ad ) ;
+                content = ad ;
             }
             
             return result ;
         }
+
+        public AttributeDescriptor content() {
+            return content ;
+        }
     }
     
     private AttributeDescriptor getAttributeDescriptorIfInherited( 
-        final Method method, final List<InheritedAttribute> ias ) {
+        final EvaluatedMethodDeclaration method, 
+        final List<InheritedAttribute> ias,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
         
-        ADHolder adh = new ADHolder( method ) ;
+        ADHolder adh = new ADHolder( method, adt ) ;
         Algorithms.find( ias, adh ) ;
         return adh.content() ;
     }
@@ -712,7 +727,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     // is all setters, and the second is all getters.  Only the most derived version is present.
     public synchronized Pair<Map<String,AttributeDescriptor>,
         Map<String,AttributeDescriptor>>
-        getAttributes( ClassAnalyzer ca ) {
+        getAttributes( 
+            final EvaluatedClassAnalyzer ca,
+            final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
 
         if (registrationDebug()) {
             dputil.enter( "getAttributes" ) ;
@@ -730,24 +747,25 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             final List<InheritedAttribute> ias = getInheritedAttributes( ca ) ;
             
-            ca.findMethods( new Predicate<Method>() {
-                public boolean evaluate( Method method ) {
-                    ManagedAttribute ma = method.getAnnotation( 
+            ca.findMethods( new Predicate<EvaluatedMethodDeclaration>() {
+                public boolean evaluate( EvaluatedMethodDeclaration method ) {
+                    ManagedAttribute ma = method.annotation(
                         ManagedAttribute.class ) ;
                     AttributeDescriptor ad ;
                     if (ma == null) {
-                        ad = getAttributeDescriptorIfInherited( method, ias ) ;
+                        ad = getAttributeDescriptorIfInherited( method, ias,
+                            adt ) ;
                     } else {
                         Description desc = getAnnotation( method, Description.class ) ;
                         String description ;
                         if (desc == null) {
-                            description = "No description available for " + method.getName() ;
+                            description = "No description available for " + method.name() ;
                         } else {
                             description = desc.value() ;
                         }
 
                         ad = AttributeDescriptor.makeFromAnnotated( ManagedObjectManagerImpl.this,
-                            method, ma.id(), description ) ;
+                            method, ma.id(), description, adt ) ;
                     }
                     
                     if (ad != null) {
@@ -815,7 +833,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public synchronized <T extends AnnotatedElement> Predicate<T> forAnnotation( 
+    public synchronized <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(
         final Class<? extends Annotation> annotation,
         final Class<T> cls ) {
 

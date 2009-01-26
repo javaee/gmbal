@@ -62,16 +62,14 @@ import javax.management.modelmbean.ModelMBeanInfo;
  * remote MBeanServerConnection (note that MBeanServer isA MBeanServerConnection,
  * so we can actually create an AMXClientImpl simply by using the MBeanServer
  * from the mom: this is useful for testing).
- *
- * XXX This points to a weakness in the AMX interface: it would be far more
- * convenient to provide a generic set/get/invoke API that does NOT throw checked
- * exceptions, rather than inheriting them from the DynamicMBean API.  Note also
- * that DynamicMBean is intended for local use, and so is missing some required
- * exceptions when proxied by MBeanServerConnection.
+ * <P>
+ * Note that this version of the AMX API provides a generic get/set API that
+ * is identical to DynamicMBean, except that it only throws unchecked exceptions.
+ * This is far more convenient in practice than the JMX-standard checked exceptions.
  *
  * @author ken
  */
-public class AMXClient implements AMX, DynamicMBean {
+public class AMXClient implements AMX {
     private MBeanServerConnection server ;
     private ObjectName oname ;
 
@@ -123,12 +121,12 @@ public class AMXClient implements AMX, DynamicMBean {
         }
     }
 
-    public AMX getContainer() {
+    public AMX getParent() {
         ObjectName res  = fetchAttribute( "getContainer", ObjectName.class ) ;
         return makeAMX( res ) ;
     }
 
-    public AMX[] getContained() {
+    public AMX[] getChildren() {
         ObjectName[] onames = fetchAttribute( "getContained", 
             ObjectName[].class ) ;
         return makeAMXArray( onames ) ;
@@ -142,24 +140,6 @@ public class AMXClient implements AMX, DynamicMBean {
         }
 
         return result ;
-    }
-
-    public AMX[] getContained(String type) {
-        String[] sig = { String.class.getName() } ;
-        Object[] args = { type } ;
-        try {
-            ObjectName[] onames = (ObjectName[]) server.invoke( oname,
-                "getContainer", args, sig );
-            return makeAMXArray( onames ) ;
-        } catch (InstanceNotFoundException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        } catch (MBeanException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        } catch (ReflectionException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        } catch (IOException ex) {
-            throw new GmbalException( "Exception in getContained", ex ) ;
-        }
     }
 
     public Object getAttribute(String attribute) {

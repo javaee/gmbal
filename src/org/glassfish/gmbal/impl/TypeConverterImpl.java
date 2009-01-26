@@ -36,18 +36,12 @@
 
 package org.glassfish.gmbal.impl ;
 
-import org.glassfish.gmbal.generic.ClassAnalyzer;
 import org.glassfish.gmbal.generic.DumpToString ;
 
 import java.lang.reflect.Array ;
 import java.lang.reflect.Constructor ;
-import java.lang.reflect.Type ;
-import java.lang.reflect.ParameterizedType ;
-import java.lang.reflect.TypeVariable ;
-import java.lang.reflect.WildcardType ;
-import java.lang.reflect.GenericArrayType ;
+import java.lang.reflect.InvocationTargetException;
 
-import java.util.Date ;
 import java.util.Collection ;
 import java.util.List ;
 import java.util.ArrayList ;
@@ -56,11 +50,10 @@ import java.util.HashMap ;
 import java.util.Iterator ;
 import java.util.Enumeration ;
 import java.util.Dictionary ;
-
-import java.math.BigDecimal ;
-import java.math.BigInteger ;
+import java.util.Arrays;
 
 import javax.management.ObjectName ;
+import javax.management.JMException;
 
 import javax.management.openmbean.ArrayType ;
 import javax.management.openmbean.OpenType ;
@@ -79,65 +72,67 @@ import org.glassfish.gmbal.generic.DprintUtil;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Pair;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import javax.management.JMException;
+import org.glassfish.gmbal.typelib.EvaluatedArrayType;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
 
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
  * ObjectName, TabularData, or CompositeData.
  */
 public abstract class TypeConverterImpl implements TypeConverter {
-    private static final Map<Type,OpenType> simpleTypeMap = 
-        new HashMap<Type,OpenType>() ;
-    private static final Map<OpenType,Type> simpleOpenTypeMap = 
-        new HashMap<OpenType,Type>() ;
+    private static final Map<EvaluatedClassDeclaration,OpenType> simpleTypeMap =
+        new HashMap<EvaluatedClassDeclaration,OpenType>() ;
+    private static final Map<OpenType,EvaluatedClassDeclaration> simpleOpenTypeMap =
+        new HashMap<OpenType,EvaluatedClassDeclaration>() ;
     private static final DprintUtil dputil = new 
         DprintUtil( TypeConverterImpl.class ) ;
 
-    private static void initMaps( final Type type, final OpenType otype ) {
+    private static void initMaps( final EvaluatedClassDeclaration type, final OpenType otype ) {
 	simpleTypeMap.put( type, otype ) ;
 	simpleOpenTypeMap.put( otype, type ) ;
     }
 
     static {
-	initMaps( boolean.class, SimpleType.BOOLEAN ) ;
-	initMaps( Boolean.class, SimpleType.BOOLEAN ) ;
+	initMaps( EvaluatedType.EBOOLEAN, SimpleType.BOOLEAN ) ;
+	initMaps( EvaluatedType.EBOOLEANW, SimpleType.BOOLEAN ) ;
 
-	initMaps( char.class, SimpleType.CHARACTER ) ;
-	initMaps( Character.class, SimpleType.CHARACTER ) ;
+	initMaps( EvaluatedType.ECHAR, SimpleType.CHARACTER ) ;
+	initMaps( EvaluatedType.ECHARW, SimpleType.CHARACTER ) ;
 
-	initMaps( byte.class, SimpleType.BYTE ) ;
-	initMaps( Byte.class, SimpleType.BYTE ) ;
+	initMaps( EvaluatedType.EBYTE, SimpleType.BYTE ) ;
+	initMaps( EvaluatedType.EBYTEW, SimpleType.BYTE ) ;
 
-	initMaps( short.class, SimpleType.SHORT ) ;
-	initMaps( Short.class, SimpleType.SHORT ) ;
+	initMaps( EvaluatedType.ESHORT, SimpleType.SHORT ) ;
+	initMaps( EvaluatedType.ESHORTW, SimpleType.SHORT ) ;
 
-	initMaps( int.class, SimpleType.INTEGER ) ;
-	initMaps( Integer.class, SimpleType.INTEGER ) ;
+	initMaps( EvaluatedType.EINT, SimpleType.INTEGER ) ;
+	initMaps( EvaluatedType.EINTW, SimpleType.INTEGER ) ;
 
-	initMaps( long.class, SimpleType.LONG ) ;
-	initMaps( Long.class, SimpleType.LONG ) ;
+	initMaps( EvaluatedType.ELONG, SimpleType.LONG ) ;
+	initMaps( EvaluatedType.ELONGW, SimpleType.LONG ) ;
 
-	initMaps( float.class, SimpleType.FLOAT ) ;
-	initMaps( Float.class, SimpleType.FLOAT ) ;
+	initMaps( EvaluatedType.EFLOAT, SimpleType.FLOAT ) ;
+	initMaps( EvaluatedType.EFLOATW, SimpleType.FLOAT ) ;
 
-	initMaps( double.class, SimpleType.DOUBLE ) ;
-	initMaps( Double.class, SimpleType.DOUBLE ) ;
+	initMaps( EvaluatedType.EDOUBLE, SimpleType.DOUBLE ) ;
+	initMaps( EvaluatedType.EDOUBLEW, SimpleType.DOUBLE ) ;
 
-	initMaps( String.class, SimpleType.STRING ) ;
-	initMaps( void.class, SimpleType.VOID ) ;
+	initMaps( EvaluatedType.ESTRING, SimpleType.STRING ) ;
+	initMaps( EvaluatedType.EVOID, SimpleType.VOID ) ;
 
-	initMaps( Date.class, SimpleType.DATE ) ;
-	initMaps( ObjectName.class, SimpleType.OBJECTNAME ) ;
+	initMaps( EvaluatedType.EDATE, SimpleType.DATE ) ;
+	initMaps( EvaluatedType.EOBJECT_NAME, SimpleType.OBJECTNAME ) ;
 
-	initMaps( BigDecimal.class, SimpleType.BIGDECIMAL ) ;
-	initMaps( BigInteger.class, SimpleType.BIGINTEGER ) ;
+	initMaps( EvaluatedType.EBIG_DECIMAL, SimpleType.BIGDECIMAL ) ;
+	initMaps( EvaluatedType.EBIG_INTEGER, SimpleType.BIGINTEGER ) ;
     }
 
     public static Class getJavaClass( final OpenType ot ) {
 	if (ot instanceof SimpleType) {
 	    final SimpleType st = (SimpleType)ot ;
-	    return (Class)simpleOpenTypeMap.get( st ) ;
+	    return simpleOpenTypeMap.get( st ).cls() ;
 	} else if (ot instanceof ArrayType) {
 	    // This code is rather odd.  We need to get the opentype of the 
             // array components, convert that to a java type, and then 
@@ -159,20 +154,16 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	}
     }
 
-    public static Class getJavaClass( final Type type ) {
-	if (type instanceof Class) {
-	    return (Class)type ;
-	} else if (type instanceof GenericArrayType) {
+    public static Class getJavaClass( final EvaluatedType type ) {
+        if (type instanceof EvaluatedClassDeclaration) {
+	    return ((EvaluatedClassDeclaration)type).cls() ;
+	} else if (type instanceof EvaluatedArrayType) {
 	    // Same trick as above.
-	    final GenericArrayType gat = (GenericArrayType)type ;
-	    final Type ctype = gat.getGenericComponentType() ;
+	    final EvaluatedArrayType gat = (EvaluatedArrayType)type ;
+	    final EvaluatedType ctype = gat.componentType() ;
 	    final Class cclass = getJavaClass( ctype ) ;
 	    final Object temp = Array.newInstance( cclass, 0 ) ;
 	    return temp.getClass() ;
-	} else if (type instanceof ParameterizedType) {
-	    final ParameterizedType pt = (ParameterizedType)type ;
-	    final Type rpt = pt.getRawType() ;
-	    return (Class)rpt ;
 	} else {
             throw Exceptions.self.cannotConvertToJavaType(type) ;
 	}
@@ -260,15 +251,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
      *					    JT -> OT: use toString
      *					    OT -> JT: requires a <init>(String) constructor
      *
-     * XXX How much do we support the OpenType -> JavaType mapping?  This is mainly a question for
-     * CompositeData.  Note that CompositeData is immutable, so all @ManagedAttributes in 
-     * CompositeData must be getters.  I think this would mainly apply to a setter in an MBean 
-     * whose type maps to CompositeData.
-     * For now, we will ignore this, because I think all CompositeData types in the ORB will be 
-     * read only.  If this is NOT the case, we can adopt a solution similar to the MXBean 
-     * @ConstructorProperties.
+     * Note that the CompositeData OpenType->JavaType mapping will be handled 
+     * the same way as in MXBeans.  
+     * XXX This is not yet implemented!
      */
-    public static TypeConverter makeTypeConverter( final Type type, 
+    public static TypeConverter makeTypeConverter( final EvaluatedType type,
         final ManagedObjectManagerInternal mom ) {
         
         if (mom.registrationDebug()) {
@@ -280,33 +267,27 @@ public abstract class TypeConverterImpl implements TypeConverter {
         try {
             final OpenType stype = simpleTypeMap.get( type ) ;
             if (stype != null) {
-                result = handleSimpleType( (Class)type, stype ) ;
-            } else if (type instanceof Class) {
-                result = handleClass( (Class<?>)type, mom ) ;
-            } else if (type instanceof ParameterizedType) {
-                result = handleParameterizedType( (ParameterizedType)type, mom ) ;
-            } else if (type instanceof GenericArrayType) {
-                result = handleArrayType( (GenericArrayType)type, mom ) ;
-            } else if (type instanceof TypeVariable) {
-                // XXX Evaluate this TypeVariable to its bound type.
-                result = handleAsString( Object.class ) ;
-            } else if (type instanceof WildcardType) {
-                // XXX Usually we will want to evaluate this WildCard to its bound type.
-                // Just treat this the same as its bound type
-                final WildcardType wt = (WildcardType)type ;
-                final Type[] upperBounds = wt.getUpperBounds() ;
-                final Type[] lowerBounds = wt.getLowerBounds() ;
-                if (lowerBounds.length > 0) {
-                    result = handleAsString( Object.class ) ;
-                } else if (upperBounds.length == 0) {
-                    result = handleAsString( Object.class ) ;
-                } else if (upperBounds.length > 1) {
-                    result = handleAsString( Object.class ) ;
+                result = handleSimpleType( type, stype ) ;
+            } else if (type instanceof EvaluatedClassDeclaration) {
+                EvaluatedClassDeclaration cls = (EvaluatedClassDeclaration)type ;
+                final ManagedObject mo = cls.annotation( ManagedObject.class ) ;
+                final ManagedData md = cls.annotation( ManagedData.class ) ;
+
+                if (mo != null) {
+                    result = handleManagedObject( cls, mom, mo ) ;
+                } else if (md != null) {
+                    result = handleManagedData( cls, mom, md ) ;
+                } else if (cls.cls().isEnum()) {
+                    result = handleEnum( cls ) ;
                 } else {
-                    result = makeTypeConverter( upperBounds[0], mom ) ;
+                    result = handleClass( cls, mom ) ;
                 }
+            } else if (type instanceof EvaluatedArrayType) {
+                result = handleArrayType( (EvaluatedArrayType)type, mom ) ;
             } else {
-                result = handleAsString( Object.class ) ;
+                // this should not happen
+                throw new IllegalArgumentException( "Unknown kind of Type "
+                    + type ) ;
             }
         } catch (RuntimeException exc) {
             if (mom.registrationDebug()) {
@@ -318,52 +299,32 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 dputil.exit( result ) ;
             }
         }
-        
+
         return result ;
     }
-    
-    private static TypeConverter handleClass( final Class<?> cls, 
-        final ManagedObjectManagerInternal mom ) {
-        
-        if (mom.registrationDebug()) {
-            dputil.enter( "handleClass" ) ;
-        }
-        
-        TypeConverter result = null ;
-        
-        try {
-            final ManagedObject mo = cls.getAnnotation( ManagedObject.class ) ;
-            final ManagedData md = cls.getAnnotation( ManagedData.class ) ;
-            if (mom.registrationDebug()) {
-                dputil.info( "mo=", mo, "md=", md ) ;
-            }
-            
-            if (mo != null) {
-                result = handleManagedObject( cls, mom, mo ) ;
-            } else if (md != null) {
-                result = handleManagedData( cls, mom, md ) ;
-            } else if (cls.isEnum()) {
-                result = handleEnum( cls ) ;
-            } else {
-                // map to string
-                // XXX Perhaps changes this to act as if MXBean?
-                result = handleAsString( cls ) ;
-            }
-        } catch (RuntimeException exc) {
-            if (mom.registrationDebug()) {
-                dputil.exception( "Error", exc ) ;
-            }
-            throw exc ;
-        } finally {
-            if (mom.registrationDebug()) {
-                dputil.exit( result ) ;
-            }
-        }
-        
-        return result ;
-    } 
-	
-    private static TypeConverter handleManagedObject( final Class type, 
+
+    private static TypeConverter handleSimpleType( final EvaluatedType type,
+	final OpenType stype ) {
+
+	return new TypeConverterImpl( type, stype ) {
+	    public Object toManagedEntity( final Object obj ) {
+		return obj ;
+	    }
+
+            @Override
+	    public Object fromManagedEntity( final Object entity ) {
+		return entity ;
+	    }
+
+            @Override
+	    public boolean isIdentity() {
+		return true ;
+	    }
+	} ;
+    }
+
+    private static TypeConverter handleManagedObject(
+        final EvaluatedClassDeclaration type,
 	final ManagedObjectManagerInternal mom, final ManagedObject mo ) {
 
         TypeConverter result = null ;
@@ -371,7 +332,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             dputil.enter( "handleManagedObject", "type=", type,
                 "mom=", mom, "mo=", mo ) ;
         }
-        
+
         try {
             result = new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
                 public Object toManagedEntity( Object obj ) {
@@ -398,21 +359,215 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 dputil.exit( result ) ;
             }
         }
-        
+
         return result ;
     }
 
+    private static Collection<AttributeDescriptor> analyzeManagedData(
+        final EvaluatedClassDeclaration cls, final ManagedObjectManagerInternal mom ) {
+
+        if (mom.registrationDebug()) {
+            dputil.enter( "analyzeManagedData", "cls=", cls, "mom=", mom ) ;
+        }
+
+        Collection<AttributeDescriptor> result = null ;
+
+        try {
+            final EvaluatedClassAnalyzer ca = mom.getClassAnalyzer( cls,
+                ManagedData.class ).second() ;
+
+            final Pair<Map<String,AttributeDescriptor>,
+                Map<String,AttributeDescriptor>> ainfos =
+                    mom.getAttributes( ca,
+                        ManagedObjectManagerInternal.AttributeDescriptorType
+                            .COMPOSITE_DATA_ATTR ) ;
+
+            result = ainfos.first().values() ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static CompositeType makeCompositeType(
+        final EvaluatedClassDeclaration cls,
+        final ManagedObjectManagerInternal mom, final ManagedData md,
+        Collection<AttributeDescriptor> minfos ) {
+
+        if (mom.registrationDebug()) {
+            dputil.enter( "makeCompositeType",
+                "cls=", cls, "mom=", mom, "md=", md, "minfos=", minfos ) ;
+        }
+
+        CompositeType result = null ;
+
+        try {
+            String name = md.name() ;
+            if (name.equals( "" )) {
+                name = mom.getStrippedName( cls.cls() ) ;
+            }
+
+            if (mom.registrationDebug()) {
+                dputil.info( "name=", name ) ;
+            }
+
+            final String mdDescription = mom.getDescription( cls ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "mdDescription=", mdDescription ) ;
+            }
+
+            final int length = minfos.size() ;
+            final String[] attrNames = new String[ length ] ;
+            final String[] attrDescriptions = new String[ length ] ;
+            final OpenType[] attrOTypes = new OpenType[ length ] ;
+
+            int ctr = 0 ;
+            for (AttributeDescriptor minfo : minfos) {
+                attrNames[ctr] = minfo.id() ;
+                attrDescriptions[ctr] = minfo.description() ;
+                attrOTypes[ctr] = minfo.tc().getManagedType() ;
+                ctr++ ;
+            }
+
+            if (mom.registrationDebug()) {
+                dputil.info( "attrNames=", Arrays.asList(attrNames),
+                    "attrDescriptions=", Arrays.asList(attrDescriptions),
+                    "attrOTypes=", Arrays.asList(attrOTypes) ) ;
+            }
+
+            try {
+                result = new CompositeType(
+                    name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
+            } catch (OpenDataException exc) {
+                throw Exceptions.self.exceptionInMakeCompositeType(exc) ;
+            }
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static TypeConverter handleManagedData(
+        final EvaluatedClassDeclaration cls,
+	final ManagedObjectManagerInternal mom, final ManagedData md ) {
+
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleManagedData", "cls=", cls,
+                "mom=", mom, "md=", md ) ;
+        }
+
+        TypeConverter result = null ;
+        try {
+            final Collection<AttributeDescriptor> minfos = analyzeManagedData(
+                cls, mom ) ;
+            final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "minfos=", minfos, "myType=", myType ) ;
+            }
+
+            result = new TypeConverterImpl( cls, myType ) {
+                public Object toManagedEntity( Object obj ) {
+                    if (mom.runtimeDebug()) {
+                        dputil.enter( "(ManagedData):toManagedEntity", "obj=", obj ) ;
+                    }
+
+                    Object runResult = null ;
+                    try {
+                        Map<String,Object> data = new HashMap<String,Object>() ;
+                        for (AttributeDescriptor minfo : minfos) {
+                            if (mom.runtimeDebug()) {
+                                dputil.info( "Fetching attribute " + minfo.id() ) ;
+                            }
+
+                            Object value = null ;
+                            if (minfo.isApplicable( obj )) {
+                                try {
+                                    FacetAccessor fa = mom.getFacetAccessor( obj ) ;
+                                    value = minfo.get(fa, mom.runtimeDebug());
+                                } catch (JMException ex) {
+                                    if (mom.runtimeDebug()) {
+                                        dputil.exception( "Error", ex) ;
+                                    }
+                                }
+                            }
+
+                            data.put( minfo.id(), value ) ;
+                        }
+
+                        try {
+                            runResult = new CompositeDataSupport( myType, data ) ;
+                        } catch (OpenDataException exc) {
+                            throw Exceptions.self.exceptionInHandleManagedData(exc) ;
+                        }
+                    } finally {
+                        if (mom.runtimeDebug()) {
+                            dputil.exit( runResult ) ;
+                        }
+                    }
+
+                    return runResult ;
+                }
+            } ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static TypeConverter handleEnum( final EvaluatedClassDeclaration cls ) {
+
+	return new TypeConverterImpl( cls, SimpleType.STRING ) {
+	    public Object toManagedEntity( final Object obj ) {
+		return obj.toString() ;
+	    }
+
+            @Override
+            @SuppressWarnings("unchecked")
+	    public Object fromManagedEntity( final Object entity ) {
+		if (!(entity instanceof String)) {
+                    throw Exceptions.self.notAString(entity) ;
+                }
+
+		return Enum.valueOf( cls.cls(), (String)entity ) ;
+	    }
+	} ;
+    }
+
     @SuppressWarnings("unchecked")
-    private static TypeConverter handleArrayType( final GenericArrayType type, 
+    private static TypeConverter handleArrayType( final EvaluatedArrayType type,
 	final ManagedObjectManagerInternal mom ) {
 
         if (mom.registrationDebug()) {
             dputil.enter( "handleArrayType" ) ;
         }
-        
+
         TypeConverter result = null ;
         try {
-            final Type ctype = type.getGenericComponentType() ;
+            final EvaluatedType ctype = type.componentType() ;
             final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
             final OpenType cotype = ctypeTc.getManagedType() ;
             final OpenType ot ;
@@ -420,11 +575,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
             try {
                 ot = new ArrayType( 1, cotype ) ;
             } catch (OpenDataException exc) {
-                throw Exceptions.self.noArrayOfArray() ;
+                throw Exceptions.self.noArrayOfArray( exc ) ;
             }
 
             final OpenType myManagedType = ot ;
-            
+
             if (mom.registrationDebug()) {
                 dputil.info( "ctype=", ctype, "ctypeTc=", ctypeTc,
                     "cotype=", cotype, "ot=", ot ) ;
@@ -459,7 +614,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                         final Object result = Array.newInstance( cclass, length ) ;
                         for (int ctr=0; ctr<length; ctr++) {
                             final Object elem = Array.get( entity, ctr ) ;
-                            final Object relem =  
+                            final Object relem =
                                 ctypeTc.fromManagedEntity( elem ) ;
                             Array.set( result, ctr, relem ) ;
                         }
@@ -470,7 +625,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
                 @Override
                 public boolean isIdentity() {
-                    return ctypeTc.isIdentity() ; 
+                    return ctypeTc.isIdentity() ;
                 }
             } ;
         } catch (RuntimeException exc) {
@@ -483,35 +638,155 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 dputil.exit( result ) ;
             }
         }
-        
+
         return result ;
     }
 
-    private static TypeConverter handleEnum( final Class cls ) {
+    private static EvaluatedMethodDeclaration findMethod(
+        final EvaluatedClassDeclaration cdecl, final String mname ) {
 
-	return new TypeConverterImpl( cls, SimpleType.STRING ) {
-	    public Object toManagedEntity( final Object obj ) {
-		return obj.toString() ;
-	    }
+        EvaluatedMethodDeclaration meth = null ;
+        for (EvaluatedMethodDeclaration m : cdecl.methods()) {
+            if (m.name().equals( mname )) {
+                meth = m ;
+                break ;
+            }
+        }
 
-            @Override
-            @SuppressWarnings("unchecked")
-	    public Object fromManagedEntity( final Object entity ) {
-		if (!(entity instanceof String)) {
-                    throw Exceptions.self.notAString(entity) ;
-                }
-
-		return Enum.valueOf( cls, (String)entity ) ;
-	    }
-	} ;
+        return meth ;
     }
 
+    private static EvaluatedType getReturnType( EvaluatedClassDeclaration decl,
+        String mname ) {
+
+        EvaluatedMethodDeclaration meth = findMethod( decl, mname ) ;
+
+        if (meth == null) {
+            return null ;
+        } else {
+            return meth.returnType() ;
+        }
+    }
+
+    private static EvaluatedType getParameterType( EvaluatedClassDeclaration decl,
+        String mname, int pindex ) {
+
+        EvaluatedMethodDeclaration meth = findMethod( decl, mname ) ;
+
+        if (meth == null) {
+            return null ;
+        } else {
+            if (pindex < meth.parameterTypes().size()) {
+                return meth.parameterTypes().get( pindex ) ;
+            } else {
+                throw new IndexOutOfBoundsException(
+                    "Parameter index is out of bounds" ) ;
+            }
+        }
+    }
+
+    private static TypeConverter handleClass( 
+        final EvaluatedClassDeclaration type,
+        final ManagedObjectManagerInternal mom ) {
+        
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleClass" ) ;
+        }
+        
+        TypeConverter result = null ;
+        
+        try {
+        // Case 1: Some kind of collection.
+        if (Iterable.class.isAssignableFrom(type.cls())) {
+            EvaluatedClassDeclaration type2 =
+                (EvaluatedClassDeclaration)getReturnType( type, "iterator") ;
+            EvaluatedType tcType = getReturnType( type2, "next" ) ;
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+
+            result = new TypeConverterListBase( type, tc ) {
+                protected Iterator getIterator( Object obj ) {
+                    return ((Iterable)obj).iterator() ;
+                }
+            } ;
+        } else if (Collection.class.isAssignableFrom(type.cls())) {
+            EvaluatedClassDeclaration type2 =
+                (EvaluatedClassDeclaration)getReturnType( type, "iterator") ;
+            EvaluatedType tcType = getReturnType( type2, "next" ) ;
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+
+            result = new TypeConverterListBase( type, tc ) {
+                protected Iterator getIterator( Object obj ) {
+                    return ((Iterable)obj).iterator() ;
+                }
+            } ;
+        } else if (Iterator.class.isAssignableFrom(type.cls())) {
+            EvaluatedType tcType = getReturnType( type, "next" ) ;
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+
+            result = new TypeConverterListBase( type, tc ) {
+                protected Iterator getIterator( Object obj ) {
+                    return (Iterator)obj ;
+                }
+            } ;
+        } else if (Enumeration.class.isAssignableFrom(type.cls())) {
+            EvaluatedType tcType = getReturnType( type, "next" ) ;
+
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+            result = new TypeConverterListBase( type, tc ) {
+                @SuppressWarnings("unchecked")
+                protected Iterator getIterator( Object obj ) {
+                    return new EnumerationAdapter( (Enumeration)obj ) ;
+                }
+            } ;
+        } else if (Map.class.isAssignableFrom(type.cls())) {
+            EvaluatedType type1 = getParameterType( type, "put", 0 ) ;
+            TypeConverter firstTc = mom.getTypeConverter( type1 ) ;
+            EvaluatedType type2 = getReturnType( type, "put" ) ;
+            TypeConverter secondTc = mom.getTypeConverter( type2 ) ;
+
+            result = new TypeConverterMapBase( type, firstTc, secondTc ) {
+                @SuppressWarnings("unchecked")
+                protected Table getTable( Object obj ) {
+                    return new TableMapImpl( (Map)obj ) ;
+                }
+            } ;
+        } else if (Dictionary.class.isAssignableFrom(type.cls())) {
+            EvaluatedType type1 = getParameterType( type, "put", 0 ) ;
+            TypeConverter firstTc = mom.getTypeConverter( type1 ) ;
+            EvaluatedType type2 = getReturnType( type, "put" ) ;
+            TypeConverter secondTc = mom.getTypeConverter( type2 ) ;
+
+            result = new TypeConverterMapBase( type, firstTc, secondTc ) {
+                @SuppressWarnings("unchecked")
+                protected Table getTable( Object obj ) {
+                    return new TableDictionaryImpl( (Dictionary)obj ) ;
+                }
+            } ;
+        } else {
+            result = handleAsString( type ) ;
+        }
+
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    } 
+	
     @SuppressWarnings({"unchecked"})
-    private static TypeConverter handleAsString( final Class cls ) {
+    private static TypeConverter handleAsString( 
+        final EvaluatedClassDeclaration cls ) {
 
         Constructor cs = null ;
         try {
-            cs = cls.getDeclaredConstructor(String.class);
+            cs = cls.cls().getDeclaredConstructor(String.class);
         } catch (NoSuchMethodException ex) {
             // log message
         } catch (SecurityException ex) {
@@ -532,212 +807,21 @@ public abstract class TypeConverterImpl implements TypeConverter {
             @Override
 	    public Object fromManagedEntity( final Object entity ) {
 		if (cons == null) {
-                    throw Exceptions.self.noStringConstructor(cls);
+                    throw Exceptions.self.noStringConstructor(cls.cls());
                 }
                 
 		try {
                     final String str = (String) entity;
                     return cons.newInstance(str);
                 } catch (InstantiationException exc) {
-                    throw Exceptions.self.stringConversionError(cls, exc ) ;
+                    throw Exceptions.self.stringConversionError(cls.cls(), exc ) ;
                 } catch (IllegalAccessException exc) {
-                    throw Exceptions.self.stringConversionError(cls, exc ) ;
+                    throw Exceptions.self.stringConversionError(cls.cls(), exc ) ;
                 } catch (InvocationTargetException exc) {
-                    throw Exceptions.self.stringConversionError(cls, exc ) ;
+                    throw Exceptions.self.stringConversionError(cls.cls(), exc ) ;
                 }
 	    }
 	} ;
-    }
-
-    private static TypeConverter handleSimpleType( final Class cls, 
-	final OpenType stype ) {
-
-	return new TypeConverterImpl( cls, stype ) {
-	    public Object toManagedEntity( final Object obj ) {
-		return obj ;
-	    }
-
-            @Override
-	    public Object fromManagedEntity( final Object entity ) {
-		return entity ;
-	    }
-
-            @Override
-	    public boolean isIdentity() {
-		return true ; 
-	    }
-	} ;
-    }
-    
-    private static Collection<AttributeDescriptor> analyzeManagedData( 
-        final Class<?> cls, final ManagedObjectManagerInternal mom ) {
-       
-        if (mom.registrationDebug()) {
-            dputil.enter( "analyzeManagedData", "cls=", cls, "mom=", mom ) ;
-        }
-        
-        Collection<AttributeDescriptor> result = null ;
-        
-        try {
-            final ClassAnalyzer ca = mom.getClassAnalyzer( cls, 
-                ManagedData.class ).second() ;
-
-            final Pair<Map<String,AttributeDescriptor>,
-                Map<String,AttributeDescriptor>> ainfos =
-                    mom.getAttributes( ca ) ;
-
-            result = ainfos.first().values() ;
-        } catch (RuntimeException exc) {
-            if (mom.registrationDebug()) {
-                dputil.exception( "Error", exc ) ;
-            }
-            throw exc ;
-        } finally {
-            if (mom.registrationDebug()) {
-                dputil.exit( result ) ;
-            }
-        }
-        
-        return result ;
-    }
-
-    private static CompositeType makeCompositeType( final Class cls, 
-        final ManagedObjectManagerInternal mom, final ManagedData md, 
-        Collection<AttributeDescriptor> minfos ) {
-
-        if (mom.registrationDebug()) {
-            dputil.enter( "makeCompositeType",
-                "cls=", cls, "mom=", mom, "md=", md, "minfos=", minfos ) ;
-        }
-        
-        CompositeType result = null ;
-        
-        try {
-            String name = md.name() ;
-            if (name.equals( "" )) {
-                name = mom.getStrippedName( cls ) ;
-            }
-            
-            if (mom.registrationDebug()) {
-                dputil.info( "name=", name ) ;
-            }
-            
-            final String mdDescription = mom.getDescription( cls ) ;
-            if (mom.registrationDebug()) {
-                dputil.info( "mdDescription=", mdDescription ) ;
-            }
-            
-            final int length = minfos.size() ;
-            final String[] attrNames = new String[ length ] ;
-            final String[] attrDescriptions = new String[ length ] ;
-            final OpenType[] attrOTypes = new OpenType[ length ] ;
-
-            int ctr = 0 ;
-            for (AttributeDescriptor minfo : minfos) {
-                attrNames[ctr] = minfo.id() ;
-                attrDescriptions[ctr] = minfo.description() ;
-                attrOTypes[ctr] = minfo.tc().getManagedType() ;
-                ctr++ ;
-            }
-            
-            if (mom.registrationDebug()) {
-                dputil.info( "attrNames=", Arrays.asList(attrNames),
-                    "attrDescriptions=", Arrays.asList(attrDescriptions),
-                    "attrOTypes=", Arrays.asList(attrOTypes) ) ;
-            }
-
-            try {
-                result = new CompositeType( 
-                    name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
-            } catch (OpenDataException exc) {
-                throw Exceptions.self.exceptionInMakeCompositeType(exc) ;
-            }
-        } catch (RuntimeException exc) {
-            if (mom.registrationDebug()) {
-                dputil.exception( "Error", exc ) ;
-            }
-            throw exc ;
-        } finally {
-            if (mom.registrationDebug()) {
-                dputil.exit( result ) ;
-            }
-        }
-        
-        return result ;
-    }
-
-    private static TypeConverter handleManagedData( final Class cls, 
-	final ManagedObjectManagerInternal mom, final ManagedData md ) {
-
-        if (mom.registrationDebug()) {
-            dputil.enter( "handleManagedData", "cls=", cls,
-                "mom=", mom, "md=", md ) ;
-        }
-        
-        TypeConverter result = null ;
-        try {
-            final Collection<AttributeDescriptor> minfos = analyzeManagedData(
-                cls, mom ) ;
-            final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
-            if (mom.registrationDebug()) {
-                dputil.info( "minfos=", minfos, "myType=", myType ) ;
-            }
-
-            result = new TypeConverterImpl( cls, myType ) {
-                public Object toManagedEntity( Object obj ) {
-                    if (mom.runtimeDebug()) {
-                        dputil.enter( "(ManagedData):toManagedEntity", "obj=", obj ) ;
-                    }
-                    
-                    Object runResult = null ;
-                    try {
-                        Map<String,Object> data = new HashMap<String,Object>() ;
-                        for (AttributeDescriptor minfo : minfos) {
-                            if (mom.runtimeDebug()) {
-                                dputil.info( "Fetching attribute " + minfo.id() ) ;
-                            }
-                            
-                            Object value = null ;
-                            if (minfo.isApplicable( obj )) {
-                                try {
-                                    FacetAccessor fa = mom.getFacetAccessor( obj ) ;
-                                    value = minfo.get(fa, mom.runtimeDebug());
-                                } catch (JMException ex) {
-                                    if (mom.runtimeDebug()) {
-                                        dputil.exception( "Error", ex) ;
-                                    }
-                                }
-                            }
-
-                            data.put( minfo.id(), value ) ;
-                        }
-
-                        try {
-                            runResult = new CompositeDataSupport( myType, data ) ;
-                        } catch (OpenDataException exc) {
-                            throw Exceptions.self.exceptionInHandleManagedData(exc) ;
-                        }
-                    } finally {
-                        if (mom.runtimeDebug()) {
-                            dputil.exit( runResult ) ;
-                        }
-                    }
-                    
-                    return runResult ;
-                }
-            } ;
-        } catch (RuntimeException exc) {
-            if (mom.registrationDebug()) {
-                dputil.exception( "Error", exc ) ;
-            }
-            throw exc ;
-        } finally {
-            if (mom.registrationDebug()) {
-                dputil.exit( result ) ;
-            }
-        }
-        
-        return result ;
     }
 
     private static class EnumerationAdapter<T> implements Iterator<T> {
@@ -763,24 +847,30 @@ public abstract class TypeConverterImpl implements TypeConverter {
     // TypeConverter that throws exceptions for its methods.  Used as a 
     // place holder to detect recursive types.
     public static class TypeConverterPlaceHolderImpl implements TypeConverter {
-        public Type getDataType() {
-            throw Exceptions.self.recursiveTypesNotSupported() ;
+        private EvaluatedType et ;
+
+        public TypeConverterPlaceHolderImpl( EvaluatedType type ) {
+            et = type ;
+        }
+
+        public EvaluatedType getDataType() {
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
         }
 
         public OpenType getManagedType() {
-            throw Exceptions.self.recursiveTypesNotSupported() ;
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
         }
 
         public Object toManagedEntity( Object obj ) {
-            throw Exceptions.self.recursiveTypesNotSupported() ;
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
         }
 
         public Object fromManagedEntity( Object entity ) {
-            throw Exceptions.self.recursiveTypesNotSupported() ;
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
         }
 
         public boolean isIdentity() {
-            throw Exceptions.self.recursiveTypesNotSupported() ;
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
         }
     }
 
@@ -789,7 +879,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         
         final TypeConverter memberTc ;
 
-        public TypeConverterListBase( final Type dataType, 
+        public TypeConverterListBase( final EvaluatedType dataType,
             final TypeConverter memberTc ) {
             
             super( dataType, makeArrayType( memberTc.getManagedType() ) ) ;
@@ -869,7 +959,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         final private TypeConverter keyTypeConverter ;
         final private TypeConverter valueTypeConverter ;
 
-        public TypeConverterMapBase( Type dataType, 
+        public TypeConverterMapBase( EvaluatedType dataType,
             TypeConverter keyTypeConverter, TypeConverter valueTypeConverter ) {
             
             super( dataType, makeMapTabularType( keyTypeConverter, 
@@ -948,116 +1038,13 @@ public abstract class TypeConverterImpl implements TypeConverter {
         }
     }
 
-    // Type must be a T<X,...> :
-    // 1. T is a collection type: Collection, Iterator, Iterable, Enumeration, 
-    // so the type is T<X> for some type X.  This maps to an array of the 
-    // mapping of X.
-    // 2. T is a mapping type: Map or Dictionary
-    //    type is T<K,V>.  This maps to a TabularType, with key field named 
-    //    "key" of type mapping of K, and value field "value" of type mapping 
-    //    of V.
-    // 3. Otherwise return null.
-    private static TypeConverter handleParameterizedType( 
-        final ParameterizedType type, 
-	final ManagedObjectManagerInternal mom ) {
-
-        if (mom.registrationDebug()) {
-            dputil.enter( "handleParameterizedType", "type=", type,
-                "mom=", mom ) ;
-        }
-        
-        TypeConverter result = null ;
-        
-        try {
-            final Class cls = (Class)(type.getRawType()) ; 
-            final Type[] args = type.getActualTypeArguments() ;
-            if (mom.registrationDebug()) {
-                dputil.info( "cls=", cls, "args=", Arrays.asList( args ) ) ;
-            }
-            
-            if (args.length < 1) {
-                throw Exceptions.self.paramTypeNeedsArgument(type) ;
-            }
-
-            final Type firstType = args[0] ;
-            final TypeConverter firstTc = mom.getTypeConverter( firstType ) ;
-
-            if (mom.registrationDebug()) {
-                dputil.info( "firstType=", firstType, "firstTc=", firstTc ) ;
-            }
-            
-            // Case 1: Some kind of collection. Must have 1 type parameter.
-            if (Iterable.class.isAssignableFrom(cls)) {
-                result = new TypeConverterListBase( type, firstTc ) {
-                    protected Iterator getIterator( Object obj ) {
-                        return ((Collection)obj).iterator() ;
-                    }
-                } ;
-            } else if (Iterator.class.isAssignableFrom(cls)) {
-                result = new TypeConverterListBase( type, firstTc ) {
-                    protected Iterator getIterator( Object obj ) {
-                        return (Iterator)obj ;
-                    }
-                } ;
-            } else if (Enumeration.class.isAssignableFrom(cls)) {
-                result = new TypeConverterListBase( type, firstTc ) {
-                    @SuppressWarnings("unchecked")
-                    protected Iterator getIterator( Object obj ) {
-                        return new EnumerationAdapter( (Enumeration)obj ) ;
-                    }
-                } ;
-            } else if (args.length != 2) {
-                result = handleClass( (Class<?>)type.getRawType(), mom ) ;
-            } else {
-                final Type secondType = args[0] ;
-                final TypeConverter secondTc = mom.getTypeConverter( secondType ) ;
-           
-                if (mom.registrationDebug()) {
-                    dputil.info( "secondType=", secondType, 
-                        "secondTc=", secondTc ) ;
-                }
-                
-                if (Map.class.isAssignableFrom(cls)) {
-                    result = new TypeConverterMapBase( type, firstTc, secondTc ) {
-                        @SuppressWarnings("unchecked")
-                        protected Table getTable( Object obj ) {
-                            return new TableMapImpl( (Map)obj ) ;
-                        }
-                    } ;
-                } else if (Dictionary.class.isAssignableFrom(cls)) {
-                    result = new TypeConverterMapBase( type, firstTc, secondTc ) {
-                        @SuppressWarnings("unchecked")
-                        protected Table getTable( Object obj ) {
-                            return new TableDictionaryImpl( (Dictionary)obj ) ;
-                        }
-                    } ;
-                } else {
-                    // XXX This loses all information about type evaluation:
-                    // instead, we want the class WITH the evaluate types.
-                    result = handleClass( (Class<?>)type.getRawType(), mom ) ;
-                }
-            }
-        } catch (RuntimeException exc) {
-            if (mom.registrationDebug()) {
-                dputil.exception( "Error", exc ) ;
-            }
-            throw exc ;
-        } finally {
-            if (mom.registrationDebug()) {
-                dputil.exit( result ) ;
-            }
-        }
-
-        return result ;
-    }
-    
     // Basic support for all TypeConverters.
     @DumpToString
-    protected final Type dataType ;
+    protected final EvaluatedType dataType ;
     @DumpToString
     protected final OpenType managedType ;
 
-    protected TypeConverterImpl( final Type dataType, 
+    protected TypeConverterImpl( final EvaluatedType dataType,
         final OpenType managedType ) {
         
         this.dataType = dataType ;
@@ -1066,7 +1053,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
     /* Java generic type of attribute in problem-domain Object.
      */
-    public final Type getDataType() {
+    public final EvaluatedType getDataType() {
         return dataType ;
     }
 
@@ -1095,7 +1082,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private String displayOpenType( OpenType otype ) {
         if (otype instanceof SimpleType) {
             SimpleType stype = (SimpleType)otype ;
-            return "SimpleType(" + otype.getTypeName() + ")" ;
+            return "SimpleType(" + stype.getTypeName() + ")" ;
         } else if (otype instanceof ArrayType) {
             ArrayType atype = (ArrayType)otype ;
             return "ArrayType(" + displayOpenType( atype.getElementOpenType() )

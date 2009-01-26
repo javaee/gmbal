@@ -52,7 +52,6 @@ public class WrapperGeneratorTest extends TestCase {
     public void testCreateTestException() {
         Exception expectedCause = new Exception() ;
         Exception exc = TestInterface.self.createTestException( expectedCause ) ;
-        assertTrue( exc instanceof IllegalArgumentException ) ;
         assertTrue( exc.getCause() == expectedCause ) ;
     }
 

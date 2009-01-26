@@ -96,29 +96,9 @@ public class DescriptorUtility {
         return map;
     }
 
-    private static SortedMap<String, ?> makeMap(String[] fields) {
-        if (fields == null) {
-            throw Exceptions.self.nullFieldsParameter() ;
-        }
-        String[] fieldNames = new String[fields.length];
-        String[] fieldValues = new String[fields.length];
-        for (int i = 0; i < fields.length; i++) {
-            String field = fields[i];
-            int eq = field.indexOf('=');
-            if (eq < 0) {
-                throw Exceptions.self.badFieldFormat( field ) ;
-            }
-            fieldNames[i] = field.substring(0, eq);
-            // makeMap will catch the case where the name is empty
-            fieldValues[i] = field.substring(eq + 1);
-        }
-        return makeMap(fieldNames, fieldValues);
-    }
-
     public static Descriptor union(Descriptor... descriptors) {
         Map<String, Object> map =
             new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
-        Descriptor biggestImmutable = EMPTY_DESCRIPTOR;
         for (Descriptor d : descriptors) {
             if (d != null) {
                 String[] names = d.getFieldNames();

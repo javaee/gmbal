@@ -36,8 +36,8 @@
 
 package org.glassfish.gmbal.typelib;
 
-import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.UnaryFunction;
+import java.util.List;
+import org.glassfish.gmbal.generic.ObjectSet;
 
 /**
  *
@@ -46,25 +46,41 @@ import org.glassfish.gmbal.generic.UnaryFunction;
 public abstract class EvaluatedClassDeclarationBase extends EvaluatedDeclarationBase
     implements EvaluatedClassDeclaration {
     
-    void makeRepresentation( StringBuilder sb ) {
-        handleModifier( sb, modifiers() ) ;
-        sb.append( " class " ) ;
+    void makeRepresentation( StringBuilder sb, ObjectSet set ) {
         sb.append( name() ) ;
-        handleList( sb, " inherits", 
-            Algorithms.map( inheritance(), 
-                new UnaryFunction<EvaluatedClassDeclaration,String>() { 
-                    public String evaluate( EvaluatedClassDeclaration type ) {
-                       return type.name();
-                    } } ) ) ;
+        if (instantiations() != null && !set.contains( this)) {
+            set.add( this) ;
+            handleList( sb, "<", 
+                castList( instantiations(), EvaluatedTypeBase.class ),
+                ",", ">", set ) ;
+        }
     }
                     
-    boolean myEquals( Object obj ) {
+    boolean myEquals( Object obj, ObjectSet set ) {
         EvaluatedClassDeclaration other = (EvaluatedClassDeclaration)obj ;
-        return name().equals( other.name() ) ;
+        if (!name().equals(other.name())) {
+            return false ;
+        }
+
+        return equalList( instantiations(), other.instantiations(), set ) ;
     }
 
-    public int hashCode() {
-        return name().hashCode() ;
+    public int hashCode( ObjectSet set ) {
+        set.add( this ) ;
+        int result = name().hashCode() ;
+        List<EvaluatedType> list = instantiations() ;
+        if (list == null) {
+            return result ;
+        } else {
+            for (EvaluatedType et : list) {
+                EvaluatedTypeBase etb = (EvaluatedTypeBase)et ;
+                if (!set.contains( et )) {
+                    result = 31*result + etb.hashCode( set ) ; 
+                }
+            }
+
+            return result ;
+        }
     }
 
     @Override

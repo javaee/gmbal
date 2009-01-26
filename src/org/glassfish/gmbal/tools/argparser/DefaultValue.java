@@ -33,7 +33,8 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package org.glassfish.gmbal ;
+
+package org.glassfish.gmbal.tools.argparser ;
 
 import java.lang.annotation.Documented ;
 import java.lang.annotation.Target ;
@@ -41,12 +42,9 @@ import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
 
-/** This annotation is applied to a method that takes no arguments and returns a value
- * that is converted into a String for use in the ObjectName when an instance of the enclosing
- * class is used to construct an open MBean.
- */
-@Documented 
-@Target(ElementType.METHOD) 
+@Documented
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ObjectNameKey {
+public @interface DefaultValue {
+    String value() default "" ;
 }

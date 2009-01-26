@@ -33,7 +33,7 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package org.glassfish.gmbal.tools ;
+package org.glassfish.gmbal.tools.file ;
 
 import java.io.File ;
 import java.io.FileInputStream ;
@@ -211,22 +211,25 @@ public class FileWrapper implements Closeable {
      * Does not assume we are using text files.
      */
     public void copyTo( FileWrapper target, byte[] buffer ) throws IOException {
-	FileInputStream _fis = null ;
-	FileOutputStream _fos = null ;
+	FileInputStream fis = null ;
+	FileOutputStream fos = null ;
 
 	try {
-	    _fis = new FileInputStream( this.file ) ;
-	    _fos = new FileOutputStream( target.file ) ;
-	    int dataRead = _fis.read( buffer ) ;
+	    fis = new FileInputStream( this.file ) ;
+	    fos = new FileOutputStream( target.file ) ;
+	    int dataRead = fis.read( buffer ) ;
 	    while (dataRead > 0) {
-		_fos.write( buffer, 0, dataRead ) ;
-		dataRead = _fis.read( buffer ) ;
+		fos.write( buffer, 0, dataRead ) ;
+		dataRead = fis.read( buffer ) ;
 	    }
 	} finally {
-	    if (_fis != null)
-		_fis.close() ;
-	    if (_fos != null)
-		_fos.close() ;
+            // FindBugs complains that this may leak fis, but that is actually
+            // not possible: if fis is not null, it will be closed.  But findbugs
+            // can't determine that.
+	    if (fis != null)
+		fis.close() ;
+	    if (fos != null)
+		fos.close() ;
 	}
     }
 }

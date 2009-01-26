@@ -7,9 +7,7 @@ package org.glassfish.gmbal.impl;
 
 import java.io.InvalidObjectException;
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import javax.management.AttributeNotFoundException;
@@ -23,6 +21,9 @@ import org.glassfish.gmbal.logex.ExceptionWrapper;
 import org.glassfish.gmbal.logex.Log;
 import org.glassfish.gmbal.logex.Message;
 import org.glassfish.gmbal.logex.WrapperGenerator;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
 
 /** Exception wrapper class.  The logex WrapperGenerator uses this interface
  * to generate an implementation which returns the appropriate exception, and
@@ -65,7 +66,7 @@ public interface Exceptions {
 
     @Message( "{0} is not a valid attribute method" )
     @Log( id=ATTRIBUTE_DESCRIPTOR_START + 2 )
-    IllegalArgumentException excForMakeFromAnnotated( Method m ) ;
+    IllegalArgumentException excForMakeFromAnnotated( EvaluatedMethodDeclaration m ) ;
 
 // DescriptorIntrospector
     static final int DESCRIPTOR_INTROSPECTOR_START =
@@ -159,7 +160,8 @@ public interface Exceptions {
         + "with @ObjectNameKey in class {2}")
     @Log( id=MBEAN_SKELETON_START + 2 )
     IllegalArgumentException duplicateObjectNameKeyAttributes(
-        Method first, Method second, String className ) ;
+        EvaluatedMethodDeclaration first, EvaluatedMethodDeclaration second,
+        String className ) ;
 
     @Message( "ParameterNams annotation must have the same number "
         + "of arguments as the length of the method parameter list" )
@@ -256,7 +258,8 @@ public interface Exceptions {
     @Message( "Class {0} contains both the InheritedAttribute and "
         + "the InheritedAttributes annotations" )
     @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 4 )
-    IllegalArgumentException badInheritedAttributeAnnotation( Class cls ) ;
+    IllegalArgumentException badInheritedAttributeAnnotation( 
+        EvaluatedClassDeclaration cls ) ;
 
     @Message( "No description available!" )
     String noDescriptionAvailable() ;
@@ -271,7 +274,7 @@ public interface Exceptions {
 
     @Message( "{0} cannot be converted into a Java class")
     @Log( id=TYPE_CONVERTER_IMPL_START + 1 )
-    IllegalArgumentException cannotConvertToJavaType( Type type ) ;
+    IllegalArgumentException cannotConvertToJavaType( EvaluatedType type ) ;
 
     @Message( "Management entity {0} is not an ObjectName")
     @Log( id=TYPE_CONVERTER_IMPL_START + 2 )
@@ -279,7 +282,7 @@ public interface Exceptions {
 
     @Message( "Arrays of arrays not supported")
     @Log( id=TYPE_CONVERTER_IMPL_START + 3 )
-    IllegalArgumentException noArrayOfArray( ) ;
+    IllegalArgumentException noArrayOfArray( @Chain Exception exc ) ;
 
     @Message( "{0} is not a String" )
     @Log( id=TYPE_CONVERTER_IMPL_START + 4 )
@@ -307,9 +310,9 @@ public interface Exceptions {
     @Log( id=TYPE_CONVERTER_IMPL_START + 9 )
     UnsupportedOperationException removeNotSupported( ) ;
 
-    @Message( "Recursive types are not supported")
+    @Message( "Recursive types are not supported: type is {0}")
     @Log( id=TYPE_CONVERTER_IMPL_START + 10 )
-    UnsupportedOperationException recursiveTypesNotSupported( ) ;
+    UnsupportedOperationException recursiveTypesNotSupported( EvaluatedType et ) ;
 
     @Message( "OpenType exception in ArrayType construction caused by {0}")
     @Log( id=TYPE_CONVERTER_IMPL_START + 11 )
@@ -347,5 +350,6 @@ public interface Exceptions {
 
     @Message( "Converting from OpenType {0} to Java type {1} is not supported")
     @Log( id=TYPE_CONVERTER_IMPL_START + 15 )
-    UnsupportedOperationException openToJavaNotSupported( OpenType otype, Type javaType ) ;
+    UnsupportedOperationException openToJavaNotSupported( OpenType otype, 
+        EvaluatedType javaType ) ;
 }

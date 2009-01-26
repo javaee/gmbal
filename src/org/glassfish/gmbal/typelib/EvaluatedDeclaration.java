@@ -37,6 +37,7 @@
 package org.glassfish.gmbal.typelib;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.util.List;
 
 /**
@@ -51,4 +52,6 @@ public interface EvaluatedDeclaration extends EvaluatedType {
     String name() ;
     
     int modifiers() ;
+
+    AnnotatedElement element() ;
 }

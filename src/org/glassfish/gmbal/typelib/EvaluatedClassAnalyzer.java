@@ -165,10 +165,9 @@ public class EvaluatedClassAnalyzer {
         classInheritance = result ;
     }
 
-    public EvaluatedClassAnalyzer( final Class<?> cls ) {
+    public EvaluatedClassAnalyzer( final EvaluatedClassDeclaration cls ) {
 	this( new Graph<EvaluatedClassDeclaration>( 
-            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( cls ),
-            finder ) ) ;
+            cls, finder ) ) ;
     }
     /*
     public ClassAnalyzer( final List<Class<?>> classes ) {
@@ -186,7 +185,6 @@ public class EvaluatedClassAnalyzer {
         this( new Graph<EvaluatedClassDeclaration>( decls, finder ) ) ;
     }
 
-
     public <T extends EvaluatedDeclaration> Predicate<T> forAnnotation( 
         final ManagedObjectManagerInternal mom,
         final Class<? extends Annotation> annotation,
@@ -197,9 +195,7 @@ public class EvaluatedClassAnalyzer {
                 if (mom == null) {
                     return elem.annotation(annotation) != null ; 
                 } else {
-                    // XXX fixme: need to change mom decl for this to compile:
-                    // return mom.getAnnotation( elem, annotation ) != null ;
-                    return false ;
+                    return mom.getAnnotation( elem, annotation ) != null ;
                 }
             }
         } ;
@@ -252,7 +248,7 @@ public class EvaluatedClassAnalyzer {
                 } else {
                     sb.append( " " ) ;
                 }
-                sb.append( cls.toString() ) ;
+                sb.append( cls.name() ) ;
             }
             sb.append( "]" ) ;
             contents = sb.toString() ;

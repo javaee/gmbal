@@ -36,7 +36,7 @@
 
 package org.glassfish.gmbal.impl ;
 
-import org.glassfish.gmbal.generic.ClassAnalyzer;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import java.lang.reflect.Type ;
 
 import java.lang.reflect.AnnotatedElement ;
@@ -52,47 +52,66 @@ import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
 import javax.management.ObjectName;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
 
+/** The internal interface to the ManagedObjectManager that is used in the
+ * gmbal implementation.  The methods defined here are not for use by
+ * gmbal clients.
+ * 
+ * @author ken
+ */
 public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     /** Construct or lookup the TypeConverter for the given type.
      * 
      * @param type The type for which we need a TypeConverter.
      * @return The type converter.
      */
-    TypeConverter getTypeConverter( Type type ) ;
+    TypeConverter getTypeConverter( EvaluatedType type ) ;
     
-    String getDescription( AnnotatedElement element ) ;
+    String getDescription( EvaluatedDeclaration element ) ;
         
-    <T extends Annotation> T getAnnotation( AnnotatedElement element,
+    <T extends Annotation> T getAnnotation( EvaluatedDeclaration element,
         Class<T> type ) ;
 
     /** Find the superclass or superinterface of cls (which may be cls itself) 
      * that has the given annotationClass as an annotation.  If the annotated 
      * Class has an IncludeSubclass annotation, add those classes into the 
-     * ClassAnalyzer for the annotated class.
-     * @param cls The class for which we need a ClassAnalyzer.
+     * EvaluatedClassAnalyzer for the annotated class.
+     * @param cls The class for which we need a EvaluatedClassAnalyzer.
      * @param annotationClass The annotation that must be present on cls or
      * a superclass or superinterface.
-     * @return A Pair of the parent class of cls, and the ClassAnalyzer.
+     * @return A Pair of the parent class of cls, and the EvaluatedClassAnalyzer.
      */
-    Pair<Class<?>,ClassAnalyzer> getClassAnalyzer( Class<?> cls,
-        Class<? extends Annotation> annotationClass ) ;
+    Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer> getClassAnalyzer( 
+        EvaluatedClassDeclaration cls, Class<? extends Annotation> annotationClass ) ;
     
-    /** Get the inherited attributes from the ClassAnalyzer.
+    /** Get the inherited attributes from the EvaluatedClassAnalyzer.
      * @param ca The ClassAnalyzer to check for InheritedAttribute(s).
      * @return The inherited attributes.
      */
-    List<InheritedAttribute> getInheritedAttributes( ClassAnalyzer ca ) ;
-    
+    List<InheritedAttribute> getInheritedAttributes( EvaluatedClassAnalyzer ca ) ;
+
+    /** Used in getAttributes to indicate type of Attribute being considered.
+     * This matters because JMX (unforunately) defines different rules for
+     * converting method names to attribute ids in MBeans and in CompositeData:
+     * for MBeans, an initial get or set is stripped, leaving an ID with an
+     * initial upper case letter; for CompositeData, JMX follows the JavaBeans
+     * conventions, and converts the first letter of the ID to lower case.
+     * Since getAttributes is used in both cases, it needs to know the difference.
+     */
+    public enum AttributeDescriptorType { MBEAN_ATTR, COMPOSITE_DATA_ATTR }
+
     Pair<Map<String,AttributeDescriptor>,Map<String,AttributeDescriptor>>
-        getAttributes( ClassAnalyzer ca ) ;
+        getAttributes( EvaluatedClassAnalyzer ca, AttributeDescriptorType adt ) ;
     
     <K,V> void putIfNotPresent( final Map<K,V> map,
         final K key, final V value ) ;
         
     String getStrippedName( Class<?> cls ) ;
     
-    <T extends AnnotatedElement> Predicate<T> forAnnotation( 
+    <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(
         Class<? extends Annotation> annotation,
         Class<T> elemType ) ;
     

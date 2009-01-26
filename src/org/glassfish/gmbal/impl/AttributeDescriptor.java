@@ -44,6 +44,7 @@ import java.lang.reflect.Type ;
 import java.security.AccessController;
 import java.security.Permission;
 import java.security.PrivilegedAction;
+import java.util.List;
 import javax.management.ReflectionException ;
 
 
@@ -55,17 +56,19 @@ import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Pair;
 import javax.management.MBeanException;
 import org.glassfish.gmbal.GmbalException;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
     
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
 
     @DumpToString
-    private Method _method ;
+    private EvaluatedMethodDeclaration _method ;
     private String _id ;
     private String _description ;
     private AttributeType _atype ;
     @DumpToString
-    private Type _type ;
+    private EvaluatedType _type ;
     private TypeConverter _tc ;
 
     @DumpIgnore
@@ -75,8 +78,9 @@ public class AttributeDescriptor {
         new ReflectPermission( "suppressAccessChecks" ) ;
 
     private AttributeDescriptor( final ManagedObjectManagerInternal mom, 
-        final Method method, final String id, 
-        final String description, final AttributeType atype, final Type type ) {
+        final EvaluatedMethodDeclaration method, final String id,
+        final String description, final AttributeType atype, 
+        final EvaluatedType type ) {
     
         SecurityManager sman = System.getSecurityManager() ;
         if (sman != null) {
@@ -84,9 +88,9 @@ public class AttributeDescriptor {
         }
 
         this._method = AccessController.doPrivileged(
-            new PrivilegedAction<Method>() {
-                public Method run() {
-                    method.setAccessible(true);
+            new PrivilegedAction<EvaluatedMethodDeclaration>() {
+                public EvaluatedMethodDeclaration run() {
+                    method.method().setAccessible(true);
                     return method ;
                 }
             }
@@ -99,7 +103,7 @@ public class AttributeDescriptor {
         this._tc = mom.getTypeConverter( type ) ;
     }
 
-    public final Method method() { return _method ; }
+    public final Method method() { return _method.method() ; }
 
     public final String id() { return _id ; }
 
@@ -107,12 +111,12 @@ public class AttributeDescriptor {
 
     public final AttributeType atype() { return _atype ; }
 
-    public final Type type() { return _type ; }
+    public final EvaluatedType type() { return _type ; }
 
     public final TypeConverter tc() { return _tc ; }
     
     public boolean isApplicable( Object obj ) {
-        return _method.getDeclaringClass().isInstance( obj ) ;
+        return _method.method().getDeclaringClass().isInstance( obj ) ;
     }
 
     private void checkType( AttributeType at ) {
@@ -133,7 +137,7 @@ public class AttributeDescriptor {
         Object result = null;
         
         try {
-            result = _tc.toManagedEntity(fa.invoke(_method, debug ));
+            result = _tc.toManagedEntity(fa.invoke(_method.method(), debug ));
         } catch (RuntimeException exc) {
             if (debug) {
                 dputil.exception( "Error:", exc ) ;
@@ -158,7 +162,8 @@ public class AttributeDescriptor {
         }
         
         try {
-            target.invoke(_method, debug, _tc.fromManagedEntity(value));
+            target.invoke(_method.method(), debug,
+                _tc.fromManagedEntity(value));
         } catch (RuntimeException exc) {
             if (debug) {
                 dputil.exception( "Error:", exc ) ;
@@ -195,41 +200,67 @@ public class AttributeDescriptor {
         */
     }
 
+    private static String lowerInitialCharacter( final String arg ) {
+        if (arg == null || arg.length() == 0) {
+            return arg ;
+        }
+
+        char initChar = Character.toLowerCase( arg.charAt(0) ) ;
+        String rest = arg.substring(1) ;
+        return initChar + rest ;
+    }
+
     private static String getDerivedId( String methodName, 
-        Pair<AttributeType,Type> ainfo ) {
+        final Pair<AttributeType,EvaluatedType> ainfo,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt) {
+
         String result = methodName ;
-        
+        boolean needLowerCase = adt ==
+            ManagedObjectManagerInternal.AttributeDescriptorType
+                .COMPOSITE_DATA_ATTR ;
+
         if (ainfo.first() == AttributeType.GETTER) {
             if (startsWithNotEquals( methodName, "get" )) {
                 result = stripPrefix( methodName, "get" ) ;
-            } else if (ainfo.second().equals( boolean.class ) &&
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
+            } else if (ainfo.second().equals( EvaluatedType.EBOOLEAN ) &&
                 startsWithNotEquals( methodName, "is" )) {
                 result = stripPrefix( methodName, "is" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
             }
         } else {
             if (startsWithNotEquals( methodName, "set" )) {
                 result = stripPrefix( methodName, "set" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
             }
         }
         
         return result ;
     }
 
-    private static Pair<AttributeType,Type> getTypeInfo( Method method ) {
-        final Type rtype = method.getGenericReturnType() ;
-        final Type[] atypes = method.getGenericParameterTypes() ;
-        AttributeType atype ;
-        Type attrType ;
+    private static Pair<AttributeType,EvaluatedType> getTypeInfo(
+        EvaluatedMethodDeclaration method ) {
 
-        if (rtype.equals( void.class )) {
-            if (atypes.length != 1) {
+        final EvaluatedType rtype = method.returnType() ;
+        final List<EvaluatedType> atypes = method.parameterTypes() ;
+        AttributeType atype ;
+        EvaluatedType attrType ;
+
+        if (rtype.equals( EvaluatedType.EVOID )) {
+            if (atypes.size() != 1) {
                 return null ;
             }
 
             atype = AttributeType.SETTER ;
-            attrType = atypes[0] ;
+            attrType = atypes.get(0) ;
         } else {
-            if (atypes.length != 0) {
+            if (atypes.size() != 0) {
                 return null ;
             }
 
@@ -237,7 +268,7 @@ public class AttributeDescriptor {
             attrType = rtype ;
         }
 
-        return new Pair<AttributeType,Type>( atype, attrType ) ;
+        return new Pair<AttributeType,EvaluatedType>( atype, attrType ) ;
     }
 
     private static boolean empty( String arg ) {
@@ -247,25 +278,28 @@ public class AttributeDescriptor {
     // See if method is an attribute according to its type, and the id and methodName arguments.
     // If it is, returns its AttributeDescriptor, otherwise return null.  Fails if
     // both id and methodName are empty.
-    public static AttributeDescriptor makeFromInherited( final ManagedObjectManagerInternal mom,
-        final Method method, final String id, final String methodName, final String description ) {
+    public static AttributeDescriptor makeFromInherited(
+        final ManagedObjectManagerInternal mom,
+        final EvaluatedMethodDeclaration method, final String id,
+        final String methodName, final String description,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
 
         if (empty(methodName) && empty(id)) {
             throw Exceptions.self.excForMakeFromInherited() ;
         }
 
-        Pair<AttributeType,Type> ainfo = getTypeInfo( method ) ;
+        Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( method ) ;
         if (ainfo == null) {
             return null ;
         }
 
-        final String derivedId = getDerivedId( method.getName(), ainfo ) ; 
+        final String derivedId = getDerivedId( method.name(), ainfo, adt ) ;
 
         if (empty( methodName )) { // We know !empty(id) at this point
             if (!derivedId.equals( id )) {
                 return null ;
             }
-        } else if (!methodName.equals( method.getName() )) {
+        } else if (!methodName.equals( method.name() )) {
             return null ;
         }
 
@@ -281,15 +315,17 @@ public class AttributeDescriptor {
     // Note that extId and description may be empty strings.
     public static AttributeDescriptor makeFromAnnotated( 
         final ManagedObjectManagerInternal mom, 
-        final Method m, final String extId, final String description ) {
+        final EvaluatedMethodDeclaration m, final String extId,
+        final String description,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
 
-        Pair<AttributeType,Type> ainfo = getTypeInfo( m ) ;
+        Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( m ) ;
         if (ainfo == null) {
             throw Exceptions.self.excForMakeFromAnnotated( m ) ;
         }
 
         String actualId = empty(extId) ? 
-            getDerivedId( m.getName(), ainfo ) : extId ;
+            getDerivedId( m.name(), ainfo, adt ) : extId ;
 
         return new AttributeDescriptor( mom, m, actualId, description,
             ainfo.first(), ainfo.second() ) ;

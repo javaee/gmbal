@@ -39,6 +39,10 @@ package org.glassfish.gmbal.typelib;
 import java.util.List;
 
 public interface EvaluatedClassDeclaration extends EvaluatedDeclaration {
+    List<EvaluatedType> instantiations() ;
+
+    void instantiations( List<EvaluatedType> arg ) ;
+
     List<EvaluatedMethodDeclaration> methods() ;
     
     void methods( List<EvaluatedMethodDeclaration> meths ) ;
