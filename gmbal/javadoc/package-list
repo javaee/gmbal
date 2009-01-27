@@ -1,6 +1,8 @@
 org.glassfish.gmbal
 org.glassfish.gmbal.generic
 org.glassfish.gmbal.impl
+org.glassfish.gmbal.logex
+org.glassfish.gmbal.tools.argparser
+org.glassfish.gmbal.tools.file
 org.glassfish.gmbal.typelib
-org.glassfish.gmbal.typeresolver
 org.glassfish.gmbal.util
