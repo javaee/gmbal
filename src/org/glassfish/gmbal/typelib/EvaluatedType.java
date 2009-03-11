@@ -47,6 +47,9 @@ import javax.management.ObjectName;
  * @author ken
  */
 public interface EvaluatedType {
+    // Constants for commonly used types.
+    // Do NOT include generics like Class here, as they WILL pull in hundreds
+    // of classes into the initialization of typelib.
     public static final EvaluatedClassDeclaration EVOID           = 
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( void.class ) ;
     public static final EvaluatedClassDeclaration EINT            = 
@@ -93,8 +96,6 @@ public interface EvaluatedType {
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( String.class ) ;
     public static final EvaluatedClassDeclaration EOBJECT         =
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( Object.class ) ;
-    public static final EvaluatedClassDeclaration ECLASS          =
-        (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( Class.class ) ;
     public static final EvaluatedClassDeclaration ENUMBER          =
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( Number.class ) ;
 

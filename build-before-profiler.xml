@@ -42,7 +42,6 @@
     <description>Builds, tests, and runs the gmbal project.</description>
     <import file="nbproject/build-impl.xml"/>
 
-    <import file="nbproject/profiler-build-impl.xml"/>
     <import file="nbproject/management-build-impl.xml"/>    <!--
 
     There exist several targets which are by default empty and which can be 
@@ -107,8 +106,8 @@
     <property name="maven.ant.file"                 value="maven-ant-tasks-2.0.9.jar"/>
     <property name="maven.ant.dir"                  value="http://apache.hoxt.com/maven/binaries"/>
     <property name="groupId"                        value="org.glassfish.gmbal"/>
-    <property name="version"                        value="2.0.0-b002"/>
-    <property name="repo.url"                       value="java-net:/maven2-repository/trunk/repository"/>
+    <property name="version"                        value="2.0.0-b001"/>
+    <property name="repo.url"                       value="java-net:/maven2-repository/trunk/www/repository"/>
     <property name="file.url"                       value="file:/tmp/maven"/>
     <property name="emma.dir"                       value="build/coverage"/>
     <property name="emma.coverage.out.file"         value="${emma.dir}/coverage.ec"/>

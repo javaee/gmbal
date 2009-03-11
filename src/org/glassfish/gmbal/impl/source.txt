@@ -1,0 +1,4520 @@
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl;
+
+import org.glassfish.gmbal.*;
+import org.glassfish.gmbal.AMX;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.AttributeNotFoundException;
+import javax.management.Descriptor;
+import javax.management.DynamicMBean;
+import javax.management.InstanceNotFoundException;
+import javax.management.IntrospectionException;
+import javax.management.InvalidAttributeValueException;
+import javax.management.JMException;
+import javax.management.MBeanException;
+import javax.management.MBeanInfo;
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+import javax.management.RuntimeOperationsException;
+import javax.management.modelmbean.ModelMBeanInfo;
+
+/** This class implements a generic AMX MBean which is connected to a possibly
+ * remote MBeanServerConnection (note that MBeanServer isA MBeanServerConnection,
+ * so we can actually create an AMXClientImpl simply by using the MBeanServer
+ * from the mom: this is useful for testing).
+ * <P>
+ * Note that this version of the AMX API provides a generic get/set API that
+ * is identical to DynamicMBean, except that it only throws unchecked exceptions.
+ * This is far more convenient in practice than the JMX-standard checked exceptions.
+ *
+ * @author ken
+ */
+public class AMXClient implements AMX {
+    private MBeanServerConnection server ;
+    private ObjectName oname ;
+
+    private <T> T fetchAttribute( String name, Class<T> type ) {
+        try {
+            return type.cast( server.getAttribute( oname, name ) ) ;
+        } catch (JMException exc) {
+            throw new GmbalException( "Exception in fetchAttribute", exc ) ;
+        } catch (IOException exc) {
+            throw new GmbalException( "Exception in fetchAttribute", exc ) ;
+        }
+    }
+
+    public AMXClient( MBeanServerConnection server,
+        ObjectName oname ) {
+        this.server = server ;
+        this.oname = oname ;
+    }
+
+    private AMXClient makeAMX( ObjectName on ) {
+        return new AMXClient( this.server, on ) ;
+    }
+
+    public String getName() {
+        return fetchAttribute( "getName", String.class )  ;
+    }
+
+    public Map<String,?> getMeta() {
+        try {
+            ModelMBeanInfo mbi = (ModelMBeanInfo) server.getMBeanInfo( oname );
+            Descriptor desc = mbi.getMBeanDescriptor() ;
+            Map<String,Object> result = new HashMap<String,Object>() ;
+            for (String str : desc.getFieldNames()) {
+                result.put( str, desc.getFieldValue( str )) ;
+            }
+            return result ;
+        } catch (MBeanException ex) {
+            throw new GmbalException( "Exception in getMeta", ex ) ;
+        } catch (RuntimeOperationsException ex) {
+            throw new GmbalException( "Exception in getMeta", ex ) ;
+        } catch (InstanceNotFoundException ex) {
+            throw new GmbalException( "Exception in getMeta", ex ) ;
+        } catch (IntrospectionException ex) {
+            throw new GmbalException( "Exception in getMeta", ex ) ;
+        } catch (ReflectionException ex) {
+            throw new GmbalException( "Exception in getMeta", ex ) ;
+        } catch (IOException ex) {
+            throw new GmbalException( "Exception in getMeta", ex ) ;
+        }
+    }
+
+    public AMX getParent() {
+        ObjectName res  = fetchAttribute( "getContainer", ObjectName.class ) ;
+        return makeAMX( res ) ;
+    }
+
+    public AMX[] getChildren() {
+        ObjectName[] onames = fetchAttribute( "getContained", 
+            ObjectName[].class ) ;
+        return makeAMXArray( onames ) ;
+    }
+
+    private AMX[] makeAMXArray( ObjectName[] onames ) {
+        AMX[] result = new AMX[onames.length] ;
+        int ctr=0 ;
+        for (ObjectName on : onames ) {
+            result[ctr++] = makeAMX( on ) ;
+        }
+
+        return result ;
+    }
+
+    public Object getAttribute(String attribute) {
+        try {
+            return server.getAttribute(oname, attribute);
+        } catch (MBeanException ex) {
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
+        } catch (AttributeNotFoundException ex) {
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
+        } catch (ReflectionException ex) {
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
+        } catch (InstanceNotFoundException ex) {
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
+        } catch (IOException ex) {
+            throw new GmbalException( "Exception in getAttribute", ex ) ;
+        }
+    }
+
+    public void setAttribute(Attribute attribute) {
+        try {
+            server.setAttribute(oname, attribute);
+        } catch (InstanceNotFoundException ex) {
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
+        } catch (AttributeNotFoundException ex) {
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
+        } catch (InvalidAttributeValueException ex) {
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
+        } catch (MBeanException ex) {
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
+        } catch (ReflectionException ex) {
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
+        } catch (IOException ex) {
+            throw new GmbalException( "Exception in setAttribute", ex ) ;
+        }
+    }
+
+    public AttributeList getAttributes(String[] attributes) {
+        try {
+            return server.getAttributes(oname, attributes);
+        } catch (InstanceNotFoundException ex) {
+            throw new GmbalException( "Exception in getAttributes", ex ) ;
+        } catch (ReflectionException ex) {
+            throw new GmbalException( "Exception in getAttributes", ex ) ;
+        } catch (IOException ex) {
+            throw new GmbalException( "Exception in getAttributes", ex ) ;
+        }
+    }
+
+    public AttributeList setAttributes(AttributeList attributes) {
+        try {
+            return server.setAttributes(oname, attributes);
+        } catch (InstanceNotFoundException ex) {
+            throw new GmbalException( "Exception in setAttributes", ex ) ;
+        } catch (ReflectionException ex) {
+            throw new GmbalException( "Exception in setAttributes", ex ) ;
+        } catch (IOException ex) {
+            throw new GmbalException( "Exception in setAttributes", ex ) ;
+        }
+    }
+
+    public Object invoke(String actionName, Object[] params, String[] signature)
+        throws MBeanException, ReflectionException {
+        try {
+            return server.invoke(oname, actionName, params, signature);
+        } catch (InstanceNotFoundException ex) {
+            throw new GmbalException( "Exception in invoke", ex ) ;
+        } catch (IOException ex) {
+            throw new GmbalException( "Exception in invoke", ex ) ;
+        }
+    }
+
+    public MBeanInfo getMBeanInfo() {
+        try {
+            return server.getMBeanInfo(oname);
+        } catch (InstanceNotFoundException ex) {
+            throw new GmbalException( "Exception in invoke", ex ) ;
+        } catch (IntrospectionException ex) {
+            throw new GmbalException( "Exception in invoke", ex ) ;
+        } catch (ReflectionException ex) {
+            throw new GmbalException( "Exception in invoke", ex ) ;
+        } catch (IOException ex) {
+            throw new GmbalException( "Exception in invoke", ex ) ;
+        }
+    }
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl;
+
+import javax.management.MBeanException;
+import org.glassfish.gmbal.AMX;
+import org.glassfish.gmbal.generic.Algorithms;
+import org.glassfish.gmbal.generic.UnaryFunction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.management.Descriptor;
+import javax.management.MBeanInfo;
+import javax.management.ObjectName;
+import javax.management.modelmbean.ModelMBeanInfoSupport;
+import org.glassfish.gmbal.GmbalException;
+
+/**
+ *
+ * @author ken
+ */
+public class AMXImpl implements AMX {
+    private MBeanImpl mbean ;
+
+    public AMXImpl( final MBeanImpl mb ) {
+        this.mbean = mb ;
+    }
+
+    public String getName() {
+        return mbean.name() ;
+    }
+
+    public Map<String,?> getMeta() {
+        MBeanInfo mbi = mbean.getMBeanInfo() ;
+        ModelMBeanInfoSupport  mmbi = (ModelMBeanInfoSupport)mbi ;
+        Descriptor desc ;
+        try {
+            desc = mmbi.getMBeanDescriptor();
+        } catch (MBeanException ex) {
+            throw Exceptions.self.excForGetMeta( ex ) ;
+        }
+        Map<String,Object> result = new HashMap<String,Object>() ;
+        for (String key : desc.getFieldNames()) {
+            result.put( key, desc.getFieldValue(key)) ;
+        }
+        return result ;
+    }
+
+    public AMX getParent() {
+        MBeanImpl parent = mbean.parent() ;
+        if (parent != null) {
+            return parent.facet( AMX.class, false ) ;
+        } else {
+            ManagedObjectManagerInternal mom = mbean.skeleton().mom() ;
+            ObjectName rpn = mom.getRootParentName() ;
+            if (rpn == null) {
+                return null ;
+            } else {
+                return new AMXClient( mom.getMBeanServer(), rpn ) ;
+            }
+        }
+    }
+
+    public AMX[] getChildren() {
+        List<AMX> children = getContained( mbean.children().keySet() ) ;
+        return children.toArray( new AMX[children.size()] ) ;
+    }
+
+    private static UnaryFunction<MBeanImpl,AMX> extract =
+        new UnaryFunction<MBeanImpl,AMX>() {
+            @SuppressWarnings("unchecked")
+            public AMX evaluate( MBeanImpl mb ) {
+                return mb.facet( AMX.class, false ) ;
+            }
+        } ;
+
+   private List<AMX> getContained( Set<String> types ) {
+        List<AMX> result = new ArrayList<AMX>() ;
+        for (String str : types ) {
+            result.addAll( Arrays.asList( getContained( str ) ) ) ;
+        }
+        return result ;
+   }
+
+    private AMX[] getContained(String type) {
+        Collection<AMX> children = Algorithms.map( mbean.children().get( type ),
+            extract ).values() ;
+        return children.toArray( new AMX[children.size()] ) ;
+    }
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl ;
+
+
+import java.lang.reflect.Method ;
+import java.lang.reflect.ReflectPermission;
+import java.lang.reflect.Type ;
+
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
+import java.util.List;
+import javax.management.ReflectionException ;
+
+
+
+import org.glassfish.gmbal.generic.DprintUtil;
+import org.glassfish.gmbal.generic.DumpIgnore;
+import org.glassfish.gmbal.generic.DumpToString;
+import org.glassfish.gmbal.generic.FacetAccessor;
+import org.glassfish.gmbal.generic.Pair;
+import javax.management.MBeanException;
+import org.glassfish.gmbal.GmbalException;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+    
+public class AttributeDescriptor {
+    public enum AttributeType { SETTER, GETTER } ;
+
+    @DumpToString
+    private EvaluatedMethodDeclaration _method ;
+    private String _id ;
+    private String _description ;
+    private AttributeType _atype ;
+    @DumpToString
+    private EvaluatedType _type ;
+    private TypeConverter _tc ;
+
+    @DumpIgnore
+    private DprintUtil dputil = new DprintUtil( getClass() ) ;
+
+    private static final Permission accessControlPermission =
+        new ReflectPermission( "suppressAccessChecks" ) ;
+
+    private AttributeDescriptor( final ManagedObjectManagerInternal mom, 
+        final EvaluatedMethodDeclaration method, final String id,
+        final String description, final AttributeType atype, 
+        final EvaluatedType type ) {
+    
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman != null) {
+            sman.checkPermission( accessControlPermission ) ;
+        }
+
+        this._method = AccessController.doPrivileged(
+            new PrivilegedAction<EvaluatedMethodDeclaration>() {
+                public EvaluatedMethodDeclaration run() {
+                    method.method().setAccessible(true);
+                    return method ;
+                }
+            }
+        ) ;
+
+        this._id = id ;
+        this._description = description ;
+        this._atype = atype ;
+        this._type = type ;
+        this._tc = mom.getTypeConverter( type ) ;
+    }
+
+    public final Method method() { return _method.method() ; }
+
+    public final String id() { return _id ; }
+
+    public final String description() { return _description ; }
+
+    public final AttributeType atype() { return _atype ; }
+
+    public final EvaluatedType type() { return _type ; }
+
+    public final TypeConverter tc() { return _tc ; }
+    
+    public boolean isApplicable( Object obj ) {
+        return _method.method().getDeclaringClass().isInstance( obj ) ;
+    }
+
+    private void checkType( AttributeType at ) {
+        if (at != _atype) {
+            throw Exceptions.self.excForCheckType( at ) ;
+        }
+    }
+
+    public Object get( FacetAccessor fa,
+        boolean debug ) throws MBeanException, ReflectionException {
+        
+        if (debug) {
+            dputil.enter( "get", "fa=", fa ) ;
+        }
+        
+        checkType( AttributeType.GETTER ) ;
+                
+        Object result = null;
+        
+        try {
+            result = _tc.toManagedEntity(fa.invoke(_method.method(), debug ));
+        } catch (RuntimeException exc) {
+            if (debug) {
+                dputil.exception( "Error:", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (debug) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    }
+
+    public void set( FacetAccessor target, Object value, 
+        boolean debug ) throws MBeanException, ReflectionException {
+        
+        checkType( AttributeType.SETTER ) ;
+        
+        if (debug) {
+            dputil.enter( "set", "target=", target, "value=", value ) ;
+        }
+        
+        try {
+            target.invoke(_method.method(), debug,
+                _tc.fromManagedEntity(value));
+        } catch (RuntimeException exc) {
+            if (debug) {
+                dputil.exception( "Error:", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (debug) {
+                dputil.exit() ;
+            }
+        }
+    }
+    
+/**************************************************************************
+ * Factory methods and supporting code:
+ *
+ **************************************************************************/
+
+    private static boolean startsWithNotEquals( String str, String prefix ) {
+	return str.startsWith( prefix ) && !str.equals( prefix ) ;
+    }
+
+    private static String stripPrefix( String str, String prefix ) {
+        return str.substring( prefix.length() ) ;
+
+        /* old implementation that converted first char after prefix to lower case:
+	int prefixLength = prefix.length() ;
+	String first = str.substring( prefixLength, 
+            prefixLength+1 ).toLowerCase() ;
+	if (str.length() == prefixLength + 1) {
+	    return first ;
+	} else {
+	    return first + str.substring( prefixLength + 1 ) ;
+	}
+        */
+    }
+
+    private static String lowerInitialCharacter( final String arg ) {
+        if (arg == null || arg.length() == 0) {
+            return arg ;
+        }
+
+        char initChar = Character.toLowerCase( arg.charAt(0) ) ;
+        String rest = arg.substring(1) ;
+        return initChar + rest ;
+    }
+
+    private static String getDerivedId( String methodName, 
+        final Pair<AttributeType,EvaluatedType> ainfo,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt) {
+
+        String result = methodName ;
+        boolean needLowerCase = adt ==
+            ManagedObjectManagerInternal.AttributeDescriptorType
+                .COMPOSITE_DATA_ATTR ;
+
+        if (ainfo.first() == AttributeType.GETTER) {
+            if (startsWithNotEquals( methodName, "get" )) {
+                result = stripPrefix( methodName, "get" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
+            } else if (ainfo.second().equals( EvaluatedType.EBOOLEAN ) &&
+                startsWithNotEquals( methodName, "is" )) {
+                result = stripPrefix( methodName, "is" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
+            }
+        } else {
+            if (startsWithNotEquals( methodName, "set" )) {
+                result = stripPrefix( methodName, "set" ) ;
+                if (needLowerCase) {
+                    result = lowerInitialCharacter( result ) ;
+                }
+            }
+        }
+        
+        return result ;
+    }
+
+    private static Pair<AttributeType,EvaluatedType> getTypeInfo(
+        EvaluatedMethodDeclaration method ) {
+
+        final EvaluatedType rtype = method.returnType() ;
+        final List<EvaluatedType> atypes = method.parameterTypes() ;
+        AttributeType atype ;
+        EvaluatedType attrType ;
+
+        if (rtype.equals( EvaluatedType.EVOID )) {
+            if (atypes.size() != 1) {
+                return null ;
+            }
+
+            atype = AttributeType.SETTER ;
+            attrType = atypes.get(0) ;
+        } else {
+            if (atypes.size() != 0) {
+                return null ;
+            }
+
+            atype = AttributeType.GETTER ;
+            attrType = rtype ;
+        }
+
+        return new Pair<AttributeType,EvaluatedType>( atype, attrType ) ;
+    }
+
+    private static boolean empty( String arg ) {
+        return (arg==null) || (arg.length() == 0) ;
+    }
+   
+    // See if method is an attribute according to its type, and the id and methodName arguments.
+    // If it is, returns its AttributeDescriptor, otherwise return null.  Fails if
+    // both id and methodName are empty.
+    public static AttributeDescriptor makeFromInherited(
+        final ManagedObjectManagerInternal mom,
+        final EvaluatedMethodDeclaration method, final String id,
+        final String methodName, final String description,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
+
+        if (empty(methodName) && empty(id)) {
+            throw Exceptions.self.excForMakeFromInherited() ;
+        }
+
+        Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( method ) ;
+        if (ainfo == null) {
+            return null ;
+        }
+
+        final String derivedId = getDerivedId( method.name(), ainfo, adt ) ;
+
+        if (empty( methodName )) { // We know !empty(id) at this point
+            if (!derivedId.equals( id )) {
+                return null ;
+            }
+        } else if (!methodName.equals( method.name() )) {
+            return null ;
+        }
+
+        String actualId = empty(id) ? derivedId : id ;
+
+        return new AttributeDescriptor( mom, method, actualId, description,
+            ainfo.first(), ainfo.second() ) ;
+    }
+
+    // Create an AttributeDescriptor from method.  This case always return an
+    // AttributeDescriptor (unless it fails, for example because an annotated
+    // method had an invalid signature as an Attribute).
+    // Note that extId and description may be empty strings.
+    public static AttributeDescriptor makeFromAnnotated( 
+        final ManagedObjectManagerInternal mom, 
+        final EvaluatedMethodDeclaration m, final String extId,
+        final String description,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
+
+        Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( m ) ;
+        if (ainfo == null) {
+            throw Exceptions.self.excForMakeFromAnnotated( m ) ;
+        }
+
+        String actualId = empty(extId) ? 
+            getDerivedId( m.name(), ainfo, adt ) : extId ;
+
+        return new AttributeDescriptor( mom, m, actualId, description,
+            ainfo.first(), ainfo.second() ) ;
+    }
+
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2008-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package org.glassfish.gmbal.impl;
+
+import java.io.InvalidObjectException;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.List;
+import javax.management.AttributeNotFoundException;
+import javax.management.MBeanException;
+import javax.management.ObjectName;
+import javax.management.openmbean.OpenType;
+import org.glassfish.gmbal.GmbalException;
+import org.glassfish.gmbal.impl.AttributeDescriptor.AttributeType;
+import org.glassfish.gmbal.logex.Chain;
+import org.glassfish.gmbal.logex.ExceptionWrapper;
+import org.glassfish.gmbal.logex.Log;
+import org.glassfish.gmbal.logex.Message;
+import org.glassfish.gmbal.logex.WrapperGenerator;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+
+/** Exception wrapper class.  The logex WrapperGenerator uses this interface
+ * to generate an implementation which returns the appropriate exception, and
+ * generates a log report when the method is called.  This is used for all
+ * implementation classes in this package.
+ *
+ * The exception IDs are allocated in blocks of EXCEPTIONS_PER_CLASS, which is
+ * a lot more than is needed, but we have 32 bits for IDs, and multiples of
+ * a suitably chosen EXCEPTIONS_PER_CLASS (like 100 here) are easy to read in
+ * error messages.
+ *
+ * @author ken
+ */
+@ExceptionWrapper( idPrefix="GMBAL" )
+public interface Exceptions {
+    static final Exceptions self = WrapperGenerator.makeWrapper(
+        Exceptions.class ) ;
+
+    // Allow 100 exceptions per class
+    static final int EXCEPTIONS_PER_CLASS = 100 ;
+
+// AMXImpl
+    static final int AMX_IMPL_START = 1 ;
+
+    @Message( "Exception in getMeta" ) 
+    @Log( id = AMX_IMPL_START + 0 )
+    GmbalException excForGetMeta( @Chain MBeanException ex ) ;
+
+// AttributeDescriptor
+    static final int ATTRIBUTE_DESCRIPTOR_START = AMX_IMPL_START + 
+        EXCEPTIONS_PER_CLASS ;
+
+    @Message( "Required type is {0}" )
+    @Log( id=ATTRIBUTE_DESCRIPTOR_START + 0 )
+    GmbalException excForCheckType( AttributeType at ) ;
+
+    @Message( "methodName and id must not both be null" )
+    @Log( id=ATTRIBUTE_DESCRIPTOR_START + 1 )
+    IllegalArgumentException excForMakeFromInherited( ) ;
+
+    @Message( "{0} is not a valid attribute method" )
+    @Log( id=ATTRIBUTE_DESCRIPTOR_START + 2 )
+    IllegalArgumentException excForMakeFromAnnotated( EvaluatedMethodDeclaration m ) ;
+
+// DescriptorIntrospector
+    static final int DESCRIPTOR_INTROSPECTOR_START =
+        ATTRIBUTE_DESCRIPTOR_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "@DescriptorFields must contain '=' : {0}" )
+    @Log( id=DESCRIPTOR_INTROSPECTOR_START + 0 )
+    IllegalArgumentException excForAddDescriptorFieldsToMap( String field ) ;
+
+    @Log( id=DESCRIPTOR_INTROSPECTOR_START + 1 )
+    UndeclaredThrowableException excForAddAnnotationFieldsToMap(
+        @Chain Exception ex ) ;
+
+    @Message( "Inconcistent values for descriptor field {0} from annotations: {1} :: {2}" )
+    @Log( id=DESCRIPTOR_INTROSPECTOR_START + 2 )
+    IllegalArgumentException excForAddToMap( String name, Object value, Object oldValue ) ;
+
+    @Message( "Illegal type for annotation element using @DescriptorKey: {0}" )
+    @Log( id=DESCRIPTOR_INTROSPECTOR_START + 3 )
+    IllegalArgumentException excForAnnotationToField( String name ) ;
+
+// ImmutableDescriptor
+    static final int IMMUTABLE_DESCRIPTOR_START =
+        DESCRIPTOR_INTROSPECTOR_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "Null Map" )
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 0 )
+    IllegalArgumentException nullMap() ;
+
+    @Message( "Empty or null field name" )
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 1 )
+    IllegalArgumentException badFieldName() ;
+
+    @Message( "Duplicate field name: {0}" )
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 2 )
+    IllegalArgumentException duplicateFieldName( String name ) ;
+
+    @Message( "Bad names or values" )
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 3 )
+    InvalidObjectException excForReadResolveImmutableDescriptor() ;
+
+    @Message( "Null array parameter")
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 4 )
+    IllegalArgumentException nullArrayParameter() ;
+
+    @Message( "Different size arrays")
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 5 )
+    IllegalArgumentException differentSizeArrays() ;
+
+    @Message( "Null fields parameter")
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 6 )
+    IllegalArgumentException nullFieldsParameter() ;
+
+    @Message( "Missing = character: {0}")
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 7 )
+    IllegalArgumentException badFieldFormat( String field ) ;
+
+    @Message( "Inconsistent values for descriptor field {0}: {1} :: {2}" )
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 8 )
+    IllegalArgumentException excForUnion( String name, Object oldValue, Object value ) ;
+
+    @Message( "Null argument" )
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 9 )
+    IllegalArgumentException nullArgument() ;
+
+    @Message( "Descriptor is read-only" )
+    @Log( id=IMMUTABLE_DESCRIPTOR_START + 10 )
+    UnsupportedOperationException unsupportedOperation() ;
+
+// MBeanImpl
+    static final int MBEAN_IMPL_START =
+        IMMUTABLE_DESCRIPTOR_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "Cannot set parent to {0}: this node already has a parent" )
+    @Log( id=MBEAN_IMPL_START + 0 )
+    IllegalArgumentException nodeAlreadyHasParent( MBeanImpl entity ) ;
+
+// MBeanSkeleton
+    static final int MBEAN_SKELETON_START =
+        MBEAN_IMPL_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "At least one of getter and setter must not be null")
+    @Log( id=MBEAN_SKELETON_START + 0 )
+    IllegalArgumentException notBothNull() ;
+
+    @Message( "Getter and setter type must match")
+    @Log( id=MBEAN_SKELETON_START + 1 )
+    IllegalArgumentException typesMustMatch() ;
+
+    @Message( "Methods {0} and {1} are both annotated "
+        + "with @ObjectNameKey in class {2}")
+    @Log( id=MBEAN_SKELETON_START + 2 )
+    IllegalArgumentException duplicateObjectNameKeyAttributes(
+        EvaluatedMethodDeclaration first, EvaluatedMethodDeclaration second,
+        String className ) ;
+
+    @Message( "ParameterNams annotation must have the same number "
+        + "of arguments as the length of the method parameter list" )
+    @Log( id=MBEAN_SKELETON_START + 3 )
+    IllegalArgumentException parameterNamesLengthBad() ;
+
+    @Message( "Could not find attribute {0}" )
+    @Log( id=MBEAN_SKELETON_START + 4 )
+    AttributeNotFoundException couldNotFindAttribute( String name ) ;
+
+    @Message( "Could not find writable attribute {0}" )
+    @Log( id=MBEAN_SKELETON_START + 5 )
+    AttributeNotFoundException couldNotFindWritableAttribute( String name ) ;
+
+    @Message( "Could not find operation named {0}" )
+    @Log( id=MBEAN_SKELETON_START + 6 )
+    IllegalArgumentException couldNotFindOperation( String name ) ;
+
+    @Message( "Could not find operation named {0} with signature {1}" )
+    @Log( id=MBEAN_SKELETON_START + 7 )
+    IllegalArgumentException couldNotFindOperationAndSignature( String name,
+        List<String> signature) ;
+
+    @Message( "Name of this ManagedObject")
+    String nameOfManagedObject() ;
+
+// MBeanTree
+    static final int MBEAN_TREE_START =
+        MBEAN_SKELETON_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "Root has already been set: cannot set it again" )
+    @Log( id=MBEAN_TREE_START + 0 )
+    IllegalStateException rootAlreadySet() ;
+
+    @Message( "Could not construct ObjectName for root" )
+    @Log( id=MBEAN_TREE_START + 1 )
+    IllegalArgumentException noRootObjectName( @Chain Exception ex ) ;
+
+    @Message( "Could not register root" )
+    @Log( id=MBEAN_TREE_START + 2 )
+    IllegalArgumentException rootRegisterFail( @Chain Exception ex ) ;
+
+    @Message( "Root has not been set" )
+    @Log( id=MBEAN_TREE_START + 3 )
+    IllegalStateException rootNotSet() ;
+
+    @Message( "rootParentName {0} is invalid: missing type or name" )
+    @Log( id=MBEAN_TREE_START + 4 )
+    GmbalException invalidRootParentName( ObjectName oname ) ;
+
+    @Message( "Entity {0} is not part of this EntityTree" )
+    @Log( id=MBEAN_TREE_START + 5 )
+    IllegalArgumentException notPartOfThisTree( MBeanImpl mbi ) ;
+
+    @Message( "Parent cannot be null" )
+    @Log( id=MBEAN_TREE_START + 6 )
+    IllegalArgumentException parentCannotBeNull() ;
+
+    @Message( "Parent object {0} not found" )
+    @Log( id=MBEAN_TREE_START + 7 )
+    String parentNotFound( Object parent ) ;
+
+    @Message( "Object {0} is alreadt registered as {1}")
+    @Log( id=MBEAN_TREE_START + 8 )
+    String objectAlreadyRegistered( Object obj, MBeanImpl oldMbi ) ;
+
+    @Message( "Should not happen" )
+    @Log( id=MBEAN_TREE_START + 9 )
+    IllegalStateException shouldNotHappen( @Chain Exception ex ) ;
+
+// ManagedObjectManagerImpl
+    static final int MANAGED_OBJECT_MANAGER_IMPL_START =
+        MBEAN_TREE_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "obj argument is a String: {0} : was a call to "
+        + "registerAtRoot intended here?" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 0 )
+    IllegalArgumentException objStringWrongRegisterCall( String str ) ;
+
+    @Message( "Exception in register" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 1 )
+    IllegalArgumentException exceptionInRegister( @Chain Exception ex ) ;
+
+    @Message( "Exception in unregister" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 2 )
+    IllegalArgumentException exceptionInUnregister( @Chain Exception ex ) ;
+
+    @Message( "Cannot add annotation to element {0}: "
+        + "an Annotation of type {1} is already present")
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 3 )
+    IllegalArgumentException duplicateAnnotation( AnnotatedElement element,
+        String name ) ;
+
+    @Message( "Class {0} contains both the InheritedAttribute and "
+        + "the InheritedAttributes annotations" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 4 )
+    IllegalArgumentException badInheritedAttributeAnnotation( 
+        EvaluatedClassDeclaration cls ) ;
+
+    @Message( "No description available!" )
+    String noDescriptionAvailable() ;
+
+// TypeConverterImpl
+    static final int TYPE_CONVERTER_IMPL_START =
+        MANAGED_OBJECT_MANAGER_IMPL_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "Unsupported OpenType {0}")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 0 )
+    IllegalArgumentException unsupportedOpenType( OpenType ot ) ;
+
+    @Message( "{0} cannot be converted into a Java class")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 1 )
+    IllegalArgumentException cannotConvertToJavaType( EvaluatedType type ) ;
+
+    @Message( "Management entity {0} is not an ObjectName")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 2 )
+    IllegalArgumentException entityNotObjectName( Object entity ) ;
+
+    @Message( "Arrays of arrays not supported")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 3 )
+    IllegalArgumentException noArrayOfArray( @Chain Exception exc ) ;
+
+    @Message( "{0} is not a String" )
+    @Log( id=TYPE_CONVERTER_IMPL_START + 4 )
+    IllegalArgumentException notAString( Object obj ) ;
+
+    @Message( "There is no <init>(String) constructor "
+        + "available to convert a String into a {0}")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 5 )
+    UnsupportedOperationException noStringConstructor( Class cls ) ;
+
+    @Message( "Error in converting from String to {0}" )
+    @Log( id=TYPE_CONVERTER_IMPL_START + 6 )
+    IllegalArgumentException stringConversionError( Class cls, @Chain
+        Exception exc ) ;
+
+    @Message( "Exception in makeCompositeType")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 7 )
+    IllegalArgumentException exceptionInMakeCompositeType( @Chain Exception exc ) ;
+
+    @Message( "Exception in handleManagedData")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 8 )
+    IllegalArgumentException exceptionInHandleManagedData( @Chain Exception exc ) ;
+
+    @Message( "Remove is not supported")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 9 )
+    UnsupportedOperationException removeNotSupported( ) ;
+
+    @Message( "Recursive types are not supported: type is {0}")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 10 )
+    UnsupportedOperationException recursiveTypesNotSupported( EvaluatedType et ) ;
+
+    @Message( "OpenType exception in ArrayType construction caused by {0}")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 11 )
+    IllegalArgumentException openTypeInArrayTypeException( OpenType ot,
+        @Chain Exception exc ) ;
+
+    @Message( "Exception in makeMapTabularType")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 12 )
+    IllegalArgumentException exceptionInMakeMapTabularType(
+        @Chain Exception exc ) ;
+
+    @Message( "row type for {0}")
+    String rowTypeDescription( String mapType ) ;
+
+    @Message( "Key of map {0}")
+    String keyFieldDescription( String mapType ) ;
+
+    @Message( "Value of map {0}")
+    String valueFieldDescription( String mapType ) ;
+
+    @Message( "Table:{0}")
+    String tableName( String mapType ) ;
+
+    @Message( "Table for map {0}")
+    String tableDescription( String mapType ) ;
+
+    @Message( "Exception in makeMapTabularData:toManagedEntity")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 13 )
+    IllegalArgumentException excInMakeMapTabularDataToManagedEntity(
+        @Chain Exception exc ) ;
+
+    @Message( "{0} must have at least 1 type argument")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 14 )
+    IllegalArgumentException paramTypeNeedsArgument( ParameterizedType type ) ;
+
+    @Message( "Converting from OpenType {0} to Java type {1} is not supported")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 15 )
+    UnsupportedOperationException openToJavaNotSupported( OpenType otype, 
+        EvaluatedType javaType ) ;
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl ;
+
+import org.glassfish.gmbal.generic.FacetAccessor;
+import org.glassfish.gmbal.generic.FacetAccessorImpl;
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Collections;
+import javax.management.Attribute ;
+import javax.management.AttributeList ;
+import javax.management.InstanceAlreadyExistsException;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException ;
+import javax.management.InvalidAttributeValueException ;
+import javax.management.AttributeNotFoundException ;
+import javax.management.MBeanRegistrationException;
+import javax.management.NotCompliantMBeanException;
+import javax.management.ReflectionException ;
+import javax.management.MBeanInfo ;
+import javax.management.DynamicMBean ;
+import javax.management.NotificationBroadcasterSupport ;
+import javax.management.MBeanNotificationInfo ;
+import javax.management.AttributeChangeNotification ;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.util.Map ;
+import java.util.HashMap ;
+
+public class MBeanImpl extends NotificationBroadcasterSupport 
+    implements FacetAccessor, DynamicMBean {
+    
+    private final MBeanSkeleton skel ;
+    private final String type ;
+    private String name ;
+    private ObjectName oname ;
+    private MBeanImpl parent ;
+    private Map<String,Map<String,MBeanImpl>> children ;
+
+    private Object target ;
+    private MBeanServer server ;
+    
+    public MBeanImpl( final MBeanSkeleton skel, 
+        final Object obj, final MBeanServer server,
+        final String type ) {
+
+        this.skel = skel ;
+        this.type = type ;
+        this.name = null ;
+        this.oname = null ;
+        this.parent = null ;
+        this.children = new HashMap<String,Map<String,MBeanImpl>>() ;
+        this.target = obj ;
+        addFacet( obj ) ;
+        addFacet( new AMXImpl( this ) ) ;
+
+        // Note that the construction of an MBean skeleton and
+        // facet registration must stay in sync.  The code is currently separated into
+        // two places (here and call to new MBeanSkeleton( skel, skel )).
+        // This will also be important for dealing with multiple upper bounds.
+        this.server = server ;
+    }
+        
+    @Override
+    public synchronized boolean equals( Object obj ) {
+        if (this == obj) {
+            return true ;
+        }
+        
+        if (!(obj instanceof MBeanImpl)) {
+            return false ;
+        }
+        
+        MBeanImpl other = (MBeanImpl)obj ;
+        
+        return parent == other.parent() &&
+            name.equals( other.name() ) &&
+            type.equals( other.type() ) ;
+    }
+    
+    @Override
+    public synchronized int hashCode() {
+        return name.hashCode() ^ type.hashCode() ^ parent.hashCode() ;
+    }
+ 
+    @Override
+    public String toString() {
+
+        return "MBeanImpl[skel=" + skel
+            + ",type=" + type + ",name=" + name
+            + ",oname=" + oname ;
+    }
+    
+    public MBeanSkeleton skeleton() {
+        return skel ;
+    }
+
+    public String type() {
+        return type ;
+    }
+    
+    public Object target() {
+        return target ;
+    }
+    
+    public synchronized String name() {
+        return name ;
+    }
+
+    public synchronized void name( String str ) {
+        name = str ;
+    }
+    
+    public synchronized ObjectName objectName() {
+        return oname ;
+    }
+    
+    public synchronized void objectName( ObjectName oname ) {
+        this.oname = oname ;
+    }
+
+    public synchronized MBeanImpl parent() {
+        return parent ;
+    }
+   
+    public synchronized void parent( MBeanImpl entity ) {
+        if (parent == null) {
+            parent = entity ;
+        } else {
+            throw Exceptions.self.nodeAlreadyHasParent(entity) ;
+        }
+    }
+
+    public synchronized Map<String,Map<String,MBeanImpl>> children() {
+        // Make a copy to avoid problems with concurrent modification.
+        Map<String,Map<String,MBeanImpl>> result = new 
+            HashMap<String,Map<String,MBeanImpl>>() ;
+        for (Map.Entry<String,Map<String,MBeanImpl>> entry 
+            : children.entrySet()) {
+            
+            result.put( entry.getKey(), 
+                Collections.unmodifiableMap( 
+                    new HashMap<String,MBeanImpl>( entry.getValue() ) ) ) ;
+        }
+           
+        return Collections.unmodifiableMap( result ) ;
+    }
+   
+    public synchronized void addChild( MBeanImpl child ) {
+        child.parent( this ) ;
+        Map<String,MBeanImpl> map = children.get( child.type() ) ;
+        if (map == null) {
+            map = new HashMap<String,MBeanImpl>() ;
+            children.put( child.type(), map ) ;
+        }
+        
+        map.put( child.name(), child) ;
+    }
+   
+    public synchronized void removeChild( MBeanImpl child ) {
+        Map<String,MBeanImpl> map = children.get( child.type() ) ;
+        if (map != null) {
+            map.remove( child.name() ) ;
+            if (map.size() == 0) {
+                children.remove( child.type() ) ;
+            }
+        }
+    }
+ 
+    private void restNameHelper( StringBuilder sb, MBeanImpl mb ) {
+        if (mb.parent() != null) {
+            restNameHelper( sb, mb.parent() ) ;
+        } 
+
+        sb.append( mb.type() ) ;
+        sb.append( '=' ) ;
+        sb.append( mb.name() ) ;
+        sb.append( ',' ) ;
+    }
+
+    public synchronized String restName() {
+        StringBuilder sb = new StringBuilder( 60 ) ;
+        restNameHelper( sb, this ) ;
+        return sb.toString() ;
+    }
+ 
+    public synchronized void register() throws InstanceAlreadyExistsException, 
+        MBeanRegistrationException, NotCompliantMBeanException {
+        
+        server.registerMBean( this, oname ) ;
+    }
+    
+    public synchronized void unregister() throws InstanceNotFoundException, 
+        MBeanRegistrationException {
+        
+        server.unregisterMBean( oname );
+    }
+    
+    // Methods for DynamicMBean
+
+    public Object getAttribute(String attribute) 
+        throws AttributeNotFoundException, MBeanException, ReflectionException {
+
+	return skel.getAttribute( this, attribute ) ;
+    }
+    
+    public void setAttribute(Attribute attribute) throws AttributeNotFoundException,
+	InvalidAttributeValueException, MBeanException, ReflectionException  {
+
+	skel.setAttribute( this, this, attribute ) ;
+    }
+        
+    public AttributeList getAttributes(String[] attributes) {
+	return skel.getAttributes( this, attributes ) ;
+    }
+        
+    public AttributeList setAttributes(AttributeList attributes) {
+	return skel.setAttributes( this, this, attributes ) ;
+    }
+    
+    public Object invoke(String actionName, Object params[], String signature[])
+	throws MBeanException, ReflectionException  {
+
+	return skel.invoke( this, actionName, params, signature ) ;
+    }
+    
+    private static final MBeanNotificationInfo[] 
+        ATTRIBUTE_CHANGE_NOTIFICATION_INFO = { new MBeanNotificationInfo(
+            new String[] { AttributeChangeNotification.ATTRIBUTE_CHANGE },
+                AttributeChangeNotification.class.getName(),
+                "An Attribute of this MBean has changed" ) 
+    } ;
+    
+    @Override
+    public MBeanNotificationInfo[] getNotificationInfo() {
+        return ATTRIBUTE_CHANGE_NOTIFICATION_INFO.clone() ;
+    }
+
+    public MBeanInfo getMBeanInfo() {
+        return skel.getMBeanInfo();
+    }
+    
+    /**********************************************************************
+     * Code for dynamic inheritance support: use invoke with reflection to
+     * call dynamically inherited classes.
+     */
+    
+    private FacetAccessor facetAccessorDelegate = 
+        new FacetAccessorImpl( this ) ;
+    
+    public <T> T facet(Class<T> cls, boolean debug ) {
+        return facetAccessorDelegate.facet( cls, debug ) ;
+    }
+
+    public <T> void addFacet(T obj) {
+        facetAccessorDelegate.addFacet( obj ) ;
+    }
+
+    public void removeFacet( Class<?> cls ) {
+        facetAccessorDelegate.removeFacet( cls ) ;
+    }
+
+    public Object invoke(Method method, boolean debug, Object... args) {
+        return facetAccessorDelegate.invoke( method, debug, args ) ;
+    }
+
+    public Collection<Object> facets() {
+        return facetAccessorDelegate.facets() ;
+    }
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl ;
+
+import org.glassfish.gmbal.AMXMetadata;
+import java.util.List ;
+import java.util.Arrays ;
+import java.util.ArrayList ;
+import java.util.Map ;
+import java.util.HashMap ;
+import java.util.Set ;
+import java.util.HashSet ;
+import java.util.Iterator ;
+import java.util.concurrent.atomic.AtomicLong ;
+
+import java.lang.reflect.Method ;
+import java.lang.reflect.ReflectPermission;
+
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
+import javax.management.Attribute ;
+import javax.management.AttributeList ;
+import javax.management.MBeanException ;
+import javax.management.InvalidAttributeValueException ;
+import javax.management.AttributeNotFoundException ;
+import javax.management.ReflectionException ;
+import javax.management.MBeanParameterInfo ;
+
+import javax.management.NotificationBroadcasterSupport ;
+import javax.management.AttributeChangeNotification ;
+
+import org.glassfish.gmbal.generic.BinaryFunction ;
+import org.glassfish.gmbal.NameValue ;
+import org.glassfish.gmbal.ManagedOperation ;
+import org.glassfish.gmbal.ParameterNames ;
+
+import org.glassfish.gmbal.generic.DprintUtil;
+import org.glassfish.gmbal.generic.DumpIgnore;
+import org.glassfish.gmbal.generic.Pair ;
+import org.glassfish.gmbal.generic.DumpToString ;
+
+import org.glassfish.gmbal.generic.FacetAccessor;
+import javax.management.Descriptor;
+import javax.management.JMException;
+import javax.management.modelmbean.ModelMBeanAttributeInfo;
+import javax.management.modelmbean.ModelMBeanInfoSupport;
+import javax.management.modelmbean.ModelMBeanOperationInfo;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+
+public class MBeanSkeleton {
+    // Object evaluate( Object, List<Object> ) 
+    // (or Result evaluate( Target, ArgList ))
+    public interface Operation
+        extends BinaryFunction<FacetAccessor,List<Object>,Object> {} ;
+
+    private Descriptor descriptor ;
+    private final String type ;
+    private AMXMetadata mbeanType ;
+    @DumpToString
+    private final AtomicLong sequenceNumber ;
+    private final ModelMBeanInfoSupport mbInfo ;
+    @DumpToString
+    private final ManagedObjectManagerInternal mom ;
+    @DumpIgnore
+    private final DprintUtil dputil ;
+    private final Map<String,AttributeDescriptor> setters ;
+    private final Map<String,AttributeDescriptor> getters ;
+    private AttributeDescriptor nameAttributeDescriptor ;
+    private final Map<String,Map<List<String>,Operation>> operations ;
+    private final List<ModelMBeanAttributeInfo> mbeanAttributeInfoList ;
+    private final List<ModelMBeanOperationInfo> mbeanOperationInfoList ;
+ 
+    private <K,L,V> void addToCompoundMap( Map<K,Map<L,V>> source, Map<K,Map<L,V>> dest ) {
+        for (Map.Entry<K,Map<L,V>> entry : source.entrySet()) {
+            Map<L,V> map = entry.getValue() ;
+            if (map == null) {
+                map = new HashMap<L,V>() ;
+                dest.put( entry.getKey(), map ) ;
+            }
+            map.putAll( source.get( entry.getKey() ) ) ;
+        }
+    }
+
+    private MBeanSkeleton( MBeanSkeleton first, MBeanSkeleton second ) {
+        dputil = new DprintUtil( getClass() ) ;
+        this.mom = first.mom ;
+
+        type = first.type ;
+
+        sequenceNumber = new AtomicLong() ;
+        setters = new HashMap<String,AttributeDescriptor>() ;
+            setters.putAll( second.setters ) ;
+            setters.putAll( first.setters ) ;
+
+        getters = new HashMap<String,AttributeDescriptor>() ;
+            getters.putAll( second.getters ) ;
+            getters.putAll( first.getters ) ;
+
+        operations = new HashMap<String,Map<List<String>,Operation>>() ;
+            addToCompoundMap( second.operations, operations ) ;
+            addToCompoundMap( first.operations, operations ) ;
+
+        mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>() ;
+            mbeanAttributeInfoList.addAll( second.mbeanAttributeInfoList ) ;
+            mbeanAttributeInfoList.addAll( first.mbeanAttributeInfoList ) ;
+
+        mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
+            mbeanOperationInfoList.addAll( second.mbeanOperationInfoList ) ;
+            mbeanOperationInfoList.addAll( first.mbeanOperationInfoList ) ;
+
+        descriptor = DescriptorUtility.union( first.descriptor,
+            second.descriptor ) ;
+
+        mbInfo = makeMbInfo( first.mbInfo.getDescription() ) ;
+    }
+
+    private ModelMBeanInfoSupport makeMbInfo( String description ) {
+        ModelMBeanAttributeInfo[] attrInfos = mbeanAttributeInfoList.toArray(
+            new ModelMBeanAttributeInfo[mbeanAttributeInfoList.size()] ) ;
+        ModelMBeanOperationInfo[] operInfos = mbeanOperationInfoList.toArray(
+            new ModelMBeanOperationInfo[mbeanOperationInfoList.size() ] ) ;
+
+        return new ModelMBeanInfoSupport(
+            type, description, attrInfos, null,
+                operInfos, null, descriptor ) ;
+    }
+
+    /** Create a new MBeanSkeleton that is the composition of this one
+     * and skel.  Note that, if this and skel contain the same attribute,
+     * the version from skel will appear in the composition.
+     */
+    public MBeanSkeleton compose( MBeanSkeleton skel ) {
+        return new MBeanSkeleton( skel, this ) ;
+    }
+
+    private enum DescriptorType { mbean, attribute, operation }
+
+    // Create a valid descriptor so that ModelMBinfoSupport won't throw
+    // an exception.
+    Descriptor makeValidDescriptor( Descriptor desc, DescriptorType dtype,
+        String dname ) {
+
+	Map<String,Object> map = new HashMap<String,Object>() ;
+	String[] names = desc.getFieldNames() ;
+	Object[] values = desc.getFieldValues( (String[])null ) ;
+	for (int ctr=0; ctr<names.length; ctr++ ) {
+	    map.put( names[ctr], values[ctr] ) ;
+	}
+
+        map.put( "descriptorType", dtype.toString() ) ;
+        if (dtype == DescriptorType.operation) {
+            map.put( "role", "operation" ) ;
+            map.put( "targetType", "ObjectReference" ) ;
+        } else if (dtype == DescriptorType.mbean) {
+            map.put( "persistPolicy", "never" ) ;
+            map.put( "log", "F" ) ;
+            map.put( "visibility", "1" ) ;
+	}
+
+        map.put( "name", dname ) ;
+	map.put( "displayName", dname ) ;
+
+        return DescriptorUtility.makeDescriptor( map ) ;
+    }
+
+    @Override
+    public String toString() {
+        return "DynamicMBeanSkeleton[type=" + type + "]" ;
+    }
+    
+    // This method should only be called when getter.id.equals( setter.id ) 
+    private void processAttribute( AttributeDescriptor getter, 
+        AttributeDescriptor setter ) {
+
+        if (mom.registrationFineDebug()) {
+            dputil.enter( "processAttribute", "getter=", getter,
+                "setter=", setter ) ;
+        }
+        
+        try {
+            if ((setter == null) && (getter == null)) {
+                throw Exceptions.self.notBothNull() ;
+            }
+
+            if ((setter != null) && (getter != null) 
+                && !setter.type().equals( getter.type() )) {
+
+                throw Exceptions.self.typesMustMatch() ;
+            }
+
+            AttributeDescriptor nonNullDescriptor =
+                (getter != null) ? getter : setter ;
+
+            String name = nonNullDescriptor.id() ;
+            String description = nonNullDescriptor.description() ;
+            Descriptor desc = DescriptorUtility.EMPTY_DESCRIPTOR ;
+            if (getter != null) {
+                desc = DescriptorUtility.union( desc,
+                    DescriptorIntrospector.descriptorForElement(
+                        getter.method() ) );
+            }
+
+            if (setter != null) {
+                desc = DescriptorUtility.union( desc,
+                    DescriptorIntrospector.descriptorForElement(
+                        setter.method() ) );
+            }
+
+            desc = makeValidDescriptor( desc, DescriptorType.attribute, name ) ;
+
+            if (mom.registrationFineDebug()) {
+                dputil.info( "name=", name, "description=", description,
+                    "desc=", desc ) ;
+            }
+            
+            TypeConverter tc = mom.getTypeConverter( nonNullDescriptor.type() ) ;
+
+            ModelMBeanAttributeInfo ainfo = new ModelMBeanAttributeInfo( name,
+                description, tc.getManagedType().toString(),
+                getter != null, setter != null, false, desc ) ;
+            
+            if (mom.registrationFineDebug()) {
+                dputil.info("ainfo=", ainfo ) ;
+            }
+
+            mbeanAttributeInfoList.add( ainfo ) ;
+        } finally {
+            if (mom.registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    private void analyzeAttributes( EvaluatedClassAnalyzer ca ) {
+        if (mom.registrationFineDebug()) {
+            dputil.enter( "analyzeAttributes", "ca=", ca ) ;
+        }
+        
+        try {
+            Pair<Map<String,AttributeDescriptor>,
+                Map<String,AttributeDescriptor>> amap =
+                mom.getAttributes( ca,
+                    ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR ) ;
+
+            getters.putAll( amap.first() ) ;
+            setters.putAll( amap.second() ) ;
+            
+            if (mom.registrationFineDebug()) {
+                dputil.info( "attributes=", amap ) ;
+            }
+
+            final Set<String> setterNames = new HashSet<String>(setters.keySet()) ;
+            if (mom.registrationFineDebug()) {
+                dputil.info( "(Before removing getters):setterNames=", setterNames ) ;
+            }
+            
+            for (String str : getters.keySet()) {
+                processAttribute( getters.get( str ), setters.get( str ) ) ;
+                setterNames.remove( str ) ;
+            }
+            
+            if (mom.registrationFineDebug()) {
+                dputil.info( "(After removing getters):setterNames=", setterNames ) ;
+            }
+   
+            // Handle setters without getters
+            for (String str : setterNames) {
+                processAttribute( null, setters.get( str ) ) ;
+            }
+        } finally {
+            if (mom.registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    private void analyzeObjectNameKeys( EvaluatedClassAnalyzer ca) {
+        if (mom.registrationFineDebug()) {
+            dputil.enter( "analyzeObjectNameKeys", "ca=", ca ) ;
+        }
+        
+        try {
+            final List<EvaluatedMethodDeclaration> annotatedMethods =
+                ca.findMethods( mom.forAnnotation( NameValue.class,
+                    EvaluatedMethodDeclaration.class )) ;
+            
+            if (annotatedMethods.size() == 0) {
+                return ;
+            }
+            
+            // If there are two methods with @NameValue in the same
+            // class, we have an error.
+            EvaluatedMethodDeclaration annotatedMethod = annotatedMethods.get(0) ;
+            if (annotatedMethods.size() > 1) {
+                EvaluatedMethodDeclaration second = annotatedMethods.get(1) ;
+                
+                if (annotatedMethod.containingClass().equals(
+                    second.containingClass())) {
+
+                    throw Exceptions.self.duplicateObjectNameKeyAttributes(
+                        annotatedMethod, second,
+                        annotatedMethod.containingClass().name() ) ;
+                }
+            } 
+
+            if (mom.registrationFineDebug()) {
+                dputil.info( "annotatedMethod=", annotatedMethod ) ;
+            }
+            
+            nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
+                mom, annotatedMethod, "Name",
+                Exceptions.self.nameOfManagedObject(),
+                ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR ) ;
+        } finally {
+            if (mom.registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+    private static final Permission accessControlPermission =
+        new ReflectPermission( "suppressAccessChecks" ) ;
+
+    private Pair<Operation,ModelMBeanOperationInfo> makeOperation(
+        final EvaluatedMethodDeclaration m ) {
+	
+        if (mom.registrationFineDebug()) {
+            dputil.enter( "makeOperation", "m=", m ) ;
+        }
+
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman != null) {
+            sman.checkPermission( accessControlPermission ) ;
+        }
+
+        AccessController.doPrivileged(
+            new PrivilegedAction<Method>() {
+                public Method run() {
+                    m.method().setAccessible(true);
+                    return m.method() ;
+                }
+            }
+        ) ;
+
+        try {
+            final String desc = mom.getDescription( m ) ;
+            final EvaluatedType rtype = m.returnType() ;
+            final TypeConverter rtc = rtype == null ? null : mom.getTypeConverter( 
+                rtype ) ;
+            final List<EvaluatedType> atypes = m.parameterTypes() ;
+            final List<TypeConverter> atcs = new ArrayList<TypeConverter>() ;
+            final ManagedOperation mo = mom.getAnnotation( m,
+                ManagedOperation.class ) ;
+            
+            Descriptor modelDescriptor = makeValidDescriptor(
+                DescriptorIntrospector.descriptorForElement( m.element() ),
+                DescriptorType.operation, m.name() ) ;
+
+            for (EvaluatedType ltype : atypes) {
+                atcs.add( mom.getTypeConverter( ltype ) ) ;
+            }
+
+            if (mom.registrationFineDebug()) {
+                dputil.info( "desc=", desc ) ;
+                dputil.info( "rtype=", rtype ) ;
+                dputil.info( "rtc=", rtc ) ;
+                dputil.info( "atcs=", atcs ) ;
+                dputil.info( "atypes=", atypes ) ;
+                dputil.info( "descriptor=", modelDescriptor ) ;
+            }
+            
+            final Operation oper = new Operation() {
+                public Object evaluate( FacetAccessor target, List<Object> args ) {
+                    if (mom.runtimeDebug()) {
+                        dputil.enter( "Operation:evaluate", "taget=", target, 
+                            "args=", args ) ;
+                    }
+
+                    Object[] margs = new Object[args.size()] ;
+                    Iterator<Object> argsIterator = args.iterator() ;
+                    Iterator<TypeConverter> tcIterator = atcs.iterator() ;
+                    int ctr = 0 ;
+                    while (argsIterator.hasNext() && tcIterator.hasNext()) {
+                        final Object arg = argsIterator.next() ;
+                        final TypeConverter tc = tcIterator.next() ;
+                        margs[ctr++] = tc.fromManagedEntity( arg ) ;
+                    }
+
+                    if (mom.runtimeDebug()) {
+                        dputil.info( "Before invoke: margs=", Arrays.asList( margs ) ) ;
+                    }
+
+                    Object result = target.invoke( m.method(), mom.runtimeDebug(),
+                        margs ) ;
+
+                    if (mom.runtimeDebug()) {
+                        dputil.info( "After invoke: result=", result ) ;
+                    }
+
+                    if (rtc == null) {
+                        return null ;
+                    } else {
+                        return rtc.toManagedEntity( result ) ;
+                    }
+                }
+            } ;
+
+            final ParameterNames pna = m.annotation( ParameterNames.class ) ;
+            if (mom.registrationFineDebug()) {
+                dputil.info( "pna=", pna.value() ) ;
+            }
+            
+            if (pna != null && pna.value().length != atcs.size()) {
+                throw Exceptions.self.parameterNamesLengthBad() ;
+            }
+
+            final MBeanParameterInfo[] paramInfo = 
+                new MBeanParameterInfo[ atcs.size() ] ;
+            int ctr = 0 ;
+            for (TypeConverter tc : atcs) {
+                paramInfo[ctr] = new MBeanParameterInfo(
+                    (pna == null) ? "arg" + ctr : pna.value()[ctr], 
+                    tc.getManagedType().toString(), desc ) ;
+                ctr++ ;
+            }
+
+            final ModelMBeanOperationInfo operInfo =
+                new ModelMBeanOperationInfo( m.name(),
+                desc, paramInfo, rtc.getManagedType().toString(),
+                mo.impact().ordinal(), modelDescriptor ) ;
+
+            if (mom.registrationFineDebug()) {
+                dputil.info( "operInfo=", operInfo ) ;
+            }
+            
+            return new Pair<Operation,ModelMBeanOperationInfo>( oper, operInfo ) ;
+        } finally {
+            if (mom.registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    private void analyzeOperations( EvaluatedClassAnalyzer ca ) {
+        if (mom.registrationFineDebug()) {
+            dputil.enter( "analyzeOperations", "ca=", ca ) ;
+        }
+        
+        try {
+            // Scan for all methods annotation with @ManagedOperation, 
+            // including inherited methods.
+            final List<EvaluatedMethodDeclaration> ops = ca.findMethods( mom.forAnnotation(
+                ManagedOperation.class, EvaluatedMethodDeclaration.class ) ) ;
+            for (EvaluatedMethodDeclaration m : ops) {
+                final Pair<Operation,ModelMBeanOperationInfo> data =
+                    makeOperation( m ) ;
+                final ModelMBeanOperationInfo info = data.second() ;
+
+                final List<String> dataTypes = new ArrayList<String>() ;
+                for (MBeanParameterInfo pi : info.getSignature()) {
+                    // Replace recursion marker with the constructed implementation
+                    dataTypes.add( pi.getType() ) ;
+                }
+
+                Map<List<String>,Operation> map = operations.get( m.name() ) ;
+                if (map == null) {
+                    map = new HashMap<List<String>,Operation>() ;
+                    operations.put( m.name(), map ) ;
+                }
+
+                // Note that the first occurrence of any method will be the most
+                // derived, so if there is already an entry, don't overwrite it.
+                mom.putIfNotPresent( map, dataTypes, data.first() ) ;
+
+                mbeanOperationInfoList.add( info ) ;
+            }
+        } finally {
+            if (mom.registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+    
+    private String getTypeName( final AMXMetadata mbt,
+        final Class<?> cls ) {
+        
+        String result ;
+        if (mbt.pathPart().length() > 0) {
+            result = mbt.pathPart() ;
+        } else {
+            result = mom.getStrippedName( cls ) ;
+        }
+        
+        return result ;
+    }
+
+    @AMXMetadata
+    private static class DefaultMBeanTypeHolder{} 
+    private static AMXMetadata defaultMBeanType =
+        DefaultMBeanTypeHolder.class.getAnnotation( AMXMetadata.class ) ;
+
+    public MBeanSkeleton( final EvaluatedClassDeclaration annotatedClass,
+        final EvaluatedClassAnalyzer ca,
+        final ManagedObjectManagerInternal mom ) {
+
+        dputil = new DprintUtil( getClass() ) ;
+        this.mom = mom ;
+        
+        mbeanType = mom.getAnnotation(annotatedClass, AMXMetadata.class ) ;
+        if (mbeanType == null) {
+            mbeanType = defaultMBeanType ;
+        }
+        
+        type = getTypeName( mbeanType, annotatedClass.cls() ) ;
+        sequenceNumber = new AtomicLong() ;
+        setters = new HashMap<String,AttributeDescriptor>() ;
+        getters = new HashMap<String,AttributeDescriptor>() ;
+        operations = new HashMap<String,Map<List<String>,Operation>>() ;
+        mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>() ;
+        mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
+
+        analyzeAttributes( ca ) ;
+        analyzeOperations( ca ) ;
+        analyzeObjectNameKeys( ca ) ;
+
+        descriptor = makeValidDescriptor(
+            DescriptorIntrospector.descriptorForElement(
+                annotatedClass.cls() ), DescriptorType.mbean, type ) ;
+
+        mbInfo = makeMbInfo( mom.getDescription( annotatedClass ) ) ;
+    }
+
+    // The rest of the methods are used in the DynamicMBeanImpl code.
+    
+    public String getType() {
+        if (mom.runtimeDebug()) {
+            dputil.enter( "getType" ) ;
+        }
+        
+        try {
+            return type ;
+        } finally {
+            if (mom.runtimeDebug()) {
+                dputil.exit( type ) ;
+            }
+        }
+    }
+
+    public AMXMetadata getMBeanType() {
+        return mbeanType ;
+    }
+    
+    public Object getAttribute( FacetAccessor fa, String name) 
+        throws AttributeNotFoundException, MBeanException, ReflectionException {
+
+        if (mom.runtimeDebug()) {
+            dputil.enter( "getAttribute", "fa=", fa, "name=", name ) ;
+        }
+        
+        Object result = null ;
+        try {
+            AttributeDescriptor getter = getters.get( name ) ;
+            if (getter == null) {
+                if (mom.runtimeDebug()) {
+                    dputil.info( "Error in finding getter ", name ) ;
+                }
+                throw Exceptions.self.couldNotFindAttribute( name ) ;
+            }
+            result = getter.get( fa, mom.runtimeDebug() ) ;
+            return result ;
+        } finally {
+            if (mom.runtimeDebug()) {
+                dputil.exit( result ) ; 
+            }
+        }
+    }
+    
+    public void setAttribute( final NotificationBroadcasterSupport emitter, 
+        final FacetAccessor fa, final Attribute attribute) 
+        throws AttributeNotFoundException, InvalidAttributeValueException, 
+        MBeanException, ReflectionException  {
+        
+        if (mom.runtimeDebug()) {
+            dputil.enter( "setAttribute", "emitter=", emitter,
+                "fa=", fa, "attribute=", attribute ) ;
+        }
+
+        try {
+            final String name = attribute.getName() ;
+            final Object value = attribute.getValue() ;
+            final AttributeDescriptor getter = getters.get( name ) ;
+            final Object oldValue = (getter == null) ?
+                null :
+                getter.get( fa, mom.runtimeDebug() ) ;
+
+            if (mom.runtimeDebug()) {
+                dputil.info( "oldValue=", oldValue ) ;
+            }
+            
+            final AttributeDescriptor setter = setters.get( name ) ;
+            if (setter == null) {
+                if (mom.runtimeDebug()) {
+                    dputil.info( "Could not find setter" ) ;
+                }
+                throw Exceptions.self.couldNotFindWritableAttribute(name) ;
+            }
+
+            setter.set( fa, value, mom.runtimeDebug() ) ;
+
+            // Note that this code assumes that emitter is also the MBean,
+            // because the MBean extends NotificationBroadcasterSupport!
+            AttributeChangeNotification notification =
+                new AttributeChangeNotification( emitter,
+                    sequenceNumber.incrementAndGet(),
+                    System.currentTimeMillis(),
+                    "Changed attribute " + name,
+                    name,
+                    setter.tc().getManagedType().toString(),
+                    oldValue,
+                    value ) ;
+
+            if (mom.runtimeDebug()) {
+                dputil.info( "sending notification ", notification ) ;
+            }
+            
+            emitter.sendNotification( notification ) ;    
+        } finally {
+            if (mom.runtimeDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+        
+    public AttributeList getAttributes( FacetAccessor fa, String[] attributes) {
+        if (mom.runtimeDebug()) {
+            dputil.enter( "getAttributes", "attributes=",
+                Arrays.asList( attributes ) ) ;
+        }
+        
+        try {
+            AttributeList result = new AttributeList() ;
+            for (String str : attributes) {
+                Object value = null ;
+                Exception exception = null ;
+                
+                try {
+                    value = getAttribute(fa, str);
+                } catch (JMException ex) {
+                    exception = ex ;
+                }
+
+                // If value == null, we had a problem in trying to fetch it,
+                // so just ignore that attribute.  Returning null simply leads to
+                // a blank entry in jconsole.  Do not let an error in fetching
+                // one attribute prevent fetching the others.
+                
+                if (exception != null) {
+                    if (mom.runtimeDebug()) {
+                        dputil.exception( "getAttribute: ", exception ) ;
+                    }
+                }
+                
+                Attribute attr = new Attribute( str, value ) ;
+                result.add( attr ) ;
+            }
+
+            return result ;
+        } finally {
+            if (mom.runtimeDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+        
+    public AttributeList setAttributes( 
+        final NotificationBroadcasterSupport emitter,
+        final FacetAccessor fa, final AttributeList attributes) {
+	
+        if (mom.runtimeDebug()) {
+            dputil.enter( "setAttributes", "emitter=", emitter,
+                "fa=", fa, "attributes=", attributes ) ;
+        }
+        
+        AttributeList result = new AttributeList() ;
+
+        try {
+            for (Object elem : attributes) {
+                Attribute attr = (Attribute)elem ;
+                Exception exception = null ;
+                try {
+                    setAttribute(emitter, fa, attr);
+                } catch (JMException ex) {
+                    exception = ex ;
+                }
+                
+                if (exception == null) {
+                    result.add( attr ) ;
+                } else {
+                    if (mom.runtimeDebug()) {
+                        dputil.exception( "Error in setting attribute" 
+                            + attr.getName(), exception ) ;
+                    }
+                }
+            }
+            
+            return result ;
+        } finally {
+            if (mom.runtimeDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+    }
+    
+    public Object invoke( FacetAccessor fa, String actionName, Object params[], 
+        String sig[]) throws MBeanException, ReflectionException  {
+        final List<String> signature = Arrays.asList( sig ) ;
+        final List<Object> parameters = Arrays.asList( params ) ;
+        Object result = null ;
+        
+        if (mom.runtimeDebug()) {
+            dputil.enter( "invoke", "fa=", fa, "actionName", actionName,
+                "params=", parameters, "signature=", signature ) ;
+        }
+        
+        try {
+            final Map<List<String>,Operation> opMap = operations.get( 
+                actionName ) ;
+            if (opMap == null) {
+                if (mom.runtimeDebug()) {
+                    dputil.info( "Operation not found" ) ;
+                }
+                
+                throw Exceptions.self.couldNotFindOperation(actionName) ;
+            }
+
+            final Operation op = opMap.get( signature ) ;
+            if (op == null) {
+                if (mom.runtimeDebug()) {
+                    dputil.info( "Cound not find signature" ) ;
+                }
+                
+                throw Exceptions.self.couldNotFindOperationAndSignature(
+                    actionName, signature ) ;
+            }
+
+            result = op.evaluate( fa, parameters ) ;
+        } finally {
+            if (mom.runtimeDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    }
+    
+    public String getNameValue( final FacetAccessor fa ) throws
+        MBeanException, ReflectionException {
+        
+        if (mom.runtimeDebug()) {
+            dputil.enter( "getNameValue", "fa=", fa ) ;
+        }
+        
+        String value = null ;
+        try { 
+            if (nameAttributeDescriptor == null) {
+                if (mom.runtimeDebug()) {
+                    dputil.info( "nameAttributeDescriptor is null" ) ;
+                }
+            } else {
+                value = nameAttributeDescriptor.get(fa, 
+                    mom.runtimeDebug()).toString();
+            }
+        } finally {
+            if (mom.runtimeDebug()) {
+                dputil.exit( value ) ;
+            }
+        }
+        
+        return value ;
+    }
+    
+    public ModelMBeanInfoSupport getMBeanInfo() {
+        return mbInfo ;
+    }
+    
+    public ManagedObjectManagerInternal mom() {
+        return mom ;
+    }
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl;
+
+import org.glassfish.gmbal.generic.DprintUtil;
+import org.glassfish.gmbal.generic.FacetAccessor;
+import java.util.HashMap;
+import java.util.Map;
+import javax.management.InstanceAlreadyExistsException;
+import javax.management.InstanceNotFoundException;
+import javax.management.JMException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MalformedObjectNameException;
+import javax.management.NotCompliantMBeanException;
+import javax.management.NotificationEmitter;
+import javax.management.ObjectName;
+import org.glassfish.gmbal.GmbalException;
+
+/** Represents the collection of DynamicMBeanImpls that we have registered with
+ * a ManagedObjectManager.
+ *
+ * XXX Need to get some benchmarks for registration cost.  This should help
+ * to determine whether we need to enable/disable MBean registration with the
+ * MBeanServer.
+ *
+ * @author ken
+ */
+public class MBeanTree {
+    private boolean rootIsSet = false ;
+    private Object root ;
+    private MBeanImpl rootEntity ;
+    private Map<Object,MBeanImpl> objectMap ;
+    private Map<ObjectName,Object> objectNameMap ;
+    private String domain ;
+    private ObjectName rootParentName ;
+    private String rootParentPrefix ;
+    private String typeString ; // What string is used for the type of the 
+                                // type name/value pair?
+    private ManagedObjectManagerInternal mom ;
+    private DprintUtil dputil ;
+    
+    private void addToObjectMaps( MBeanImpl mbean ) {
+        ObjectName oname = mbean.objectName() ;
+        for (Object obj : mbean.facets() ) {
+            objectMap.put( obj, mbean ) ;
+        }
+        objectNameMap.put( oname, mbean ) ;
+    }
+    
+    private void removeFromObjectMaps( MBeanImpl mbean ) {
+        ObjectName oname = mbean.objectName() ;
+        for (Object obj : mbean.facets() ) {
+            objectMap.remove( obj ) ;
+        }
+        
+        objectNameMap.remove( oname ) ;
+    }
+    
+    public synchronized NotificationEmitter setRoot( Object root, String rootName ) {
+        if (rootIsSet) {
+            throw Exceptions.self.rootAlreadySet() ;
+        } else {
+            rootIsSet = true ;
+        }
+        
+        // Now register the root MBean.
+        MBeanImpl rootMB = mom.constructMBean( root, rootName ) ;
+        
+        ObjectName oname ;
+        try {
+            oname = objectName(null, rootMB.type(), rootMB.name());
+        } catch (MalformedObjectNameException ex) {
+            throw Exceptions.self.noRootObjectName(ex) ;
+        }
+        rootMB.objectName( oname ) ;
+        
+        addToObjectMaps( rootMB ) ;
+        
+        try {
+            rootMB.register();
+        } catch (JMException ex) {
+            throw Exceptions.self.rootRegisterFail( ex ) ;
+        }
+        
+        this.root = root ;
+        rootEntity = rootMB ;
+        return rootMB ;
+    }
+    
+    public synchronized Object getRoot() {
+        if (rootIsSet) {
+            return root ;
+        } else {
+            throw Exceptions.self.rootNotSet() ;
+        }   
+    }
+
+    private String getRootParentPrefix( final ObjectName rootParentName ) {
+        final String[] keys =
+            rootParentName.getKeyPropertyListString().split( "," ) ;
+
+        final StringBuilder res = new StringBuilder() ;
+        String typeValue = null ;
+        String nameValue = null ;
+        for (String str : keys) {
+            int index = str.indexOf( '=' ) ;
+            String key = str.substring( 0, index ) ;
+            String value = str.substring( index+1 ) ;
+            if (key.equals( "type" ) || key.equals( "j2eeType" ) ) {
+                typeValue = value ;
+            } else if (key.equals( "name" ) ) {
+                nameValue = value ;
+            } else {
+                res.append( key ) ;
+                res.append( '=' ) ;
+                res.append( value ) ;
+                res.append( ',' ) ;
+            }
+        }
+
+        if (typeValue == null || nameValue == null) {
+            throw Exceptions.self.invalidRootParentName(rootParentName) ;
+        }
+
+        final String result = res + typeValue + '=' + nameValue ;
+        return result ;
+    }
+
+    public MBeanTree( final ManagedObjectManagerInternal mom,
+        final String domain, 
+        final ObjectName rootParentName,
+        final String typeString ) {
+        
+        this.mom = mom ;
+        this.domain = domain ;
+        this.rootParentName = rootParentName ;
+        if (rootParentName == null) {
+            rootParentPrefix = null ;
+        } else {
+            rootParentPrefix = getRootParentPrefix( rootParentName ) ;
+        }
+
+        this.typeString = typeString ;
+        objectMap = new HashMap<Object,MBeanImpl>() ;
+        objectNameMap = new HashMap<ObjectName,Object>() ;
+        dputil = new DprintUtil( getClass() ) ;
+    }
+
+    public synchronized FacetAccessor getFacetAccessor(Object obj) {
+        return objectMap.get( obj ) ;
+    }
+    
+    private void checkCorrectRoot( MBeanImpl entity ) {
+        MBeanImpl current = entity ;
+        do {
+            if (current == rootEntity) {
+                return ;
+            }
+            
+            current = current.parent() ;
+        } while (current != null) ;
+        
+        throw Exceptions.self.notPartOfThisTree(entity) ;
+    }
+    
+    public synchronized ObjectName objectName( MBeanImpl parent,
+        String type, String name ) 
+        throws MalformedObjectNameException {
+        
+        if (parent != null) {
+            checkCorrectRoot( parent ) ;
+        }
+
+        StringBuilder result = new StringBuilder() ;
+
+        result.append( domain ) ;
+        result.append( ":" ) ;
+        if (rootParentPrefix != null) {
+            result.append( rootParentPrefix ) ;
+            result.append( ',' ) ;
+        }
+
+        if (parent != null) {
+            result.append( parent.restName() ) ;
+        }
+
+        result.append( typeString ) ;
+        result.append( "=" ) ;
+        result.append( type ) ;
+
+        result.append( ',') ;
+        result.append( "name" ) ;
+        result.append( "=" ) ;
+        result.append( name ) ;
+
+        return new ObjectName( result.toString() ) ; 
+    }
+    
+    public synchronized NotificationEmitter register( 
+        final Object parent, 
+        final Object obj, 
+        final MBeanImpl mb ) throws InstanceAlreadyExistsException, 
+        MBeanRegistrationException, NotCompliantMBeanException, 
+        MalformedObjectNameException {
+        
+        if (mom.registrationDebug()) {
+            dputil.enter( "register", 
+                "parent=", parent,
+                "obj=", obj,
+                "mb=", mb ) ;
+        }
+        
+        try { 
+            if (parent == null) {
+                throw Exceptions.self.parentCannotBeNull() ;
+            }
+            
+            MBeanImpl oldMB = objectMap.get( obj ) ;
+            if (oldMB != null) {
+                String msg = Exceptions.self.objectAlreadyRegistered(obj, oldMB) ;
+                
+                if (mom.registrationDebug()) {
+                    dputil.info( msg ) ;
+                }
+                
+                throw new IllegalArgumentException( msg ) ;
+            }
+            
+            MBeanImpl parentEntity ;
+
+            parentEntity = objectMap.get( parent ) ;
+            if (parentEntity == null) {
+                String msg = Exceptions.self.parentNotFound(parent) ;
+                if (mom.registrationDebug()) {
+                    dputil.info( msg ) ;
+                }
+                throw new IllegalArgumentException( msg ) ;
+            }
+            
+            ObjectName oname = objectName( parentEntity, mb.type(), 
+                mb.name() ) ;
+            mb.objectName( oname ) ;
+        
+            addToObjectMaps( mb ) ;
+
+            parentEntity.addChild( mb ) ; 
+
+            mb.register() ;
+
+            return mb ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+    
+    public synchronized void unregister( Object obj ) 
+        throws InstanceNotFoundException, MBeanRegistrationException {
+        if (obj == root) {
+            rootIsSet = false ;
+            root = null ;
+            rootEntity = null ;
+        }
+        
+        MBeanImpl mb = objectMap.get( obj ) ;
+        for (Map<String,MBeanImpl> nameToMBean : mb.children().values() ) {
+            for (MBeanImpl child : nameToMBean.values() ) {
+                unregister( child.target()) ;
+            }
+        }
+
+        removeFromObjectMaps( mb ) ;
+        mb.unregister() ;
+        
+        if (mb.parent() != null) {
+            mb.parent().removeChild( mb ) ;
+        }
+    }
+    
+    public synchronized ObjectName getObjectName( Object obj ) {
+        MBeanImpl result = objectMap.get(obj);
+        return result.objectName() ;
+    }
+    
+    public synchronized Object getObject( ObjectName oname ) {
+        return objectNameMap.get( oname ) ;
+    }
+    
+    public synchronized MBeanImpl getMBeanImpl( Object obj ) {
+        return objectMap.get( obj ) ;
+    }
+    
+    public synchronized void clear(){
+        if (rootIsSet) {
+            try {
+                unregister(root);
+            } catch (InstanceNotFoundException ex) {
+                throw Exceptions.self.shouldNotHappen( ex ) ;
+            } catch (MBeanRegistrationException ex) {
+                throw Exceptions.self.shouldNotHappen( ex ) ;
+            }
+        }
+        
+        objectMap.clear() ;
+        objectNameMap.clear() ;
+        rootEntity = null ;
+    }
+
+    public ObjectName getRootParentName() {
+        return rootParentName ;
+    }
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl ;
+
+import java.util.ResourceBundle ;
+import java.util.Map ;
+import java.util.HashMap ;
+import java.util.WeakHashMap ;
+import java.util.List ;
+import java.util.ArrayList ;
+
+import java.io.IOException ;
+
+import java.lang.annotation.Annotation ;
+
+import java.lang.management.ManagementFactory ;
+
+import java.lang.reflect.AnnotatedElement;
+import javax.management.MBeanServer ;
+import javax.management.JMException ;
+import javax.management.ObjectName ;
+import javax.management.NotificationEmitter;
+
+import org.glassfish.gmbal.generic.Pair ;
+import org.glassfish.gmbal.generic.Algorithms ;
+
+import org.glassfish.gmbal.ManagedObject ;
+import org.glassfish.gmbal.Description ;
+import org.glassfish.gmbal.IncludeSubclass ;
+import org.glassfish.gmbal.InheritedAttribute ;
+import org.glassfish.gmbal.InheritedAttributes ;
+import org.glassfish.gmbal.AMXMetadata;
+import org.glassfish.gmbal.ManagedAttribute;
+import org.glassfish.gmbal.ManagedObjectManager;
+import org.glassfish.gmbal.generic.DprintUtil;
+import org.glassfish.gmbal.generic.DumpIgnore;
+import org.glassfish.gmbal.generic.ObjectUtility;
+import org.glassfish.gmbal.generic.Predicate;
+import org.glassfish.gmbal.generic.UnaryFunction;
+import org.glassfish.gmbal.generic.FacetAccessor ;
+import org.glassfish.gmbal.generic.FacetAccessorImpl;
+import org.glassfish.gmbal.generic.Holder;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.gmbal.typelib.TypeEvaluator;
+
+/* Implementation notes:
+ * XXX Test attribute change notification.
+ */
+public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
+    private String domain ;
+    private ResourceBundle resourceBundle ;
+    private MBeanServer server ; 
+    private MBeanTree tree ;
+    private final Map<EvaluatedClassDeclaration,MBeanSkeleton> skeletonMap ;
+    private final Map<EvaluatedType,TypeConverter> typeConverterMap ;
+    private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
+    
+    @DumpIgnore
+    private DprintUtil dputil = null ;
+    private ManagedObjectManager.RegistrationDebugLevel regDebugLevel = 
+        ManagedObjectManager.RegistrationDebugLevel.NONE ;
+    private boolean runDebugFlag = false ;
+    
+    private static final class StringComparator implements Comparator<String> {
+        public int compare(String o1, String o2) {
+            return - o1.compareTo( o2 ) ;
+        }
+    } ;
+    private Comparator<String> revComp = new StringComparator() ;
+    
+    // Maintain the list of typePrefixes in reversed sorted order, so that
+    // we strip the longest prefix first.
+    private final SortedSet<String> typePrefixes = new TreeSet<String>( 
+        revComp ) ;
+
+    @Override
+    public String toString( ) {
+        return "ManagedObjectManagerImpl[domain=" + domain + "]" ;
+    }
+    
+    private ManagedObjectManagerImpl() {
+        this.resourceBundle = null ;
+        this.server = ManagementFactory.getPlatformMBeanServer() ;
+        this.skeletonMap = 
+            new WeakHashMap<EvaluatedClassDeclaration,MBeanSkeleton>() ;
+        this.typeConverterMap = new WeakHashMap<EvaluatedType,TypeConverter>() ;
+        this.addedAnnotations = 
+            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
+    }
+    
+    public ManagedObjectManagerImpl( final String domain ) {
+        this() ;
+        this.domain = domain ;
+
+        // set actualRoot, rootName later
+        // MBeanTree need mom, domain, rootParentName
+        this.tree = new MBeanTree( this, domain, null, "type" ) ;
+    }
+
+    public ManagedObjectManagerImpl( final ObjectName rootParentName ) {
+        this() ;
+        this.domain = rootParentName.getDomain() ;
+
+        // set actualRoot, rootName later
+        // MBeanTree need mom, domain, rootParentName
+        this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
+    }
+
+
+    public void close() throws IOException {
+        if (registrationDebug()) {
+            dputil.enter( "close" ) ;
+        }
+        
+        try {
+            tree.clear() ;
+            skeletonMap.clear() ;
+            typeConverterMap.clear() ;
+            addedAnnotations.clear() ;
+            server = null ;
+            resourceBundle = null ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    public synchronized ObjectName getRootParentName() {
+        return tree.getRootParentName() ;
+    }
+
+    @ManagedObject
+    @AMXMetadata( pathPart="GMBALROOT")
+    @Description( "Dummy class used when no root is specified" ) 
+    private static class Root {
+        // No methods: will simply implement an AMX container
+    }
+    
+    public synchronized NotificationEmitter createRoot() {
+        return tree.setRoot( new Root(), null ) ;
+    }
+
+    public synchronized NotificationEmitter createRoot(Object root) {
+        return tree.setRoot( root, null ) ;
+    }
+
+    public synchronized NotificationEmitter createRoot(Object root, String name) {
+        return tree.setRoot( root, name ) ;
+    }
+
+    public synchronized Object getRoot() {
+        return tree.getRoot() ;
+    }
+    
+    public synchronized MBeanSkeleton getSkeleton( EvaluatedClassDeclaration cls ) {
+        if (registrationDebug()) {
+            dputil.enter( "getSkeleton", cls ) ;
+        }
+        
+        try {
+            MBeanSkeleton result = skeletonMap.get( cls ) ;
+
+            boolean newSkeleton = false ;
+            if (result == null) {
+                newSkeleton = true ;
+                if (registrationDebug()) {
+                    dputil.info( "creating new Skeleton" ) ;
+                }
+                
+                Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer> pair = 
+                    getClassAnalyzer( cls, ManagedObject.class ) ;
+                EvaluatedClassDeclaration annotatedClass = pair.first() ;
+                EvaluatedClassAnalyzer ca = pair.second() ;
+
+                result = skeletonMap.get( annotatedClass ) ;
+
+                if (result == null) {
+                    result = new MBeanSkeleton( annotatedClass, ca, this ) ;
+                }
+
+                skeletonMap.put( cls, result ) ;
+            }
+            
+            if (registrationFineDebug() || (registrationDebug() && newSkeleton)) {
+                dputil.info( "Skeleton=" 
+                    + ObjectUtility.defaultObjectToString( result ) ) ;
+            }
+            
+            return result ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    public synchronized TypeConverter getTypeConverter( EvaluatedType type ) {
+        if (registrationFineDebug()) {
+            dputil.enter( "getTypeConverter", type ) ;
+        }
+        
+        TypeConverter result = null;
+        
+        try {
+            boolean newTypeConverter = false ;
+            result = typeConverterMap.get( type ) ;	
+            if (result == null) {
+                if (registrationFineDebug()) {
+                    dputil.info( "Creating new TypeConverter" ) ;
+                }
+            
+                // Store a TypeConverter impl that throws an exception when 
+                // acessed.  Used to detect recursive types.
+                typeConverterMap.put( type, 
+                    new TypeConverterImpl.TypeConverterPlaceHolderImpl( type ) ) ;
+
+                result = TypeConverterImpl.makeTypeConverter( type, this ) ;
+
+                // Replace recursion marker with the constructed implementation
+                typeConverterMap.put( type, result ) ;
+                newTypeConverter = true ;
+            }
+            
+            if (registrationFineDebug() || 
+                (registrationDebug() && newTypeConverter)) {
+                
+                if (registrationFineDebug()) {
+                    dputil.info( "result=" 
+                        + ObjectUtility.defaultObjectToString( result ) ) ;
+                }
+            }
+        } finally {
+            if (registrationFineDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    }
+
+    public String getStrippedName( Class<?> cls ) {
+        String arg = cls.getName() ;
+        for (String str : typePrefixes ) {
+            if (arg.startsWith( str ) ) {
+                return arg.substring( str.length() + 1 ) ;
+            }
+        }
+        
+        return arg ;
+    }
+    
+    public synchronized MBeanImpl constructMBean( Object obj, String name ) {
+        MBeanImpl result = null ;
+        
+        if (registrationDebug()) {
+            dputil.enter( "constructMean", 
+                "obj=", obj,
+                "name=", name ) ;
+        }
+        
+        try {
+            final Class<?> cls = obj.getClass() ;
+            final EvaluatedClassDeclaration cdecl = 
+                (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(cls) ;
+            final MBeanSkeleton skel = getSkeleton( cdecl ) ;
+
+            String type = skel.getType() ;
+            if (registrationDebug()) {
+                dputil.info( "Stripped type =", type ) ;
+            }
+
+            result = new MBeanImpl( skel, obj, server, type ) ;
+            
+            String objName = name ;
+            if (objName == null) {
+                objName = skel.getNameValue( result ) ;
+                if (objName == null) {
+                    objName = "na" ;
+                }
+            }  
+           
+            if (registrationDebug()) {
+                dputil.info( "Name value =", objName ) ;
+            }
+            
+            result.name( objName ) ;
+        } catch (JMException exc) {
+            if (registrationDebug()) {
+                dputil.exception( "Problem in fetching value of name", exc) ;
+            }
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public synchronized NotificationEmitter register( final Object parent,
+        final Object obj, final String name ) {
+
+        if (registrationDebug()) {
+            dputil.enter( "register", 
+                "parent=", parent, 
+                "obj=", obj,
+                "name=", name ) ;
+        }
+        
+        if (obj instanceof String) {
+            throw Exceptions.self.objStringWrongRegisterCall( (String)obj ) ;
+        }
+        
+        // Construct the MBean
+        try {
+            final MBeanImpl mb = constructMBean( obj, name ) ;
+            
+            return tree.register( parent, obj, mb) ;
+    	} catch (JMException exc) {
+            throw Exceptions.self.exceptionInRegister(exc) ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+    
+    public synchronized NotificationEmitter register( final Object parent,
+        final Object obj ) {
+
+        return register( parent, obj, null ) ;
+    }
+
+    
+    public synchronized NotificationEmitter registerAtRoot(Object obj, String name) {
+        return register( tree.getRoot(), obj, name ) ;
+    }
+
+    public synchronized NotificationEmitter registerAtRoot(Object obj) {
+        return register( tree.getRoot(), obj, null ) ;
+    }
+    
+    public synchronized void unregister( Object obj ) {
+        if (registrationDebug()) {
+            dputil.enter( "unregister", "obj=", obj ) ;
+        }
+        
+        try {
+            tree.unregister( obj ) ;
+        } catch (JMException exc) {
+            throw Exceptions.self.exceptionInUnregister(exc) ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    public synchronized ObjectName getObjectName( Object obj ) {
+        if (registrationDebug()) {
+            dputil.enter( "getObjectName", obj ) ;
+        }
+        
+        ObjectName result = null;
+        try {
+            result = tree.getObjectName( obj ) ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    }
+
+    public synchronized Object getObject( ObjectName oname ) {
+        if (registrationDebug()) {
+            dputil.enter( "getObject", oname ) ;
+        }
+        
+        Object result = null ;
+        try {
+            result = tree.getObject( oname ) ;
+	} finally {
+            if (registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    }
+    
+    public synchronized FacetAccessor getFacetAccessor( Object obj ) {
+        MBeanImpl mb = tree.getMBeanImpl( obj ) ;
+        if (mb != null) {
+            return tree.getFacetAccessor( obj ) ;
+        } else {
+            return new FacetAccessorImpl( obj ) ;
+        }
+    }   
+    
+    public synchronized String getDomain() {
+	return domain ;
+    }
+
+    public synchronized void setMBeanServer( MBeanServer server ) {
+	this.server = server ;
+    }
+
+    public synchronized MBeanServer getMBeanServer() {
+	return server ;
+    }
+
+    public synchronized void setResourceBundle( ResourceBundle rb ) {
+        this.resourceBundle = rb ;
+    }
+
+    public synchronized ResourceBundle getResourceBundle() {
+        return resourceBundle ;
+    }
+    
+    public synchronized String getDescription( EvaluatedDeclaration element ) {
+        Description desc = element.annotation( Description.class ) ;
+        String result ;
+        if (desc == null) {
+            result = Exceptions.self.noDescriptionAvailable() ;
+        } else {
+            result = desc.value() ;
+        }
+        
+        if (resourceBundle != null) {
+            result = resourceBundle.getString( result ) ;
+        }
+        
+        return result ;
+    }
+    
+    
+    public synchronized void addAnnotation( AnnotatedElement element,
+        Annotation annotation ) {
+        
+        if (registrationDebug()) {
+            dputil.enter( "addAnnotation", "element = ", element,
+                "annotation = ", annotation ) ;
+        }
+        
+        try {
+            Map<Class, Annotation> map = addedAnnotations.get( element ) ;
+            if (map == null) {
+                if (registrationDebug()) {
+                    dputil.info( "Creating new Map<Class,Annotation>" ) ;
+                }
+                
+                map = new HashMap<Class, Annotation>() ;
+                addedAnnotations.put( element, map ) ;
+            }
+
+            Annotation  ann = map.get( annotation.getClass() ) ;
+            if (ann != null) {
+                if (registrationDebug()) {
+                    dputil.info( "Duplicate annotation") ;
+                }
+                
+                throw Exceptions.self.duplicateAnnotation( element, 
+                    annotation.getClass().getName()) ;
+            }
+
+            map.put( annotation.getClass(), annotation ) ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    @SuppressWarnings({"unchecked"})
+    public synchronized <T extends Annotation> T getAnnotation( 
+        EvaluatedDeclaration element, Class<T> type ) {
+        
+        if (registrationFineDebug()) {
+            dputil.enter( "getAnnotation", "element=", element,
+                "type=", type.getName() ) ;
+        }
+        
+        try {
+            T result = element.annotation( type ) ;
+            if (result == null) {
+                if (registrationFineDebug()) {
+                    dputil.info( 
+                        "No annotation on element: trying addedAnnotations map" ) ;
+                }
+
+                Map<Class, Annotation> map = addedAnnotations.get( 
+                    element.element() );
+                if (map != null) {
+                    result = (T)map.get( type ) ;
+                } 
+            }
+
+            if (registrationFineDebug()) {
+                dputil.info( "result = " + result ) ;
+            }
+            
+            return result ;
+        } finally {
+            if (registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+    
+    public synchronized Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer>
+        getClassAnalyzer( final EvaluatedClassDeclaration cls,
+        final Class<? extends Annotation> annotationClass ) {
+
+        if (registrationDebug()) {
+            dputil.enter( "getClassAnalyzer", "cls = ", cls,
+                "annotationClass = ", annotationClass ) ;
+        }
+        
+        try {
+            EvaluatedClassAnalyzer ca = new EvaluatedClassAnalyzer( cls ) ;
+
+            final EvaluatedClassDeclaration annotatedClass = Algorithms.getFirst(
+                ca.findClasses( forAnnotation( annotationClass, 
+                    EvaluatedClassDeclaration.class ) ),
+                "No " + annotationClass.getName() + " annotation found on" 
+                    + "EvaluatedClassAnalyzer " + ca ) ;
+
+            if (registrationDebug()) {
+                dputil.info( "annotatedClass = " + annotatedClass ) ;
+            }
+    
+            final List<EvaluatedClassDeclaration> classes =
+                new ArrayList<EvaluatedClassDeclaration>() ;
+            classes.add( annotatedClass ) ;
+            final IncludeSubclass incsub = annotatedClass.annotation(
+                IncludeSubclass.class ) ;
+            if (incsub != null) {
+                for (Class<?> klass : incsub.value()) {
+                    EvaluatedClassDeclaration ecd = 
+                        (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(klass) ;
+                    classes.add( ecd ) ;
+                    if (registrationDebug()) {
+                        dputil.info( "included subclass: " + klass ) ;
+                    }
+                }
+            }
+
+            if (classes.size() > 1) {
+                if (registrationDebug()) {
+                    dputil.info( 
+                        "Getting new EvaluatedClassAnalyzer for included subclasses" ) ;
+                }
+                ca = new EvaluatedClassAnalyzer( classes ) ;
+            }
+
+            return new Pair<EvaluatedClassDeclaration,
+                 EvaluatedClassAnalyzer>( annotatedClass, ca ) ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+    
+    public synchronized List<InheritedAttribute> getInheritedAttributes( 
+        final EvaluatedClassAnalyzer ca ) {
+        
+        if (registrationDebug()) {
+            dputil.enter( "getInheritedAttributes", "ca=", ca ) ;
+        }
+        
+        try {
+            final Predicate<EvaluatedClassDeclaration> pred = Algorithms.or(
+                forAnnotation( InheritedAttribute.class, 
+                    EvaluatedClassDeclaration.class ),
+                forAnnotation( InheritedAttributes.class, 
+                    EvaluatedClassDeclaration.class ) ) ;
+
+            // Construct list of classes annotated with InheritedAttribute or
+            // InheritedAttributes.
+            final List<EvaluatedClassDeclaration> iaClasses =
+                ca.findClasses( pred ) ;
+
+            List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
+                new UnaryFunction<EvaluatedClassDeclaration,List<InheritedAttribute>>() {
+                    public List<InheritedAttribute> evaluate( EvaluatedClassDeclaration cls ) {
+                        final InheritedAttribute ia = getAnnotation(cls,
+                            InheritedAttribute.class);
+                        final InheritedAttributes ias = getAnnotation(cls,
+                            InheritedAttributes.class);
+                        if ((ia != null) && (ias != null)) {
+                            throw Exceptions.self.badInheritedAttributeAnnotation(cls) ;
+                        }
+
+                        final List<InheritedAttribute> result = 
+                            new ArrayList<InheritedAttribute>() ;
+
+                        if (ia != null) {
+                            result.add( ia ) ;
+                        } else if (ias != null) {
+                            result.addAll( Arrays.asList( ias.value() )) ;
+                        }
+
+                        return result ;
+                    }
+            } ) ;
+
+            return isList ;
+        } finally {
+            if (registrationDebug())
+                dputil.exit() ;
+        }
+    }
+    
+    private class ADHolder implements Predicate<InheritedAttribute> {
+        
+        private final EvaluatedMethodDeclaration method ;
+        private final ManagedObjectManagerInternal.AttributeDescriptorType adt ;
+        private AttributeDescriptor content ;
+
+        public ADHolder(  final EvaluatedMethodDeclaration method,
+            ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
+            this.method = method ;
+            this.adt = adt ;
+        }
+        
+        public boolean evaluate( InheritedAttribute ia ) {
+            AttributeDescriptor ad = AttributeDescriptor.makeFromInherited( 
+                ManagedObjectManagerImpl.this, method,
+                ia.id(), ia.methodName(), ia.description(), adt ) ;
+            boolean result = ad != null ;
+            if (result) {
+                content = ad ;
+            }
+            
+            return result ;
+        }
+
+        public AttributeDescriptor content() {
+            return content ;
+        }
+    }
+    
+    private AttributeDescriptor getAttributeDescriptorIfInherited( 
+        final EvaluatedMethodDeclaration method, 
+        final List<InheritedAttribute> ias,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
+        
+        ADHolder adh = new ADHolder( method, adt ) ;
+        Algorithms.find( ias, adh ) ;
+        return adh.content() ;
+    }
+
+    public synchronized <K,V> void putIfNotPresent( final Map<K,V> map,
+        final K key, final V value ) {
+    
+        if (registrationFineDebug()) {
+            dputil.enter( "putIfNotPresent", "key=", key,
+                "value=", value ) ;
+        }
+        
+        try {
+            if (!map.containsKey( key )) {
+                if (registrationFineDebug()) {
+                    dputil.info( "Adding key, value to map" ) ;
+                }
+                map.put( key, value ) ;
+            } else {
+                if (registrationFineDebug()) {
+                    dputil.info( "Key,value already in map" ) ;
+                }
+            }
+        } finally {
+            if (registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    // Returns a pair of maps defining all managed attributes in the ca.  The first map
+    // is all setters, and the second is all getters.  Only the most derived version is present.
+    public synchronized Pair<Map<String,AttributeDescriptor>,
+        Map<String,AttributeDescriptor>>
+        getAttributes( 
+            final EvaluatedClassAnalyzer ca,
+            final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
+
+        if (registrationDebug()) {
+            dputil.enter( "getAttributes" ) ;
+        }
+
+        try {
+            final Map<String,AttributeDescriptor> getters = 
+                new HashMap<String,AttributeDescriptor>() ; 
+            final Map<String,AttributeDescriptor> setters = 
+                new HashMap<String,AttributeDescriptor>() ; 
+            final Pair<Map<String,AttributeDescriptor>,
+                Map<String,AttributeDescriptor>> result =  
+                    new Pair<Map<String,AttributeDescriptor>,
+                        Map<String,AttributeDescriptor>>( getters, setters ) ;
+            
+            final List<InheritedAttribute> ias = getInheritedAttributes( ca ) ;
+            
+            ca.findMethods( new Predicate<EvaluatedMethodDeclaration>() {
+                public boolean evaluate( EvaluatedMethodDeclaration method ) {
+                    ManagedAttribute ma = method.annotation(
+                        ManagedAttribute.class ) ;
+                    AttributeDescriptor ad ;
+                    if (ma == null) {
+                        ad = getAttributeDescriptorIfInherited( method, ias,
+                            adt ) ;
+                    } else {
+                        Description desc = getAnnotation( method, Description.class ) ;
+                        String description ;
+                        if (desc == null) {
+                            description = "No description available for " + method.name() ;
+                        } else {
+                            description = desc.value() ;
+                        }
+
+                        ad = AttributeDescriptor.makeFromAnnotated( ManagedObjectManagerImpl.this,
+                            method, ma.id(), description, adt ) ;
+                    }
+                    
+                    if (ad != null) {
+                        if (ad.atype()==AttributeDescriptor.AttributeType.GETTER) {
+                            putIfNotPresent( getters, ad.id(), ad ) ;
+                        } else {
+                            putIfNotPresent( setters, ad.id(), ad ) ;
+                        }
+                    }
+                    
+                    return false ;
+                } } ) ;
+         
+            return result ;
+        } finally {
+            if (registrationDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    public synchronized void setRegistrationDebug( 
+        ManagedObjectManager.RegistrationDebugLevel level ) {
+        
+        regDebugLevel = level ;
+        if (level != ManagedObjectManager.RegistrationDebugLevel.NONE ) {
+            dputil = new DprintUtil( getClass() ) ;
+        } else {
+            dputil = null ;
+        }
+    }
+    
+    public synchronized void setRuntimeDebug( boolean flag ) {
+        runDebugFlag = flag ;
+    }
+    
+    public synchronized String dumpSkeleton( Object obj ) {
+        MBeanImpl impl = tree.getMBeanImpl( obj ) ;
+        if (impl == null) {
+            return obj + " is not currently registered with mom " + this ;
+        } else {
+            MBeanSkeleton skel = impl.skeleton() ;
+            String skelString = ObjectUtility.defaultObjectToString( skel ) ;
+            return "Skeleton for MBean for object " + obj + ":\n"
+                + skelString ;
+        }
+    }
+    
+    public synchronized boolean registrationDebug() {
+        return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.NORMAL 
+            || regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
+    }
+    
+    public synchronized boolean registrationFineDebug() {
+        return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
+    }
+    
+    public synchronized boolean runtimeDebug() {
+        return runDebugFlag ;
+    }
+    
+    public synchronized void stripPrefix( String... args ) {
+        for (String str : args) {
+            typePrefixes.add( str ) ;
+        }
+    }
+    
+    public synchronized <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(
+        final Class<? extends Annotation> annotation,
+        final Class<T> cls ) {
+
+        return new Predicate<T>() {
+            public boolean evaluate( T elem ) {
+                return getAnnotation( elem, annotation ) != null ;
+            }
+        } ;
+    }
+
+}
+/* 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * 
+ * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * 
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * language governing permissions and limitations under the License.
+ * 
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at legal/LICENSE.TXT.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ * 
+ * Contributor(s):
+ * 
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ * 
+ */ 
+
+package org.glassfish.gmbal.impl ;
+
+import org.glassfish.gmbal.generic.DumpToString ;
+
+import java.lang.reflect.Array ;
+import java.lang.reflect.Constructor ;
+import java.lang.reflect.InvocationTargetException;
+
+import java.util.Collection ;
+import java.util.List ;
+import java.util.ArrayList ;
+import java.util.Map ;
+import java.util.HashMap ;
+import java.util.Iterator ;
+import java.util.Enumeration ;
+import java.util.Dictionary ;
+import java.util.Arrays;
+
+import javax.management.ObjectName ;
+import javax.management.JMException;
+
+import javax.management.openmbean.ArrayType ;
+import javax.management.openmbean.OpenType ;
+import javax.management.openmbean.OpenDataException ;
+import javax.management.openmbean.SimpleType ;
+import javax.management.openmbean.TabularType ;
+import javax.management.openmbean.CompositeType ;
+import javax.management.openmbean.CompositeData ;
+import javax.management.openmbean.CompositeDataSupport ;
+import javax.management.openmbean.TabularData ;
+import javax.management.openmbean.TabularDataSupport ;
+
+import org.glassfish.gmbal.ManagedObject ;
+import org.glassfish.gmbal.ManagedData ;
+import org.glassfish.gmbal.generic.DprintUtil;
+import org.glassfish.gmbal.generic.FacetAccessor;
+import org.glassfish.gmbal.generic.Pair;
+
+import org.glassfish.gmbal.typelib.EvaluatedArrayType;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
+import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+
+/** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
+ * ObjectName, TabularData, or CompositeData.
+ */
+public abstract class TypeConverterImpl implements TypeConverter {
+    private static final Map<EvaluatedClassDeclaration,OpenType> simpleTypeMap =
+        new HashMap<EvaluatedClassDeclaration,OpenType>() ;
+    private static final Map<OpenType,EvaluatedClassDeclaration> simpleOpenTypeMap =
+        new HashMap<OpenType,EvaluatedClassDeclaration>() ;
+    private static final DprintUtil dputil = new 
+        DprintUtil( TypeConverterImpl.class ) ;
+
+    private static void initMaps( final EvaluatedClassDeclaration type, final OpenType otype ) {
+	simpleTypeMap.put( type, otype ) ;
+	simpleOpenTypeMap.put( otype, type ) ;
+    }
+
+    static {
+	initMaps( EvaluatedType.EBOOLEAN, SimpleType.BOOLEAN ) ;
+	initMaps( EvaluatedType.EBOOLEANW, SimpleType.BOOLEAN ) ;
+
+	initMaps( EvaluatedType.ECHAR, SimpleType.CHARACTER ) ;
+	initMaps( EvaluatedType.ECHARW, SimpleType.CHARACTER ) ;
+
+	initMaps( EvaluatedType.EBYTE, SimpleType.BYTE ) ;
+	initMaps( EvaluatedType.EBYTEW, SimpleType.BYTE ) ;
+
+	initMaps( EvaluatedType.ESHORT, SimpleType.SHORT ) ;
+	initMaps( EvaluatedType.ESHORTW, SimpleType.SHORT ) ;
+
+	initMaps( EvaluatedType.EINT, SimpleType.INTEGER ) ;
+	initMaps( EvaluatedType.EINTW, SimpleType.INTEGER ) ;
+
+	initMaps( EvaluatedType.ELONG, SimpleType.LONG ) ;
+	initMaps( EvaluatedType.ELONGW, SimpleType.LONG ) ;
+
+	initMaps( EvaluatedType.EFLOAT, SimpleType.FLOAT ) ;
+	initMaps( EvaluatedType.EFLOATW, SimpleType.FLOAT ) ;
+
+	initMaps( EvaluatedType.EDOUBLE, SimpleType.DOUBLE ) ;
+	initMaps( EvaluatedType.EDOUBLEW, SimpleType.DOUBLE ) ;
+
+	initMaps( EvaluatedType.ESTRING, SimpleType.STRING ) ;
+	initMaps( EvaluatedType.EVOID, SimpleType.VOID ) ;
+
+	initMaps( EvaluatedType.EDATE, SimpleType.DATE ) ;
+	initMaps( EvaluatedType.EOBJECT_NAME, SimpleType.OBJECTNAME ) ;
+
+	initMaps( EvaluatedType.EBIG_DECIMAL, SimpleType.BIGDECIMAL ) ;
+	initMaps( EvaluatedType.EBIG_INTEGER, SimpleType.BIGINTEGER ) ;
+    }
+
+    public static Class getJavaClass( final OpenType ot ) {
+	if (ot instanceof SimpleType) {
+	    final SimpleType st = (SimpleType)ot ;
+	    return simpleOpenTypeMap.get( st ).cls() ;
+	} else if (ot instanceof ArrayType) {
+	    // This code is rather odd.  We need to get the opentype of the 
+            // array components, convert that to a java type, and then 
+            // construct a Java type (Class) that has that java type as its 
+            // component (java) type.  I think the only way to do this 
+            // is to call Array.newInstance, and then take the class from the 
+            // resulting array instance.
+	    final ArrayType at = (ArrayType)ot ;
+	    final OpenType cot = at.getElementOpenType() ;
+	    final Class cjt = getJavaClass( cot ) ;
+	    final Object temp = Array.newInstance( cjt, 0 ) ;
+	    return temp.getClass() ;
+	} else if (ot instanceof TabularType) {
+	    return TabularData.class ;
+	} else if (ot instanceof CompositeType) {
+	    return CompositeData.class ;
+	} else {
+            throw Exceptions.self.unsupportedOpenType( ot ) ;
+	}
+    }
+
+    public static Class getJavaClass( final EvaluatedType type ) {
+        if (type instanceof EvaluatedClassDeclaration) {
+	    return ((EvaluatedClassDeclaration)type).cls() ;
+	} else if (type instanceof EvaluatedArrayType) {
+	    // Same trick as above.
+	    final EvaluatedArrayType gat = (EvaluatedArrayType)type ;
+	    final EvaluatedType ctype = gat.componentType() ;
+	    final Class cclass = getJavaClass( ctype ) ;
+	    final Object temp = Array.newInstance( cclass, 0 ) ;
+	    return temp.getClass() ;
+	} else {
+            throw Exceptions.self.cannotConvertToJavaType(type) ;
+	}
+    }
+
+    /* Type mapping rules for OT : Type -> OpenType:
+     *  <pre>
+     *  Java Type			Open Type
+     *  -----------------------------------------
+     *  boolean, Boolean		BOOLEAN
+     *  char, Character			CHARACTER
+     *  byte, Byte			BYTE
+     *  short, Short			SHORT
+     *  int, Integer			INTEGER
+     *  long, LONG			LONG
+     *  float, Float			FLOAT	
+     *  double, Double			DOUBLE
+     *  String				STRING
+     *  void				VOID
+     *  java.util.Date			DATE
+     *  javax.management.ObjectName	OBJECTNAME
+     *  java.math.BigDecimal		BIGDECIMAL
+     *  java.math.BigInteger		BIGINTEGER
+     *  (all of the above types have the same JT and OT representation.
+     *  
+     *  Enumeration type		String (only valid values are keywords)
+     *
+     *  @ManagedObject			ObjectName
+     *
+     *  @ManagedData			CompositeType( 
+     *					    @ManagedData.name, 
+     *					    @ManagedData.description, 
+     *					    ALL @ManagedAttribute ID, (extracted from the method 
+     *					                               name)
+     *					    ALL @ManagedAttribute.description, 
+     *					    ALL @ManagedAttribute OT(Type) ) (extracted from the 
+     *						                              method attribute 
+     *						                              TYPE)
+     *					We also need to include @IncludeSubclass and 
+     *					@InheritedAttribute(s) attributes
+     *					Also note that @InheritTable adds an attribute to the 
+     *					class.  
+     *					The inherited table is mapped to an array.  
+     *					The InheritTable annotation specifies a class X, which must
+     *					be part of the Type C<X>, where C is a subclass of 
+     *					Collection, Iterable, Iterator, or Enumerable.  
+     *					JT -> OT: invoke attribute methods, collect results, 
+     *					    construct CompositeDataSupport
+     *					OT -> JT: NOT SUPPORTED (for now)
+     *					(can only be supported in Collection case)
+     *
+     *	C<X>, C a subtype of Collection, Iterator, Iterable, or Enumeration
+     *	        			Mapped to array data containing OT(X) 
+     *					JT -> OT: Construct ArrayType of type OT(X), 
+     *					    fill it with all JT elements as mapped to their OT type
+     *					OT -> JT: NOT SUPPORTED 
+     *					    (unless CompositeData -> Java type is supported)
+     *					What about SortedSet?
+     *
+     *	M<K,V>, M a subtype of Map or Dictionary
+     *	                                Mapped to tabular data containing id="key" OT(K) as 
+     *	                                the key and id="value" OT(V) 
+     *	                                XXX What about SortedMap?
+     *	    
+     *	X[]				OT(X)[]
+     *					    As for CompositeData, we will mostly treat this as 
+     *					    readonly.  Mappings same as C<X> case. 
+     *
+     *	TypeVariable			
+     *	WildCardType			Both need to be supported.  The basic idea is that 
+     *	                                the upper bounds give us information on what interfaces 
+     *	                                must be implemented by by an instance of the type 
+     *	                                variable.  This in turn tells us what
+     *					subclasses identified by @IncludeSubclass should be 
+     *					used when mapping the actual data to a CompositeData 
+     *					instance.
+     *					Not supported: lower bounds (what would that mean?  
+     *					               Do I need it?)
+     *						       multiple upper bounds (I don't think I 
+     *						       need this?)
+     *					Multiple upper bounds PROBABLY means the intersection of 
+     *					the included subclasses for all of the bounds
+     *
+     *	Other				String
+     *					    JT -> OT: use toString
+     *					    OT -> JT: requires a <init>(String) constructor
+     *
+     * Note that the CompositeData OpenType->JavaType mapping will be handled 
+     * the same way as in MXBeans.  
+     * XXX This is not yet implemented!
+     */
+    public static TypeConverter makeTypeConverter( final EvaluatedType type,
+        final ManagedObjectManagerInternal mom ) {
+        
+        if (mom.registrationDebug()) {
+            dputil.enter( "makeTypeConverter", "type=", type,
+                "mom=", mom ) ;
+        }
+        
+        TypeConverter result = null ;
+        try {
+            final OpenType stype = simpleTypeMap.get( type ) ;
+            if (stype != null) {
+                result = handleSimpleType( type, stype ) ;
+            } else if (type instanceof EvaluatedClassDeclaration) {
+                EvaluatedClassDeclaration cls = (EvaluatedClassDeclaration)type ;
+                final ManagedObject mo = cls.annotation( ManagedObject.class ) ;
+                final ManagedData md = cls.annotation( ManagedData.class ) ;
+
+                if (mo != null) {
+                    result = handleManagedObject( cls, mom, mo ) ;
+                } else if (md != null) {
+                    result = handleManagedData( cls, mom, md ) ;
+                } else if (cls.cls().isEnum()) {
+                    result = handleEnum( cls ) ;
+                } else {
+                    result = handleClass( cls, mom ) ;
+                }
+            } else if (type instanceof EvaluatedArrayType) {
+                result = handleArrayType( (EvaluatedArrayType)type, mom ) ;
+            } else {
+                // this should not happen
+                throw new IllegalArgumentException( "Unknown kind of Type "
+                    + type ) ;
+            }
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static TypeConverter handleSimpleType( final EvaluatedType type,
+	final OpenType stype ) {
+
+	return new TypeConverterImpl( type, stype ) {
+	    public Object toManagedEntity( final Object obj ) {
+		return obj ;
+	    }
+
+            @Override
+	    public Object fromManagedEntity( final Object entity ) {
+		return entity ;
+	    }
+
+            @Override
+	    public boolean isIdentity() {
+		return true ;
+	    }
+	} ;
+    }
+
+    private static TypeConverter handleManagedObject(
+        final EvaluatedClassDeclaration type,
+	final ManagedObjectManagerInternal mom, final ManagedObject mo ) {
+
+        TypeConverter result = null ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleManagedObject", "type=", type,
+                "mom=", mom, "mo=", mo ) ;
+        }
+
+        try {
+            result = new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
+                public Object toManagedEntity( Object obj ) {
+                    return mom.getObjectName( obj ) ;
+                }
+
+                @Override
+                public Object fromManagedEntity( final Object entity ) {
+                    if (!(entity instanceof ObjectName)) {
+                        throw Exceptions.self.entityNotObjectName( entity ) ;
+                    }
+
+                    final ObjectName oname = (ObjectName)entity ;
+                    return mom.getObject( oname ) ;
+                }
+            } ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static Collection<AttributeDescriptor> analyzeManagedData(
+        final EvaluatedClassDeclaration cls, final ManagedObjectManagerInternal mom ) {
+
+        if (mom.registrationDebug()) {
+            dputil.enter( "analyzeManagedData", "cls=", cls, "mom=", mom ) ;
+        }
+
+        Collection<AttributeDescriptor> result = null ;
+
+        try {
+            final EvaluatedClassAnalyzer ca = mom.getClassAnalyzer( cls,
+                ManagedData.class ).second() ;
+
+            final Pair<Map<String,AttributeDescriptor>,
+                Map<String,AttributeDescriptor>> ainfos =
+                    mom.getAttributes( ca,
+                        ManagedObjectManagerInternal.AttributeDescriptorType
+                            .COMPOSITE_DATA_ATTR ) ;
+
+            result = ainfos.first().values() ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static CompositeType makeCompositeType(
+        final EvaluatedClassDeclaration cls,
+        final ManagedObjectManagerInternal mom, final ManagedData md,
+        Collection<AttributeDescriptor> minfos ) {
+
+        if (mom.registrationDebug()) {
+            dputil.enter( "makeCompositeType",
+                "cls=", cls, "mom=", mom, "md=", md, "minfos=", minfos ) ;
+        }
+
+        CompositeType result = null ;
+
+        try {
+            String name = md.name() ;
+            if (name.equals( "" )) {
+                name = mom.getStrippedName( cls.cls() ) ;
+            }
+
+            if (mom.registrationDebug()) {
+                dputil.info( "name=", name ) ;
+            }
+
+            final String mdDescription = mom.getDescription( cls ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "mdDescription=", mdDescription ) ;
+            }
+
+            final int length = minfos.size() ;
+            final String[] attrNames = new String[ length ] ;
+            final String[] attrDescriptions = new String[ length ] ;
+            final OpenType[] attrOTypes = new OpenType[ length ] ;
+
+            int ctr = 0 ;
+            for (AttributeDescriptor minfo : minfos) {
+                attrNames[ctr] = minfo.id() ;
+                attrDescriptions[ctr] = minfo.description() ;
+                attrOTypes[ctr] = minfo.tc().getManagedType() ;
+                ctr++ ;
+            }
+
+            if (mom.registrationDebug()) {
+                dputil.info( "attrNames=", Arrays.asList(attrNames),
+                    "attrDescriptions=", Arrays.asList(attrDescriptions),
+                    "attrOTypes=", Arrays.asList(attrOTypes) ) ;
+            }
+
+            try {
+                result = new CompositeType(
+                    name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
+            } catch (OpenDataException exc) {
+                throw Exceptions.self.exceptionInMakeCompositeType(exc) ;
+            }
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static TypeConverter handleManagedData(
+        final EvaluatedClassDeclaration cls,
+	final ManagedObjectManagerInternal mom, final ManagedData md ) {
+
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleManagedData", "cls=", cls,
+                "mom=", mom, "md=", md ) ;
+        }
+
+        TypeConverter result = null ;
+        try {
+            final Collection<AttributeDescriptor> minfos = analyzeManagedData(
+                cls, mom ) ;
+            final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
+            if (mom.registrationDebug()) {
+                dputil.info( "minfos=", minfos, "myType=", myType ) ;
+            }
+
+            result = new TypeConverterImpl( cls, myType ) {
+                public Object toManagedEntity( Object obj ) {
+                    if (mom.runtimeDebug()) {
+                        dputil.enter( "(ManagedData):toManagedEntity", "obj=", obj ) ;
+                    }
+
+                    Object runResult = null ;
+                    try {
+                        Map<String,Object> data = new HashMap<String,Object>() ;
+                        for (AttributeDescriptor minfo : minfos) {
+                            if (mom.runtimeDebug()) {
+                                dputil.info( "Fetching attribute " + minfo.id() ) ;
+                            }
+
+                            Object value = null ;
+                            if (minfo.isApplicable( obj )) {
+                                try {
+                                    FacetAccessor fa = mom.getFacetAccessor( obj ) ;
+                                    value = minfo.get(fa, mom.runtimeDebug());
+                                } catch (JMException ex) {
+                                    if (mom.runtimeDebug()) {
+                                        dputil.exception( "Error", ex) ;
+                                    }
+                                }
+                            }
+
+                            data.put( minfo.id(), value ) ;
+                        }
+
+                        try {
+                            runResult = new CompositeDataSupport( myType, data ) ;
+                        } catch (OpenDataException exc) {
+                            throw Exceptions.self.exceptionInHandleManagedData(exc) ;
+                        }
+                    } finally {
+                        if (mom.runtimeDebug()) {
+                            dputil.exit( runResult ) ;
+                        }
+                    }
+
+                    return runResult ;
+                }
+            } ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static TypeConverter handleEnum( final EvaluatedClassDeclaration cls ) {
+
+	return new TypeConverterImpl( cls, SimpleType.STRING ) {
+	    public Object toManagedEntity( final Object obj ) {
+		return obj.toString() ;
+	    }
+
+            @Override
+            @SuppressWarnings("unchecked")
+	    public Object fromManagedEntity( final Object entity ) {
+		if (!(entity instanceof String)) {
+                    throw Exceptions.self.notAString(entity) ;
+                }
+
+		return Enum.valueOf( cls.cls(), (String)entity ) ;
+	    }
+	} ;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static TypeConverter handleArrayType( final EvaluatedArrayType type,
+	final ManagedObjectManagerInternal mom ) {
+
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleArrayType" ) ;
+        }
+
+        TypeConverter result = null ;
+        try {
+            final EvaluatedType ctype = type.componentType() ;
+            final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
+            final OpenType cotype = ctypeTc.getManagedType() ;
+            final OpenType ot ;
+
+            try {
+                ot = new ArrayType( 1, cotype ) ;
+            } catch (OpenDataException exc) {
+                throw Exceptions.self.noArrayOfArray( exc ) ;
+            }
+
+            final OpenType myManagedType = ot ;
+
+            if (mom.registrationDebug()) {
+                dputil.info( "ctype=", ctype, "ctypeTc=", ctypeTc,
+                    "cotype=", cotype, "ot=", ot ) ;
+            }
+
+            result = new TypeConverterImpl( type, myManagedType ) {
+                public Object toManagedEntity( final Object obj ) {
+                    if (isIdentity()) {
+                        return obj ;
+                    } else {
+                        final Class cclass = getJavaClass( ctype ) ;
+                        final int length = Array.getLength( obj ) ;
+                        final Object result = Array.newInstance( cclass, length ) ;
+                        for (int ctr=0; ctr<length; ctr++) {
+                            final Object elem = Array.get( obj, ctr ) ;
+                            final Object relem =  ctypeTc.toManagedEntity( elem ) ;
+                            Array.set( result, ctr, relem ) ;
+                        }
+
+                        return result ;
+                    }
+                }
+
+                @Override
+                public Object fromManagedEntity( final Object entity ) {
+                    if (isIdentity()) {
+                        return entity ;
+                    } else {
+                        final Class cclass = getJavaClass( cotype ) ;
+
+                        final int length = Array.getLength( entity ) ;
+                        final Object result = Array.newInstance( cclass, length ) ;
+                        for (int ctr=0; ctr<length; ctr++) {
+                            final Object elem = Array.get( entity, ctr ) ;
+                            final Object relem =
+                                ctypeTc.fromManagedEntity( elem ) ;
+                            Array.set( result, ctr, relem ) ;
+                        }
+
+                        return result ;
+                    }
+                }
+
+                @Override
+                public boolean isIdentity() {
+                    return ctypeTc.isIdentity() ;
+                }
+            } ;
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+
+        return result ;
+    }
+
+    private static EvaluatedMethodDeclaration findMethod(
+        final EvaluatedClassDeclaration cdecl, final String mname ) {
+
+        EvaluatedMethodDeclaration meth = null ;
+        for (EvaluatedMethodDeclaration m : cdecl.methods()) {
+            if (m.name().equals( mname )) {
+                meth = m ;
+                break ;
+            }
+        }
+
+        return meth ;
+    }
+
+    private static EvaluatedType getReturnType( EvaluatedClassDeclaration decl,
+        String mname ) {
+
+        EvaluatedMethodDeclaration meth = findMethod( decl, mname ) ;
+
+        if (meth == null) {
+            return null ;
+        } else {
+            return meth.returnType() ;
+        }
+    }
+
+    private static EvaluatedType getParameterType( EvaluatedClassDeclaration decl,
+        String mname, int pindex ) {
+
+        EvaluatedMethodDeclaration meth = findMethod( decl, mname ) ;
+
+        if (meth == null) {
+            return null ;
+        } else {
+            if (pindex < meth.parameterTypes().size()) {
+                return meth.parameterTypes().get( pindex ) ;
+            } else {
+                throw new IndexOutOfBoundsException(
+                    "Parameter index is out of bounds" ) ;
+            }
+        }
+    }
+
+    private static TypeConverter handleClass( 
+        final EvaluatedClassDeclaration type,
+        final ManagedObjectManagerInternal mom ) {
+        
+        if (mom.registrationDebug()) {
+            dputil.enter( "handleClass" ) ;
+        }
+        
+        TypeConverter result = null ;
+        
+        try {
+        // Case 1: Some kind of collection.
+        if (Iterable.class.isAssignableFrom(type.cls())) {
+            EvaluatedClassDeclaration type2 =
+                (EvaluatedClassDeclaration)getReturnType( type, "iterator") ;
+            EvaluatedType tcType = getReturnType( type2, "next" ) ;
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+
+            result = new TypeConverterListBase( type, tc ) {
+                protected Iterator getIterator( Object obj ) {
+                    return ((Iterable)obj).iterator() ;
+                }
+            } ;
+        } else if (Collection.class.isAssignableFrom(type.cls())) {
+            EvaluatedClassDeclaration type2 =
+                (EvaluatedClassDeclaration)getReturnType( type, "iterator") ;
+            EvaluatedType tcType = getReturnType( type2, "next" ) ;
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+
+            result = new TypeConverterListBase( type, tc ) {
+                protected Iterator getIterator( Object obj ) {
+                    return ((Iterable)obj).iterator() ;
+                }
+            } ;
+        } else if (Iterator.class.isAssignableFrom(type.cls())) {
+            EvaluatedType tcType = getReturnType( type, "next" ) ;
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+
+            result = new TypeConverterListBase( type, tc ) {
+                protected Iterator getIterator( Object obj ) {
+                    return (Iterator)obj ;
+                }
+            } ;
+        } else if (Enumeration.class.isAssignableFrom(type.cls())) {
+            EvaluatedType tcType = getReturnType( type, "next" ) ;
+
+            TypeConverter tc = mom.getTypeConverter( tcType ) ;
+            result = new TypeConverterListBase( type, tc ) {
+                @SuppressWarnings("unchecked")
+                protected Iterator getIterator( Object obj ) {
+                    return new EnumerationAdapter( (Enumeration)obj ) ;
+                }
+            } ;
+        } else if (Map.class.isAssignableFrom(type.cls())) {
+            EvaluatedType type1 = getParameterType( type, "put", 0 ) ;
+            TypeConverter firstTc = mom.getTypeConverter( type1 ) ;
+            EvaluatedType type2 = getReturnType( type, "put" ) ;
+            TypeConverter secondTc = mom.getTypeConverter( type2 ) ;
+
+            result = new TypeConverterMapBase( type, firstTc, secondTc ) {
+                @SuppressWarnings("unchecked")
+                protected Table getTable( Object obj ) {
+                    return new TableMapImpl( (Map)obj ) ;
+                }
+            } ;
+        } else if (Dictionary.class.isAssignableFrom(type.cls())) {
+            EvaluatedType type1 = getParameterType( type, "put", 0 ) ;
+            TypeConverter firstTc = mom.getTypeConverter( type1 ) ;
+            EvaluatedType type2 = getReturnType( type, "put" ) ;
+            TypeConverter secondTc = mom.getTypeConverter( type2 ) ;
+
+            result = new TypeConverterMapBase( type, firstTc, secondTc ) {
+                @SuppressWarnings("unchecked")
+                protected Table getTable( Object obj ) {
+                    return new TableDictionaryImpl( (Dictionary)obj ) ;
+                }
+            } ;
+        } else {
+            result = handleAsString( type ) ;
+        }
+
+        } catch (RuntimeException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw exc ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( result ) ;
+            }
+        }
+        
+        return result ;
+    } 
+	
+    @SuppressWarnings({"unchecked"})
+    private static TypeConverter handleAsString( 
+        final EvaluatedClassDeclaration cls ) {
+
+        Constructor cs = null ;
+        try {
+            cs = cls.cls().getDeclaredConstructor(String.class);
+        } catch (NoSuchMethodException ex) {
+            // log message
+        } catch (SecurityException ex) {
+            // log message
+        }
+
+	final Constructor cons = cs ;
+
+	return new TypeConverterImpl( cls, SimpleType.STRING ) {
+	    public Object toManagedEntity( Object obj ) {
+                if (obj == null) {
+                    return "*NULL*" ;
+                } else {
+                    return obj.toString() ;
+                }
+	    }
+
+            @Override
+	    public Object fromManagedEntity( final Object entity ) {
+		if (cons == null) {
+                    throw Exceptions.self.noStringConstructor(cls.cls());
+                }
+                
+		try {
+                    final String str = (String) entity;
+                    return cons.newInstance(str);
+                } catch (InstantiationException exc) {
+                    throw Exceptions.self.stringConversionError(cls.cls(), exc ) ;
+                } catch (IllegalAccessException exc) {
+                    throw Exceptions.self.stringConversionError(cls.cls(), exc ) ;
+                } catch (InvocationTargetException exc) {
+                    throw Exceptions.self.stringConversionError(cls.cls(), exc ) ;
+                }
+	    }
+	} ;
+    }
+
+    private static class EnumerationAdapter<T> implements Iterator<T> {
+        final private Enumeration<T> enumeration ;
+
+        public EnumerationAdapter( final Enumeration<T> en ) {
+            this.enumeration = en ;
+        }
+
+        public boolean hasNext() {
+            return enumeration.hasMoreElements() ;
+        }
+
+        public T next() {
+            return enumeration.nextElement() ;
+        }
+
+        public void remove() {
+            throw Exceptions.self.removeNotSupported() ;
+        }
+    }
+
+    // TypeConverter that throws exceptions for its methods.  Used as a 
+    // place holder to detect recursive types.
+    public static class TypeConverterPlaceHolderImpl implements TypeConverter {
+        private EvaluatedType et ;
+
+        public TypeConverterPlaceHolderImpl( EvaluatedType type ) {
+            et = type ;
+        }
+
+        public EvaluatedType getDataType() {
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
+        }
+
+        public OpenType getManagedType() {
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
+        }
+
+        public Object toManagedEntity( Object obj ) {
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
+        }
+
+        public Object fromManagedEntity( Object entity ) {
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
+        }
+
+        public boolean isIdentity() {
+            throw Exceptions.self.recursiveTypesNotSupported( et ) ;
+        }
+    }
+
+    private abstract static class TypeConverterListBase 
+        extends TypeConverterImpl {
+        
+        final TypeConverter memberTc ;
+
+        public TypeConverterListBase( final EvaluatedType dataType,
+            final TypeConverter memberTc ) {
+            
+            super( dataType, makeArrayType( memberTc.getManagedType() ) ) ;
+            this.memberTc = memberTc ;
+        }
+
+        @SuppressWarnings("unchecked")
+        private static ArrayType makeArrayType( final OpenType ot ) {
+            try {
+                return new ArrayType( 1, ot ) ;
+            } catch (OpenDataException exc) {
+                throw Exceptions.self.openTypeInArrayTypeException( ot, exc) ;
+            }
+        }
+
+        protected abstract Iterator getIterator( Object obj ) ;
+
+        public Object toManagedEntity( final Object obj ) {
+            final Iterator iter = getIterator( obj ) ;
+            final List<Object> list = new ArrayList<Object>() ;
+            while (iter.hasNext()) {
+                list.add( iter.next() ) ;
+            }
+
+            final Class cclass = getJavaClass( memberTc.getManagedType() ) ;
+            final Object result = Array.newInstance( cclass, list.size() ) ;
+            int ctr = 0 ;
+            for (Object elem : list) {
+                final Object mappedElem = memberTc.toManagedEntity( elem ) ;
+                Array.set( result, ctr++, mappedElem ) ;
+            }
+
+            return result ;
+        }
+    }
+
+    private interface Table<K,V> extends Iterable<K> {
+        V get( K key ) ;
+    }
+
+    private static class TableMapImpl<K,V> implements Table<K,V> {
+        final private Map<K,V> map ;
+
+        public TableMapImpl( final Map<K,V> map ) {
+            this.map = map ;
+        }
+
+        public Iterator<K> iterator() {
+            return map.keySet().iterator() ;
+        }
+
+        public V get( final K key ) {
+            return map.get( key ) ;
+        }
+    }
+
+    private static class TableDictionaryImpl<K,V> implements Table<K,V> {
+        final private Dictionary<K,V> dict ;
+
+        public TableDictionaryImpl( final Dictionary<K,V> dict ) {
+            this.dict = dict ;
+        }
+
+        @SuppressWarnings("unchecked")
+        public Iterator<K> iterator() {
+            return new EnumerationAdapter( dict.elements() ) ;
+        }
+
+        public V get( final K key ) {
+            return dict.get( key ) ;
+        }
+    }
+
+    private abstract static class TypeConverterMapBase 
+        extends TypeConverterImpl {
+        
+        final private TypeConverter keyTypeConverter ;
+        final private TypeConverter valueTypeConverter ;
+
+        public TypeConverterMapBase( EvaluatedType dataType,
+            TypeConverter keyTypeConverter, TypeConverter valueTypeConverter ) {
+            
+            super( dataType, makeMapTabularType( keyTypeConverter, 
+                valueTypeConverter ) ) ;
+            this.keyTypeConverter = keyTypeConverter ;
+            this.valueTypeConverter = valueTypeConverter ;
+        }
+
+        private static TabularType makeMapTabularType( 
+            final TypeConverter firstTc, final TypeConverter secondTc ) {
+            
+            final String mapType = firstTc + "->" + secondTc ;
+
+            final String[] itemNames = new String[] { "key", "value" } ;
+
+            final String description = Exceptions.self.rowTypeDescription(
+                mapType) ;
+
+            final String[] itemDescriptions = new String[] {
+                Exceptions.self.keyFieldDescription(mapType),
+                Exceptions.self.valueFieldDescription(mapType)
+            } ;
+
+            final OpenType[] itemTypes = new OpenType[] {
+                firstTc.getManagedType(), secondTc.getManagedType() 
+            } ;
+
+            try {
+                final CompositeType rowType = new CompositeType( mapType,
+                    description, itemNames, itemDescriptions, itemTypes ) ;
+
+                final String[] keys = new String[] { "key" } ;
+                final String tableName =
+                    Exceptions.self.tableName( mapType ) ;
+                final String tableDescription = 
+                    Exceptions.self.tableDescription( mapType ) ;
+
+                final TabularType result = new TabularType( tableName,
+                    tableDescription, rowType, keys ) ;
+
+                return result ;
+            } catch (OpenDataException exc) {
+                throw Exceptions.self.exceptionInMakeMapTabularType(exc) ;
+            }
+        }
+
+        protected abstract Table getTable( Object obj ) ;
+
+        @SuppressWarnings("unchecked")
+        public Object toManagedEntity( Object obj ) {
+            try {
+                final Table table = getTable( obj ) ;
+                final TabularType ttype = (TabularType)getManagedType() ;
+                final CompositeType ctype = ttype.getRowType() ;
+                final TabularData result = new TabularDataSupport( ttype ) ;
+                for (Object key : table) {
+                    @SuppressWarnings("unchecked")
+                    final Object value = table.get( key ) ;
+                    final Object mappedKey = 
+                        keyTypeConverter.toManagedEntity( key ) ;
+                    final Object mappedValue = 
+                        valueTypeConverter.toManagedEntity( value ) ;
+                    final Map items = new HashMap() ;
+                    items.put( "key", mappedKey ) ;
+                    items.put( "value", mappedValue ) ;
+                    CompositeDataSupport cdata = new CompositeDataSupport( 
+                        ctype, items ) ;
+                    result.put( cdata ) ;
+                }
+
+                return result ;
+            } catch (OpenDataException exc) {
+                throw Exceptions.self.excInMakeMapTabularDataToManagedEntity( 
+                    exc ) ;
+            }
+        }
+    }
+
+    // Basic support for all TypeConverters.
+    @DumpToString
+    protected final EvaluatedType dataType ;
+    @DumpToString
+    protected final OpenType managedType ;
+
+    protected TypeConverterImpl( final EvaluatedType dataType,
+        final OpenType managedType ) {
+        
+        this.dataType = dataType ;
+        this.managedType = managedType ;
+    }
+
+    /* Java generic type of attribute in problem-domain Object.
+     */
+    public final EvaluatedType getDataType() {
+        return dataType ;
+    }
+
+    /* Open MBeans Open Type for management domain object.
+     */
+    public final OpenType getManagedType() {
+        return managedType ;
+    }
+
+    /* Convert from a problem-domain Object obj to a ManagedEntity.
+     */
+    public abstract Object toManagedEntity( Object obj ) ;
+
+    /* Convert from a ManagedEntity to a problem-domain Object.
+     */
+    public Object fromManagedEntity( Object entity ) {
+        throw Exceptions.self.openToJavaNotSupported(managedType, dataType) ;
+    }
+
+    /* Returns true if this TypeConverter is an identity transformation.
+     */
+    public boolean isIdentity() {
+        return false ;
+    }
+    
+    private String displayOpenType( OpenType otype ) {
+        if (otype instanceof SimpleType) {
+            SimpleType stype = (SimpleType)otype ;
+            return "SimpleType(" + stype.getTypeName() + ")" ;
+        } else if (otype instanceof ArrayType) {
+            ArrayType atype = (ArrayType)otype ;
+            return "ArrayType(" + displayOpenType( atype.getElementOpenType() )
+                + "," + atype.getDimension() + ")" ;
+        } else if (otype instanceof CompositeType) {
+            CompositeType ctype = (CompositeType)otype ;
+            return "CompositeType(" + ctype.getTypeName() + ")" ;
+        } else if (otype instanceof TabularType) {
+            TabularType ttype = (TabularType)otype ;
+            return "TabularType(" + ttype.getTypeName() + ","
+                + "rowType=" + ttype.getRowType()
+                + "indexNames=" + ttype.getIndexNames() + ")" ;
+        } else {
+            return "UNKNOWN(" + otype + ")" ;
+        }
+    }
+
+    public String toString() {
+        return "TypeConverter[dataType=" + dataType 
+            + ",managedType=" + displayOpenType( managedType ) + "]" ;
+    }
+}
+

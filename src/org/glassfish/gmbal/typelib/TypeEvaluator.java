@@ -52,14 +52,20 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import static java.lang.reflect.Modifier.* ;
+
 import java.lang.reflect.Type ;
 import java.lang.reflect.GenericArrayType ;
 import java.lang.reflect.Method;
 import java.lang.reflect.WildcardType ;
 import java.lang.reflect.ParameterizedType ;
 import java.lang.reflect.TypeVariable ;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Date;
 import java.util.IdentityHashMap;
 import java.util.WeakHashMap;
+import javax.management.ObjectName;
 
 /**
  *
@@ -77,11 +83,106 @@ public class TypeEvaluator {
         }
     }
 
+    private static EvaluatedClassDeclaration getECD( Class cls ) {
+        return DeclarationFactory.ecdecl( PUBLIC,
+            cls.getName(), cls ) ;
+    }
+
     // Cache of representations of classes with bound type variables.
     // A class may be in many EvalMapKeys with different tvar bindings.
     // XXX EvaluatedClassDeclaration strongly references Class!
+    // XXX Is this part of the problem in Gmbal-10: a value strongly 
+    // references its key, trapping the value in the Weak map?
     private static Map<EvalMapKey,EvaluatedClassDeclaration> evalClassMap =
         new WeakHashMap<EvalMapKey,EvaluatedClassDeclaration>() ;
+
+    private static List<EvaluatedType> emptyETList =
+            new ArrayList<EvaluatedType>() ;
+    private static List<EvaluatedClassDeclaration> emptyECDList =
+        new ArrayList<EvaluatedClassDeclaration>() ;
+    private static  List<EvaluatedMethodDeclaration> emptyEMDList =
+        new ArrayList<EvaluatedMethodDeclaration>() ;
+
+    private static void mapPut( EvaluatedClassDeclaration ecd, 
+        Class cls ) {
+        evalClassMap.put( new EvalMapKey( cls, emptyETList ),
+            ecd ) ;
+    }
+
+    // Initialize the map with a few key classes that we do NOT want to evaluate
+    // (evaluating Object leads to a getClass method, which leads to all of the
+    // reflection classes, which leads to, ... (450 classes later).
+    // NONE of these classes are interesting for gmbal, so let's just bootstrap
+    // evalClassMap with Object, Object.toString, and String (needed for the
+    // return type of Object.toString).
+    // Kind of like grounding a meta-object protocol...
+    static {
+        try {
+            // Initialize all of the classes in EvaluatedType to just
+            // inherit from Object, except for Object, which has no
+            // inheritance, and defines a toString() method.
+            // We also need to handle String separately because
+            // of the toString() method signature.
+            final Class[] classes = {
+                void.class, Integer.class, Byte.class, Character.class,
+                Short.class, Boolean.class, Float.class, Double.class,
+                Long.class, BigDecimal.class, BigInteger.class,
+                Date.class, ObjectName.class, Class.class,
+                Number.class
+            } ;
+
+            final Class objectClass = Object.class ;
+            final Class stringClass = String.class ;
+            final Class voidClass = Void.class ;
+
+            final Method toStringMethod = objectClass.getDeclaredMethod(
+                "toString" ) ;
+
+            // Introduce the EvaluatedClassDeclarations we need
+            final EvaluatedClassDeclaration objectECD = getECD( objectClass ) ;
+            final EvaluatedClassDeclaration voidECD = getECD( voidClass ) ;
+            final EvaluatedClassDeclaration stringECD = getECD( stringClass ) ;
+
+            final EvaluatedMethodDeclaration toStringEMD =
+                DeclarationFactory.emdecl( PUBLIC, stringECD, "toString", 
+                emptyETList, toStringMethod ) ;
+            final List<EvaluatedMethodDeclaration> toStringList =
+                Algorithms.list( toStringEMD ) ;
+
+            final List<EvaluatedClassDeclaration> objectList =
+                Algorithms.list( objectECD ) ;
+
+            // Now finalize the definitions of the ECDs
+            voidECD.instantiations( emptyETList ) ;
+            voidECD.inheritance( objectList ) ;
+            voidECD.methods( emptyEMDList ) ;
+
+            objectECD.instantiations( emptyETList ) ;
+            objectECD.inheritance( emptyECDList ) ;
+            objectECD.methods( toStringList ) ;
+
+            stringECD.instantiations( emptyETList ) ;
+            stringECD.inheritance( objectList ) ;
+            stringECD.methods( emptyEMDList ) ;
+
+            // And store them in the evalClassMap.
+            mapPut( voidECD, voidClass ) ;
+            mapPut( objectECD, objectClass ) ;
+            mapPut( stringECD, stringClass ) ;
+
+            // Finally initialize all of the TypeEvaluator classes.
+            for (Class cls : classes) {
+                EvaluatedClassDeclaration ecd = getECD( cls ) ;
+                ecd.instantiations( emptyETList ) ;
+                ecd.inheritance( objectList ) ;
+                ecd.methods( emptyEMDList ) ;
+                mapPut( ecd, cls ) ;
+            }
+        } catch (Exception exc) {
+            // If any of this code throws errors, the VM is broken...GIVE UP.
+            throw new RuntimeException( exc ) ;
+        }
+    }
 
     public static void dumpEvalClassMap() {
         System.out.println( "TypeEvaluator: dumping eval class map") ;
@@ -223,20 +324,37 @@ public class TypeEvaluator {
 
         private EvaluatedType getCorrectDeclaration( OrderedResult<String,EvaluatedType> bindings,
             Class decl, EvaluatedClassDeclaration newDecl ) {
-            
-            EvalMapKey key = new EvalMapKey( decl, bindings.getList() ) ;
-            newDecl.instantiations( bindings.getList() ) ;
-
-            EvaluatedType result = evalClassMap.get( key ) ;
-            if (result == null) {
-                evalClassMap.put( key, newDecl ) ;
-
-                processClass( newDecl, bindings.getMap(), decl ) ;
-
-                result = newDecl ;
+            if (DEBUG) {
+                dputil.enter( "getCorrectDeclaration", "decl=", decl ) ;
             }
 
-            return result ;
+            try {
+                EvalMapKey key = new EvalMapKey( decl, bindings.getList() ) ;
+                newDecl.instantiations( bindings.getList() ) ;
+
+                EvaluatedType result = evalClassMap.get( key ) ;
+                if (result == null) {
+                    if (DEBUG) {
+                        dputil.info( "No result in evalClassMap" ) ;
+                    }
+
+                    evalClassMap.put( key, newDecl ) ;
+
+                    processClass( newDecl, bindings.getMap(), decl ) ;
+
+                    result = newDecl ;
+                } else {
+                    if (DEBUG) {
+                        dputil.info( "Found result in evalClassMap", "result=", result ) ;
+                    }
+                }
+
+                return result ;
+            } finally {
+                if (DEBUG) {
+                    dputil.exit() ;
+                }
+            }
         }
 
         private EvaluatedType visitClassDeclaration( Class decl ) {
