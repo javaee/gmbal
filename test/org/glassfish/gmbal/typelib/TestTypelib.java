@@ -44,7 +44,6 @@
 
 package org.glassfish.gmbal.typelib ;
 
-import org.glassfish.gmbal.typelib.TestTypelibDecls;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -55,11 +54,6 @@ import java.util.Map;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
-import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration ;
-import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration ;
-import org.glassfish.gmbal.typelib.DeclarationFactory ;
-import org.glassfish.gmbal.typelib.EvaluatedType;
-import org.glassfish.gmbal.typelib.TypeEvaluator ;
 
 public class TestTypelib extends TestCase {
     private static class TypelibTestCase extends TestCase {
@@ -165,11 +159,11 @@ public class TestTypelib extends TestCase {
     }
 
     public static class ListInt extends Super<List<Integer>> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
 
     public static class ListIntSub extends ListInt {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
 
         @Override
         public List<Integer> getThing() {
@@ -178,15 +172,15 @@ public class TestTypelib extends TestCase {
     }
 
     public static class ListU<U> extends Super<List<U>> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
     }
 
     public static class ListUInt extends ListU<Integer> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
 
     public static class ListUSub<V> extends ListU<V> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
 
         public List<V> getThing() {
             return null;
@@ -194,7 +188,7 @@ public class TestTypelib extends TestCase {
     }
 
     public static class ListUSubInt extends ListUSub<Integer> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
 
     public static class TwoParams<S, T> extends Super<S> {
@@ -261,7 +255,7 @@ public class TestTypelib extends TestCase {
 
     public static class GenericArray extends Super<List<String>[]> {
         static final EvaluatedType expect = DeclarationFactory.egat(
-            TestTypelibDecls.LIST_STRING ) ;
+            TestTypelibDecls.Prototypes.LIST_STRING ) ;
     }
 
     public static class GenericArrayT<T> extends Super<T[]> {
@@ -275,15 +269,15 @@ public class TestTypelib extends TestCase {
     }
 
     public static class Wildcard extends Super<List<?>> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
     }
 
     public static class WildcardT<T> extends Super<List<? extends T>> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
     }
 
     public static class WildcardTSub extends WildcardT<Integer> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
 
     public static class WildcardTSubSub<X> extends WildcardTSub {
@@ -292,19 +286,19 @@ public class TestTypelib extends TestCase {
     }
 
     public static class RawWildcardTSubSub extends WildcardTSubSub {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
 
     public static class WildcardTSuper<T> extends Super<List<? super T>> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
     }
 
     public static class WildcardTSuperSub extends WildcardTSuper<Integer> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
     }
 
     public static class SuperMap<K, V> {
-        static final EvaluatedType expect = TestTypelibDecls.MAP_OBJECT_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.MAP_OBJECT_OBJECT ;
 
         public Map<K, V> getThing() {
             return null;
@@ -312,15 +306,15 @@ public class TestTypelib extends TestCase {
     }
 
     public static class SubMap extends SuperMap<String, Integer> {
-        static final EvaluatedType expect = TestTypelibDecls.MAP_STRING_INTEGER ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.MAP_STRING_INTEGER ;
     }
 
     public static class ListListT<T> extends Super<List<List<T>>> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_LIST_OBJECT ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_LIST_OBJECT ;
     }
 
     public static class ListListString extends ListListT<String> {
-        static final EvaluatedType expect = TestTypelibDecls.LIST_LIST_STRING ;
+        static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_LIST_STRING ;
     }
 
     public static class UExtendsT<T, U extends T> extends Super<U> {

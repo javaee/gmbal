@@ -40,6 +40,10 @@ package org.glassfish.gmbal.typelib;
 import java.util.List;
 
 public interface EvaluatedClassDeclaration extends EvaluatedDeclaration {
+    boolean simpleClass() ;
+
+    void freeze() ;
+
     List<EvaluatedType> instantiations() ;
 
     void instantiations( List<EvaluatedType> arg ) ;

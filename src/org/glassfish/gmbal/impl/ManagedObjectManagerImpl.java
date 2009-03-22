@@ -90,6 +90,11 @@ import org.glassfish.gmbal.typelib.TypeEvaluator;
  * XXX Test attribute change notification.
  */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
+    private static ObjectUtility myObjectUtil =
+        new ObjectUtility(true, 0, 4)
+            .useToString( EvaluatedType.class )
+            .useToString( ManagedObjectManager.class ) ;
+
     private String domain ;
     private ResourceBundle resourceBundle ;
     private MBeanServer server ; 
@@ -227,7 +232,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             if (registrationFineDebug() || (registrationDebug() && newSkeleton)) {
                 dputil.info( "Skeleton=" 
-                    + ObjectUtility.defaultObjectToString( result ) ) ;
+                    + myObjectUtil.objectToString(result) ) ;
             }
             
             return result ;
@@ -270,7 +275,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 
                 if (registrationFineDebug()) {
                     dputil.info( "result=" 
-                        + ObjectUtility.defaultObjectToString( result ) ) ;
+                        + myObjectUtil.objectToString( result ) ) ;
                 }
             }
         } finally {
@@ -809,7 +814,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             return obj + " is not currently registered with mom " + this ;
         } else {
             MBeanSkeleton skel = impl.skeleton() ;
-            String skelString = ObjectUtility.defaultObjectToString( skel ) ;
+            String skelString = myObjectUtil.objectToString( skel ) ;
             return "Skeleton for MBean for object " + obj + ":\n"
                 + skelString ;
         }

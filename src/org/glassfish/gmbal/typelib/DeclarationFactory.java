@@ -41,161 +41,276 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+
+import java.util.Map;
+import org.glassfish.gmbal.generic.DprintUtil ;
+import org.glassfish.gmbal.generic.DumpToString;
+import org.glassfish.gmbal.generic.Pair;
 
 /** Utility class used to construct instances of the typelib interfaces directly from
  * factory methods, rather than from actual Java classes.  This is useful for testing:
  * we can construct the expected result, then compare with the actual result.
  */
 public class DeclarationFactory {
-    
+    private static boolean DEBUG = false ;
+    private static DprintUtil dputil = new DprintUtil( DeclarationFactory.class ) ;
+
+    private static final Map<EvaluatedType,EvaluatedArrayType> arrayMap =
+        new HashMap<EvaluatedType,EvaluatedArrayType>() ;
+
+    private static final Map<String,EvaluatedClassDeclaration> simpleClassMap =
+        new HashMap<String,EvaluatedClassDeclaration>() ;
+
+    /*
+    private static final Map<Pair<String,List<EvaluatedType>>,
+        EvaluatedMethodDeclaration> methodMap =
+        new HashMap<Pair<String,List<EvaluatedType>>,EvaluatedMethodDeclaration>() ;
+    */
+
     private DeclarationFactory() {}
 
-    public static EvaluatedArrayType egat( final EvaluatedType compType ) {
-        return new EvaluatedArrayTypeBase() {
-            public EvaluatedType componentType() {
-                return compType ;
+    public static synchronized EvaluatedArrayType egat( final EvaluatedType compType ) {
+        EvaluatedArrayType result = arrayMap.get( compType ) ;
+        if (result == null) {
+            if (DEBUG) {
+                dputil.enter( "egat", "compType", compType ) ;
             }
-        } ;
+
+            try {
+                result = new EvaluatedArrayTypeImpl( compType ) ;
+                arrayMap.put( compType, result ) ;
+            } finally {
+                if (DEBUG) {
+                    dputil.exit( result ) ;
+                }
+            }
+        }
+
+        return result ;
     }
-    
-    public static EvaluatedMethodDeclaration emdecl( 
-        final int modifiers, final EvaluatedType rtype, final String name,
+
+    public static synchronized EvaluatedClassDeclaration ecdecl( final int modifiers,
+        final String name, final List<EvaluatedClassDeclaration> inheritance,
+        final List<EvaluatedMethodDeclaration> methods, final Class cls ) {
+
+        EvaluatedClassDeclaration result = null ;
+        if (cls.getTypeParameters().length == 0) {
+            // Try the cache first
+            result = simpleClassMap.get( name ) ;
+        }
+
+        if (result == null) {
+            if (DEBUG) {
+                dputil.enter( "ecdecl", "name", name ) ;
+            }
+
+            try {
+                result = new EvaluatedClassDeclarationImpl( modifiers, name,
+                    inheritance, methods, cls ) ;
+                if (result.simpleClass()) {
+                    simpleClassMap.put( name, result ) ;
+                }
+            } finally {
+                if (DEBUG) {
+                    dputil.exit( result ) ;
+                }
+            }
+        }
+
+        return result ;
+    }
+
+    public static synchronized EvaluatedMethodDeclaration emdecl( 
+        final EvaluatedClassDeclaration ecdecl, final int modifiers,
+        final EvaluatedType rtype, final String name,
         final List<EvaluatedType> ptypes, final Method method ) {
-        
-        return new EvaluatedMethodDeclarationBase() {
-            private EvaluatedClassDeclaration container ;
-            
-            public String name() {
-                return name ;
-            }
-            
-            public int modifiers() {
-                return modifiers ;
-            }
-            
-            public List<EvaluatedType> parameterTypes() {
-                return ptypes ;
-            }
 
-            public EvaluatedType returnType() {
-                return rtype ;
-            }
-            
-            public EvaluatedClassDeclaration containingClass() {
-                return container ;
-            }
-            
-            @Override
-            public void containingClass( EvaluatedClassDeclaration cdecl ) {
-                container = cdecl ;
-            }
-            
-            public java.lang.reflect.Method method() {
-                return method ;
-            }
+        if (DEBUG) {
+            dputil.enter( "emdecl", "name", name, "ptypes", ptypes ) ;
+        }
 
-            public <T extends Annotation> T annotation(Class<T> annotationType) {
-                if (method == null) {
-                    throw new UnsupportedOperationException(
-                        "Not supported in constructed ClassDeclaration.");
-                } else {
-                    return method.getAnnotation( annotationType ) ;
-                }
-            }
+        EvaluatedMethodDeclaration result = null ;
 
-            public List<Annotation> annotations() {
-                if (method == null) {
-                    throw new UnsupportedOperationException(
-                        "Not supported in constructed ClassDeclaration.");
-                } else {
-                    return Arrays.asList( method.getAnnotations() ) ;
-                }
+        try {
+            result = new EvaluatedMethodDeclarationImpl( ecdecl, modifiers,
+                rtype, name, ptypes, method ) ;
+        } finally {
+            if (DEBUG) {
+                dputil.exit( result ) ;
             }
+        }
 
-            public AnnotatedElement element() {
-                return method ;
-            }
-        } ;
+        return result ;
     }
     
     public static EvaluatedClassDeclaration ecdecl( final int modifiers,
         final String name, final Class cls ) {
 
         return ecdecl( modifiers, name, 
-            new ArrayList<EvaluatedClassDeclaration>(),
-            new ArrayList<EvaluatedMethodDeclaration>(), cls ) ;
+            new ArrayList<EvaluatedClassDeclaration>(0),
+            new ArrayList<EvaluatedMethodDeclaration>(0), cls ) ;
     }
 
-    public static EvaluatedClassDeclaration ecdecl( final int modifiers,
-        final String name, final List<EvaluatedClassDeclaration> inheritance,
-        final List<EvaluatedMethodDeclaration> methods, final Class cls ) {
-    
-        return new EvaluatedClassDeclarationBase() {
-            private List<EvaluatedMethodDeclaration> myMethods =
-                methods ;
-            private List<EvaluatedClassDeclaration> myInheritance = 
-                inheritance ;
-            private List<EvaluatedType> instantiations = null ;
-            
-            public <T extends Annotation> T annotation(Class<T> annotationType) {
-                if (cls == null) {
-                    throw new UnsupportedOperationException(
-                        "Not supported in constructed ClassDeclaration.");
-                } else {
-                    return (T) cls.getAnnotation( annotationType ) ;
-                }
-            }
+    private static class EvaluatedArrayTypeImpl extends EvaluatedArrayTypeBase {
+        private EvaluatedType compType ;
 
-            public List<Annotation> annotations() {
-                if (cls == null) {
-                    throw new UnsupportedOperationException(
-                        "Not supported in constructed ClassDeclaration.");
-                } else {
-                    return Arrays.asList( cls.getAnnotations() ) ;
-                }
-            }
-            
-            public String name() {
-                return name ;
-            }
+        public EvaluatedArrayTypeImpl( final EvaluatedType compType ) {
+            this.compType = compType ;
+        }
 
-            public int modifiers() {
-                return modifiers ;
+        public EvaluatedType componentType() { return compType ; }
+    }
+
+    private static class EvaluatedMethodDeclarationImpl extends EvaluatedMethodDeclarationBase {
+        private final EvaluatedClassDeclaration container ;
+        private final int modifiers ;
+        private final EvaluatedType rtype ;
+        private final String name ;
+        private final List<EvaluatedType> ptypes ;
+        @DumpToString
+        private final Method method ;
+
+        public EvaluatedMethodDeclarationImpl( EvaluatedClassDeclaration cdecl,
+            final int modifiers, final EvaluatedType rtype,
+            final String name, final List<EvaluatedType> ptypes,
+            final Method method ) {
+
+            this.container = cdecl ;
+            this.modifiers = modifiers ;
+            this.rtype = rtype ; 
+            this.name = name ;
+            this.ptypes = ptypes ;
+            this.method = method ;
+        }
+
+        public String name() { return name ; }
+        
+        public int modifiers() { return modifiers ; }
+        
+        public List<EvaluatedType> parameterTypes() { return ptypes ; }
+
+        public EvaluatedType returnType() { return rtype ; }
+        
+        public EvaluatedClassDeclaration containingClass() { return container ; }
+        
+        public java.lang.reflect.Method method() { return method ; }
+
+        public <T extends Annotation> T annotation(Class<T> annotationType) {
+            if (method == null) {
+                throw new UnsupportedOperationException(
+                    "Not supported in constructed ClassDeclaration.");
+            } else {
+                return method.getAnnotation( annotationType ) ;
             }
+        }
 
-            public Class cls() {
-                return cls ;
+        public List<Annotation> annotations() {
+            if (method == null) {
+                throw new UnsupportedOperationException(
+                    "Not supported in constructed ClassDeclaration.");
+            } else {
+                return Arrays.asList( method.getAnnotations() ) ;
             }
+        }
 
-            public List<EvaluatedMethodDeclaration> methods() {
-                return myMethods ;
+        public AnnotatedElement element() { return method ; }
+    }
+
+    private static class EvaluatedClassDeclarationImpl extends EvaluatedClassDeclarationBase {
+        private final int modifiers ;
+        private final String name ;
+        private List<EvaluatedClassDeclaration> inheritance ;
+        private List<EvaluatedMethodDeclaration> methods ;
+        @DumpToString
+        private final Class cls ;
+        private List<EvaluatedType> instantiations = 
+            new ArrayList<EvaluatedType>(0) ;
+        // set to TRUE if cls is a simple class with no type parameters
+        // This is important because there can be only one form of such classes,
+        // so they are cacheable.
+        private boolean simpleClass ;
+        private boolean frozen ;
+
+        public EvaluatedClassDeclarationImpl( final int modifiers,
+            final String name, final List<EvaluatedClassDeclaration> inheritance,
+            final List<EvaluatedMethodDeclaration> methods, final Class cls ) {
+
+            this.modifiers = modifiers ;
+            this.name = name ;
+            this.inheritance = inheritance ;
+            this.methods = methods ;
+            this.cls = cls ;
+            this.simpleClass = cls.getTypeParameters().length == 0 ;
+            this.frozen = false ;
+        }
+
+        public void freeze() {
+            frozen = true ;
+        }
+
+        public boolean simpleClass() {
+            return simpleClass ;
+        }
+
+        public <T extends Annotation> T annotation(Class<T> annotationType) {
+            if (cls == null) {
+                throw new UnsupportedOperationException(
+                    "Not supported in constructed ClassDeclaration.");
+            } else {
+                return (T) cls.getAnnotation( annotationType ) ;
             }
+        }
 
-            public List<EvaluatedClassDeclaration> inheritance() {
-                return myInheritance ;
-            } ;
-
-            public void methods(List<EvaluatedMethodDeclaration> meths) {
-                myMethods = meths ;
+        public List<Annotation> annotations() {
+            if (cls == null) {
+                throw new UnsupportedOperationException(
+                    "Not supported in constructed ClassDeclaration.");
+            } else {
+                return Arrays.asList( cls.getAnnotations() ) ;
             }
+        }
+        
+        public String name() { return name ; }
 
-            public void inheritance(List<EvaluatedClassDeclaration> inh) {
-                myInheritance = inh ;
+        public int modifiers() { return modifiers ; }
+
+        public Class cls() { return cls ; }
+
+        public List<EvaluatedMethodDeclaration> methods() { return methods ; }
+
+        public List<EvaluatedClassDeclaration> inheritance() { return inheritance ; } ;
+
+        private void checkFrozen() {
+            if (frozen) {
+                throw new IllegalStateException(
+                    "Cannot modify frozen instance for " + this ) ;
             }
+        }
+        public void methods(List<EvaluatedMethodDeclaration> meths) { 
+            checkFrozen() ;
+            methods = meths ;
+        }
 
-            public AnnotatedElement element() {
-                return cls ;
-            }
+        public void inheritance(List<EvaluatedClassDeclaration> inh) { 
+            checkFrozen() ;
+            inheritance = inh ;
+        }
 
-            public List<EvaluatedType> instantiations() {
-                return this.instantiations ;
-            }
+        public AnnotatedElement element() { return cls ; }
 
-            public void instantiations(List<EvaluatedType> arg) {
+        public List<EvaluatedType> instantiations() { return this.instantiations ; }
+
+        public void instantiations(List<EvaluatedType> arg) {
+            checkFrozen() ;
+            // XXX Should we add more consistency checking?
+            if (simpleClass) {
+                throw new IllegalStateException(
+                    "Cannot add instantiations to a class with no type args" ) ;
+            } else {
                 this.instantiations = arg ;
             }
-        } ;
+        }
     }
 }
-

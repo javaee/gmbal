@@ -119,7 +119,7 @@ public final class ObjectUtility {
                 }
             }
 
-            throw new IllegalArgumentException( "get should not fail" ) ;
+            return null ;
 	}
 
 	/** Add obj to the map with key cls.  Note that order matters,
@@ -259,17 +259,9 @@ public final class ObjectUtility {
         { AtomicInteger.class, toStringPrinter },
         { AtomicLong.class, toStringPrinter },
         { AtomicBoolean.class, toStringPrinter },
-        
-        // Types from upper layers!
-        // XXX Add an SPI to register special handling of classes
-        { EvaluatedType.class, toStringPrinter },
-        { ManagedObjectManager.class, toStringPrinter },
-
 	{ Properties.class, propertiesPrinter },
 	{ Collection.class, collectionPrinter },
 	{ Map.class, mapPrinter  },
-
-        { Object.class, generalObjectPrinter }
     } ;
 
     private ClassMap classMap ;
@@ -280,7 +272,7 @@ public final class ObjectUtility {
     private static ObjectUtility standard = new ObjectUtility( true, 0, 4 ) ;
     private static ObjectUtility compact = new ObjectUtility( false, 0, 4 ) ;
 
-    private ObjectUtility( boolean isIndenting, 
+    public ObjectUtility( boolean isIndenting,
 	int initialLevel, int increment )
     {
 	this.isIndenting = isIndenting ;
@@ -292,6 +284,11 @@ public final class ObjectUtility {
             ObjectPrinter value = (ObjectPrinter)pair[1] ;
             classMap.put( key, value ) ;
         }
+    }
+
+    public ObjectUtility useToString( Class cls ) {
+        classMap.put( cls, toStringPrinter ) ;
+        return this ;
     }
 
     /** A convenience method that gives the default behavior: use indenting
@@ -322,7 +319,7 @@ public final class ObjectUtility {
     * is to ignore all toString() methods except for those defined for
     * primitive types, primitive type wrappers, and strings.
     */
-    private String objectToString(java.lang.Object obj) {
+    public String objectToString(java.lang.Object obj) {
 	IdentityHashMap printed = new IdentityHashMap() ;
 	ObjectWriter result = ObjectWriter.make( isIndenting, initialLevel, 
 	    increment ) ;
@@ -340,7 +337,12 @@ public final class ObjectUtility {
         } else if (cls.isArray()) {
             return arrayPrinter ;
         } else {
-            return classMap.get( cls ) ;
+            ObjectPrinter result = classMap.get( cls ) ;
+            if (result == null) {
+                return generalObjectPrinter ;
+            } else {
+                return result ;
+            }
         }
     }
     

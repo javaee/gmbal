@@ -73,7 +73,7 @@ public class DprintUtil {
         }
     }
  
-    private synchronized void dprint(String msg) {
+    public synchronized void dprint(String msg) {
         String prefix = "(" + Thread.currentThread().getName() + "): " ;
   
         if (USE_LOGGER) {

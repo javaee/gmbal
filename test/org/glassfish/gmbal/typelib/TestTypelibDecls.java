@@ -47,12 +47,41 @@ package org.glassfish.gmbal.typelib ;
 import java.util.List;
 
 import java.util.Map;
-import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration ;
-import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration ;
-import org.glassfish.gmbal.typelib.EvaluatedType;
-import org.glassfish.gmbal.typelib.TypeEvaluator ;
 
 public class TestTypelibDecls {
+    public static class Prototypes {
+        private Prototypes() {}
+
+        List<Integer> getListInteger() { return null ; }
+        public static final EvaluatedType LIST_INTEGER =
+            getMethod( "getListInteger" ).returnType() ;
+
+        List<Object> getListObject() { return null ; }
+        public static final EvaluatedType LIST_OBJECT =
+            getMethod( "getListObject" ).returnType() ;
+
+        List<String> getListString() { return null ; }
+        public static final EvaluatedType LIST_STRING =
+            getMethod( "getListString" ).returnType() ;
+
+        List<List<String>> getListListString() { return null ; }
+        public static final EvaluatedType LIST_LIST_STRING =
+            getMethod( "getListListString" ).returnType() ;
+
+        List<List<Object>> getListListObject() { return null ; }
+        public static final EvaluatedType LIST_LIST_OBJECT =
+            getMethod( "getListListObject" ).returnType() ;
+
+        Map<Object,Object> getMapObjectObject() { return null ; }
+        public static final EvaluatedType MAP_OBJECT_OBJECT =
+            getMethod( "getMapObjectObject" ).returnType() ;
+
+        Map<String,Integer> getMapStringInteger() { return null ; }
+        public static final EvaluatedType MAP_STRING_INTEGER =
+            getMethod( "getMapStringInteger" ).returnType() ;
+
+    }
+
     public static EvaluatedMethodDeclaration getMethod(
         EvaluatedClassDeclaration cdecl, String name )  {
 
@@ -74,40 +103,11 @@ public class TestTypelibDecls {
         return null ;
     }
 
-    private static EvaluatedClassDeclaration self = 
+    private static EvaluatedClassDeclaration proto =
         (EvaluatedClassDeclaration) TypeEvaluator.getEvaluatedType(
-            TestTypelibDecls.class ) ;
+            Prototypes.class ) ;
 
     private static EvaluatedMethodDeclaration getMethod( String name ) {
-        return getMethod( self, name ) ;
+        return getMethod( proto, name ) ;
     }
-
-    List<Integer> getListInteger() { return null ; }
-    public static final EvaluatedType LIST_INTEGER =
-        getMethod( "getListInteger" ).returnType() ;
-
-    List<Object> getListObject() { return null ; }
-    public static final EvaluatedType LIST_OBJECT =
-        getMethod( "getListObject" ).returnType() ;
-
-    List<String> getListString() { return null ; }
-    public static final EvaluatedType LIST_STRING =
-        getMethod( "getListString" ).returnType() ;
-
-    List<List<String>> getListListString() { return null ; }
-    public static final EvaluatedType LIST_LIST_STRING =
-        getMethod( "getListListString" ).returnType() ;
-
-    List<List<Object>> getListListObject() { return null ; }
-    public static final EvaluatedType LIST_LIST_OBJECT =
-        getMethod( "getListListObject" ).returnType() ;
-
-    Map<Object,Object> getMapObjectObject() { return null ; }
-    public static final EvaluatedType MAP_OBJECT_OBJECT =
-        getMethod( "getMapObjectObject" ).returnType() ;
-
-    Map<String,Integer> getMapStringInteger() { return null ; }
-    public static final EvaluatedType MAP_STRING_INTEGER =
-        getMethod( "getMapStringInteger" ).returnType() ;
-
 }

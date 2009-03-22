@@ -50,7 +50,5 @@ public interface EvaluatedMethodDeclaration extends EvaluatedDeclaration {
 
     EvaluatedClassDeclaration containingClass() ;
     
-    void containingClass( EvaluatedClassDeclaration cdecl ) ;
-    
     java.lang.reflect.Method method() ;
 }

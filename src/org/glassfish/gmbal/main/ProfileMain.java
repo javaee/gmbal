@@ -32,6 +32,6 @@ public class ProfileMain {
         mom = ManagedObjectManagerFactory.createStandalone("test") ;
         mom.createRoot(myroot) ;
         mom.close();
-        TypeEvaluator.dumpEvalClassMap();
+        // TypeEvaluator.dumpEvalClassMap();
     }
 }
