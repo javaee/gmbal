@@ -260,13 +260,17 @@ public interface Exceptions {
     @Log( id=MBEAN_TREE_START + 7 )
     String parentNotFound( Object parent ) ;
 
-    @Message( "Object {0} is alreadt registered as {1}")
+    @Message( "Object {0} is already registered as {1}")
     @Log( id=MBEAN_TREE_START + 8 )
     String objectAlreadyRegistered( Object obj, MBeanImpl oldMbi ) ;
 
     @Message( "Should not happen" )
     @Log( id=MBEAN_TREE_START + 9 )
     IllegalStateException shouldNotHappen( @Chain Exception ex ) ;
+
+    @Message( "Object {0} not found")
+    @Log( id=MBEAN_TREE_START + 10 )
+    IllegalArgumentException objectNotFound( Object obj ) ;
 
 // ManagedObjectManagerImpl
     static final int MANAGED_OBJECT_MANAGER_IMPL_START =

@@ -61,10 +61,7 @@ import java.lang.reflect.TypeVariable ;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
-import java.util.IdentityHashMap;
-import java.util.WeakHashMap;
 import javax.management.ObjectName;
-import org.glassfish.gmbal.generic.ObjectUtility;
 
 /**
  *
@@ -100,6 +97,9 @@ public class TypeEvaluator {
     // references its key, trapping the value in the Weak map?
     // XXX We can't have extra attempts to process things like java.lang.Object
     // So what is the best way to handle this?
+    // Design sketch: Create a custom Map implementation (or just something
+    // with get/put/iterate) that has two maps: a HashMap for system classes,
+    // and a WeakHashMap for non-system classes.
     private static Map<EvalMapKey,EvaluatedClassDeclaration> evalClassMap =
         new HashMap<EvalMapKey,EvaluatedClassDeclaration>() ;
 
@@ -115,12 +115,6 @@ public class TypeEvaluator {
         try {
             EvalMapKey key = new EvalMapKey( cls, emptyETList ) ;
             evalClassMap.put( key, ecd ) ;
-            if (DEBUG) {
-                if (key.equals( EvalMapKey.OBJECT_KEY)) {
-                    dputil.info( 
-                        "Storing evaluatedClassDeclaration for java.lang.Object") ;
-                }
-            }
         } finally {
             if (DEBUG) {
                 dputil.exit() ;
@@ -526,23 +520,9 @@ public class TypeEvaluator {
                 if (result == null) {
                     if (DEBUG) {
                         dputil.info( "No result in evalClassMap" ) ;
-                        if (decl.getName().equals( "java.lang.Object")) {
-                            dputil.info( "java.lang.Object not found") ;
-                            dputil.info( "decl identity:", 
-                                System.identityHashCode(decl) ) ;
-                            dputil.info( "bindings.getList()",
-                                blist ) ;
-                            dputil.info( "key", key ) ;
-                        }
                     }
 
                     evalClassMap.put( key, newDecl ) ;
-                    if (DEBUG) {
-                        if (key.equals(EvalMapKey.OBJECT_KEY)) {
-                            dputil.info(
-                                "Storing decl for java.lang.Object with key", key ) ;
-                        }
-                    }
 
                     processClass( newDecl, bindings.getMap(), decl ) ;
 

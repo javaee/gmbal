@@ -299,6 +299,10 @@ public class MBeanTree {
         }
         
         MBeanImpl mb = objectMap.get( obj ) ;
+        if (mb == null) {
+            throw Exceptions.self.objectNotFound( obj ) ;
+        }
+
         for (Map<String,MBeanImpl> nameToMBean : mb.children().values() ) {
             for (MBeanImpl child : nameToMBean.values() ) {
                 unregister( child.target()) ;

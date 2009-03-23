@@ -47,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 import org.glassfish.gmbal.generic.DprintUtil ;
 import org.glassfish.gmbal.generic.DumpToString;
-import org.glassfish.gmbal.generic.Pair;
 
 /** Utility class used to construct instances of the typelib interfaces directly from
  * factory methods, rather than from actual Java classes.  This is useful for testing:
