@@ -224,6 +224,14 @@ public interface Exceptions {
     @Message( "Name of this ManagedObject")
     String nameOfManagedObject() ;
 
+    @Message( "Error in setting attribute {0}" )
+    @Log( id=MBEAN_SKELETON_START + 8 )
+    void attributeSettingError( @Chain Exception ex, String name ) ;
+
+    @Message( "Error in getting attribute {0}" )
+    @Log( id=MBEAN_SKELETON_START + 9 )
+    void attributeGettingError( @Chain Exception ex, String name ) ;
+
 // MBeanTree
     static final int MBEAN_TREE_START =
         MBEAN_SKELETON_START + EXCEPTIONS_PER_CLASS ;

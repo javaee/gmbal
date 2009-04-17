@@ -36,6 +36,7 @@
  */ 
 package org.glassfish.gmbal.generic;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -44,6 +45,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.glassfish.gmbal.GmbalException;
 
 /** 
@@ -141,12 +144,46 @@ public class FacetAccessorImpl implements FacetAccessor {
             if (debug) {
                 dputil.exception( "Exception in method invoke call", exc ) ;
             }
+
+            throw exc ;
         } finally {
             if (debug) {
                 dputil.exit( result ) ;
             }
         }
         
+        return result ;
+    }
+
+    public Object get(Field field, boolean debug) {
+        if (debug) {
+            dputil.enter( "get", "field=", field ) ;
+        }
+
+        Object result = null ;
+
+        try {
+            Object target = facet( field.getDeclaringClass(), debug ) ;
+
+            try {
+                result = field.get(target);
+            } catch (IllegalArgumentException ex) {
+                throw new GmbalException( "Exception on field get", ex ) ;
+            } catch (IllegalAccessException ex) {
+                throw new GmbalException( "Exception on field get", ex ) ;
+            }
+        } catch (RuntimeException exc) {
+            if (debug) {
+                dputil.exception( "Exception in method invoke call", exc ) ;
+            }
+
+            throw exc ;
+        } finally {
+            if (debug) {
+                dputil.exit( result ) ;
+            }
+        }
+
         return result ;
     }
 
@@ -164,6 +201,4 @@ public class FacetAccessorImpl implements FacetAccessor {
                     return false ;
                 } } ) ;
     }
-
-
 }

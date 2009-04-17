@@ -36,6 +36,7 @@
  */ 
 package org.glassfish.gmbal.generic;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 
@@ -84,4 +85,13 @@ public interface FacetAccessor {
      * @return restult of the invoke call.
      */
     Object invoke( Method method, boolean debug, Object... args ) ;
+
+    /** Fetch the value of the field from whichever facet contains the field.
+     * Read-only because that's all that the intended application needs.
+     *
+     * @param field The field to access
+     * @param debug True if debugging trace output is desired
+     * @return
+     */
+    Object get( Field field, boolean debug ) ;
 }

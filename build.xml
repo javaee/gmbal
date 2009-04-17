@@ -107,7 +107,7 @@
     <property name="maven.ant.file"                 value="maven-ant-tasks-2.0.9.jar"/>
     <property name="maven.ant.dir"                  value="http://apache.hoxt.com/maven/binaries"/>
     <property name="groupId"                        value="org.glassfish.gmbal"/>
-    <property name="version"                        value="2.0.0-b003"/>
+    <property name="version"                        value="2.0.0-b004"/>
     <property name="repo.url"                       value="java-net:/maven2-repository/trunk/repository"/>
     <property name="file.url"                       value="file:/tmp/maven"/>
     <property name="emma.dir"                       value="build/coverage"/>
@@ -229,9 +229,19 @@
             </sequential>
     </macrodef>
 
-    <target name="make-bundles">
+    <target name="make-source-bundle" depends="init">
+        <mkdir dir="dist/bundles"/> 
+        <jar jarfile="dist/bundles/gmbal-source.jar" duplicate="fail">
+            <fileset dir="src">
+                <include name="**/*.java"/>
+            </fileset>
+        </jar>
+    </target>
+
+    <target name="make-bundles" depends="make-source-bundle">
         <make-bundle file="gmbal-api"/>
         <make-bundle file="gmbal-impl"/>
+        <make-bundle file="gfprobe-provider-client"/>
     </target>
 
 <!-- ================================================================== -->
@@ -328,7 +338,7 @@ The modules             (and their dependencies):
                     <token key="version" value="${version}"/>
                     <token key="jarDescription" value="@{description}"/>
                     <token key="groupId" value="${groupId}"/>
-                    <token key="repositoryUrl" value="${file.url}"/>
+                    <token key="repositoryUrl" value="${repo.url}"/>
                 </replacetokens>
             </filterchain>
         </loadfile>
@@ -371,6 +381,17 @@ Section: Producing Multiple JARs from a single POM (maven limitations)
 <target name="release" depends="mavenize">
     <push-to-maven module="gmbal-api" description="gmbal API"/>
     <push-to-maven module="gmbal-impl" description="gmbal implementation"/>
+    <push-to-maven module="gmbal-source" description="gmbal source code"/>
 </target>
+
+<target name="release-probe" depends="mavenize">
+    <artifact:pom id="gfprobe.project" file="make/gfprobe-provider-client.pom.xml"/>
+    <artifact:deploy file="dist/bundles/gfprobe-provider-client.jar">
+        <remoteRepository url="${repo.url}">
+        </remoteRepository>
+        <pom refId="gfprobe.project"/>
+    </artifact:deploy>
+</target>
+
 </project>
 

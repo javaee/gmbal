@@ -37,6 +37,7 @@
 
 package org.glassfish.gmbal.generic;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import junit.framework.TestCase;
@@ -107,6 +108,10 @@ public class FacetAccessorTest extends TestCase {
 
         public Collection<Object> facets() {
             return delegate.facets() ;
+        }
+
+        public Object get(Field field, boolean debug) {
+            throw new UnsupportedOperationException("Not supported yet.");
         }
     }
     

@@ -37,9 +37,6 @@
 
 package org.glassfish.gmbal.generic;
 
-import java.lang.reflect.Method;
-import java.util.Collection;
-
 /** Implementation of FacetAccessor that delegates to another FacetAccessor,
  * typically a FacetAccessorImpl.  The purpose of this call is to provide
  * a convenient template of methods that may be copied into a class that
@@ -80,6 +77,10 @@ abstract class FacetAccessorDelegateImpl implements FacetAccessor {
 
     public Object invoke(Method method, boolean debug, Object... args) {
         return facetAccessorDelegate.invoke( method, debug, args ) ;
+    }
+
+    public Object get( Field field, boolean debug ) {
+        return facetAccessorDelegate.get( field, debug ) ;
     }
 
     public Collection<Object> facets() {

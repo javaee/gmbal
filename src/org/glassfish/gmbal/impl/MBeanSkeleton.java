@@ -645,6 +645,7 @@ public class MBeanSkeleton {
 
             setter.set( fa, value, mom.runtimeDebug() ) ;
 
+            // XXX Can we check if a notification is needed before constructing this?
             // Note that this code assumes that emitter is also the MBean,
             // because the MBean extends NotificationBroadcasterSupport!
             AttributeChangeNotification notification =
@@ -679,24 +680,20 @@ public class MBeanSkeleton {
             AttributeList result = new AttributeList() ;
             for (String str : attributes) {
                 Object value = null ;
-                Exception exception = null ;
                 
                 try {
                     value = getAttribute(fa, str);
                 } catch (JMException ex) {
-                    exception = ex ;
+                    Exceptions.self.attributeGettingError(ex, str ) ;
+                    if (mom.runtimeDebug()) {
+                        dputil.exception( "getAttributes: ", ex ) ;
+                    }
                 }
 
                 // If value == null, we had a problem in trying to fetch it,
                 // so just ignore that attribute.  Returning null simply leads to
                 // a blank entry in jconsole.  Do not let an error in fetching
                 // one attribute prevent fetching the others.
-                
-                if (exception != null) {
-                    if (mom.runtimeDebug()) {
-                        dputil.exception( "getAttribute: ", exception ) ;
-                    }
-                }
                 
                 Attribute attr = new Attribute( str, value ) ;
                 result.add( attr ) ;
@@ -724,19 +721,15 @@ public class MBeanSkeleton {
         try {
             for (Object elem : attributes) {
                 Attribute attr = (Attribute)elem ;
-                Exception exception = null ;
+
                 try {
                     setAttribute(emitter, fa, attr);
-                } catch (JMException ex) {
-                    exception = ex ;
-                }
-                
-                if (exception == null) {
                     result.add( attr ) ;
-                } else {
+                } catch (JMException ex) {
+                    Exceptions.self.attributeSettingError(ex, attr.getName()) ;
                     if (mom.runtimeDebug()) {
-                        dputil.exception( "Error in setting attribute" 
-                            + attr.getName(), exception ) ;
+                        dputil.exception( "Error in setting attribute"
+                            + attr.getName(), ex ) ;
                     }
                 }
             }
