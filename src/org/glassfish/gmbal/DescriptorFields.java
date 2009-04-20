@@ -139,7 +139,7 @@ import java.lang.annotation.Target;
  */
 @Documented
 @Inherited  // for @MBean and @MXBean classes
-@Target({ElementType.CONSTRUCTOR, ElementType.METHOD,
+@Target({ElementType.CONSTRUCTOR, ElementType.METHOD, ElementType.FIELD,
          ElementType.PARAMETER, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DescriptorFields {

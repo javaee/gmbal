@@ -270,6 +270,20 @@ public class MBeanSkeleton {
         }
     }
 
+    private void analyzeFields( EvaluatedClassAnalyzer ca ) {
+        if (mom.registrationFineDebug()) {
+            dputil.enter( "analyzeFields", "ca=", ca ) ;
+        }
+
+        try {
+
+        } finally {
+            if (mom.registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
     private void analyzeAttributes( EvaluatedClassAnalyzer ca ) {
         if (mom.registrationFineDebug()) {
             dputil.enter( "analyzeAttributes", "ca=", ca ) ;
@@ -558,6 +572,7 @@ public class MBeanSkeleton {
         mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
 
         analyzeAttributes( ca ) ;
+        analyzeFields( ca ) ;
         analyzeOperations( ca ) ;
         analyzeObjectNameKeys( ca ) ;
 

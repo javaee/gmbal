@@ -38,6 +38,7 @@
 package org.glassfish.gmbal.impl ;
 
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method ;
 import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type ;
@@ -57,14 +58,18 @@ import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Pair;
 import javax.management.MBeanException;
 import org.glassfish.gmbal.GmbalException;
+import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
     
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
 
+    // Only one of _method and _field may be non-null
     @DumpToString
     private EvaluatedMethodDeclaration _method ;
+    @DumpToString
+    private EvaluatedFieldDeclaration _field ;
     private String _id ;
     private String _description ;
     private AttributeType _atype ;
@@ -78,6 +83,33 @@ public class AttributeDescriptor {
     private static final Permission accessControlPermission =
         new ReflectPermission( "suppressAccessChecks" ) ;
 
+    private AttributeDescriptor( final ManagedObjectManagerInternal mom,
+        final EvaluatedFieldDeclaration field, final String id,
+        final String description, final EvaluatedType type ) {
+                SecurityManager sman = System.getSecurityManager() ;
+
+        if (sman != null) {
+            sman.checkPermission( accessControlPermission ) ;
+        }
+
+        this._method = null ;
+        this._field = AccessController.doPrivileged(
+            new PrivilegedAction<EvaluatedFieldDeclaration>() {
+                public EvaluatedFieldDeclaration run() {
+                    field.field().setAccessible(true);
+                    return field ;
+                }
+            }
+        ) ;
+
+        this._id = id ;
+        this._description = description ;
+        this._atype = AttributeType.GETTER ;
+        this._type = type ;
+        this._tc = mom.getTypeConverter( type ) ;
+
+    }
+
     private AttributeDescriptor( final ManagedObjectManagerInternal mom, 
         final EvaluatedMethodDeclaration method, final String id,
         final String description, final AttributeType atype, 
@@ -88,6 +120,7 @@ public class AttributeDescriptor {
             sman.checkPermission( accessControlPermission ) ;
         }
 
+        this._field = null ;
         this._method = AccessController.doPrivileged(
             new PrivilegedAction<EvaluatedMethodDeclaration>() {
                 public EvaluatedMethodDeclaration run() {
@@ -103,6 +136,8 @@ public class AttributeDescriptor {
         this._type = type ;
         this._tc = mom.getTypeConverter( type ) ;
     }
+
+    public final Field field() { return _field.field() ; }
 
     public final Method method() { return _method.method() ; }
 
@@ -138,7 +173,15 @@ public class AttributeDescriptor {
         Object result = null;
         
         try {
-            result = _tc.toManagedEntity(fa.invoke(_method.method(), debug ));
+            if (_method != null) {
+                result = _tc.toManagedEntity(fa.invoke(_method.method(), debug ));
+            } else if (_field != null) {
+                result = _tc.toManagedEntity( fa.get( _field.field(), debug )) ;
+            } else {
+                // XXX needs entry in Exceptions
+                throw new RuntimeException( 
+                    "both _field and _method are null!" ) ;
+            }
         } catch (RuntimeException exc) {
             if (debug) {
                 dputil.exception( "Error:", exc ) ;

@@ -82,6 +82,7 @@ import java.util.TreeSet;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
@@ -760,7 +761,31 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         Map<String,AttributeDescriptor>>( getters, setters ) ;
             
             final List<InheritedAttribute> ias = getInheritedAttributes( ca ) ;
-            
+
+            ca.findFields( new Predicate<EvaluatedFieldDeclaration>() {
+                public boolean evaluate( EvaluatedFieldDeclaration field ) {
+                    ManagedAttribute ma = field.annotation(
+                        ManagedAttribute.class ) ;
+                    if (ma == null) {
+                        return false ;
+                    } else {
+                        Description desc = getAnnotation( field,
+                            Description.class ) ;
+                        String description ;
+                        if (desc == null) {
+                            description = "No description available for "
+                                + field.name() ;
+                        } else {
+                            description = desc.value() ;
+                        }
+
+                        Attribute descriptor ad =
+                            AttributeDescriptor.makeFromAnnotated(
+                                 ManagedObjectManagerImpl.this, field,
+                                 ma.id(), description ) ;
+                    }
+                } } ) ;
+
             ca.findMethods( new Predicate<EvaluatedMethodDeclaration>() {
                 public boolean evaluate( EvaluatedMethodDeclaration method ) {
                     ManagedAttribute ma = method.annotation(
@@ -770,15 +795,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         ad = getAttributeDescriptorIfInherited( method, ias,
                             adt ) ;
                     } else {
-                        Description desc = getAnnotation( method, Description.class ) ;
+                        Description desc = getAnnotation( method,
+                            Description.class ) ;
                         String description ;
                         if (desc == null) {
-                            description = "No description available for " + method.name() ;
+                            description = "No description available for "
+                                + method.name() ;
                         } else {
                             description = desc.value() ;
                         }
 
-                        ad = AttributeDescriptor.makeFromAnnotated( ManagedObjectManagerImpl.this,
+                        ad = AttributeDescriptor.makeFromAnnotated(
+                            ManagedObjectManagerImpl.this,
                             method, ma.id(), description, adt ) ;
                     }
                     
