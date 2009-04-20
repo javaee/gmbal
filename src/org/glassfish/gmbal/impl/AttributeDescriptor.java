@@ -41,7 +41,6 @@ package org.glassfish.gmbal.impl ;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method ;
 import java.lang.reflect.ReflectPermission;
-import java.lang.reflect.Type ;
 
 import java.security.AccessController;
 import java.security.Permission;
@@ -49,15 +48,12 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import javax.management.ReflectionException ;
 
-
-
 import org.glassfish.gmbal.generic.DprintUtil;
 import org.glassfish.gmbal.generic.DumpIgnore;
 import org.glassfish.gmbal.generic.DumpToString;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Pair;
 import javax.management.MBeanException;
-import org.glassfish.gmbal.GmbalException;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
@@ -107,7 +103,6 @@ public class AttributeDescriptor {
         this._atype = AttributeType.GETTER ;
         this._type = type ;
         this._tc = mom.getTypeConverter( type ) ;
-
     }
 
     private AttributeDescriptor( final ManagedObjectManagerInternal mom, 
@@ -289,6 +284,15 @@ public class AttributeDescriptor {
     }
 
     private static Pair<AttributeType,EvaluatedType> getTypeInfo(
+        EvaluatedFieldDeclaration field ) {
+
+        final EvaluatedType ftype = field.fieldType() ;
+        AttributeType atype = AttributeType.GETTER ;
+
+        return new Pair<AttributeType,EvaluatedType>( atype, ftype ) ;
+    }
+
+    private static Pair<AttributeType,EvaluatedType> getTypeInfo(
         EvaluatedMethodDeclaration method ) {
 
         final EvaluatedType rtype = method.returnType() ;
@@ -351,6 +355,22 @@ public class AttributeDescriptor {
 
         return new AttributeDescriptor( mom, method, actualId, description,
             ainfo.first(), ainfo.second() ) ;
+    }
+
+    // Create an AttributeDescriptor from a field.
+    public static AttributeDescriptor makeFromAnnotated(
+        final ManagedObjectManagerInternal mom,
+        final EvaluatedFieldDeclaration f, final String extId,
+        final String description,
+        final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
+   
+        Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( f ) ;
+
+        String actualId = empty(extId) ? 
+            getDerivedId( f.name(), ainfo, adt ) : extId ;
+
+        return new AttributeDescriptor( mom, f, actualId, description,
+            ainfo.second() ) ;
     }
 
     // Create an AttributeDescriptor from method.  This case always return an

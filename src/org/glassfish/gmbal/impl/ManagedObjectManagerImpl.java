@@ -51,6 +51,7 @@ import java.lang.annotation.Annotation ;
 import java.lang.management.ManagementFactory ;
 
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Modifier;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -738,6 +739,16 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
 
+    // Only final fields of immutable type can be used as ManagedAttributes.
+    static void checkFieldType( EvaluatedFieldDeclaration field ) {
+        // XXX implement me
+        if (Modifier.isFinal( field.modifiers() ) ) {
+        
+        } else {
+            // throw exception
+        }
+    }
+
     // Returns a pair of maps defining all managed attributes in the ca.  The first map
     // is all setters, and the second is all getters.  Only the most derived version is present.
     public synchronized Pair<Map<String,AttributeDescriptor>,
@@ -769,6 +780,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                     if (ma == null) {
                         return false ;
                     } else {
+                        checkFieldType( field ) ;
+
                         Description desc = getAnnotation( field,
                             Description.class ) ;
                         String description ;
@@ -779,10 +792,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                             description = desc.value() ;
                         }
 
-                        Attribute descriptor ad =
+                        AttributeDescriptor ad =
                             AttributeDescriptor.makeFromAnnotated(
                                  ManagedObjectManagerImpl.this, field,
-                                 ma.id(), description ) ;
+                                 ma.id(), description, adt ) ;
+
+                        putIfNotPresent( getters, ad.id(), ad ) ;
+
+                        return true ;
                     }
                 } } ) ;
 
