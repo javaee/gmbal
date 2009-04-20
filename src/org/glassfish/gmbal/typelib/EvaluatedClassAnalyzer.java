@@ -219,16 +219,36 @@ public class EvaluatedClassAnalyzer {
 
     // Tested by testFindMethod
     // Tested by testGetAnnotatedMethods
-    public List<EvaluatedMethodDeclaration> findMethods( 
+    public List<EvaluatedMethodDeclaration> findMethods(
         Predicate<EvaluatedMethodDeclaration> pred ) {
-	
-        final List<EvaluatedMethodDeclaration> result = 
+
+        final List<EvaluatedMethodDeclaration> result =
             new ArrayList<EvaluatedMethodDeclaration>() ;
-	
+
         for (EvaluatedClassDeclaration c : classInheritance) {
             for (EvaluatedMethodDeclaration m : c.methods()) {
                 if (pred.evaluate( m )) {
                     result.add( m ) ;
+                }
+	    }
+	}
+
+	return result ;
+    }
+
+    public List<EvaluatedFieldDeclaration> findFields(
+        Predicate<EvaluatedFieldDeclaration> pred ) {
+	
+        final List<EvaluatedFieldDeclaration> result =
+            new ArrayList<EvaluatedFieldDeclaration>() ;
+	
+        // XXX Should we optimize this?  We only need to scan 
+        // interfaces, and we could keep a direct list of classes,
+        // rather than scanning the full list of classes and interfaces.
+        for (EvaluatedClassDeclaration c : classInheritance) {
+            for (EvaluatedFieldDeclaration f : c.fields()) {
+                if (pred.evaluate( f )) {
+                    result.add( f ) ;
                 }
 	    }
 	}

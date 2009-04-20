@@ -37,6 +37,7 @@
 
 package org.glassfish.gmbal.typelib;
 
+import java.lang.reflect.Field;
 import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.Display;
 import org.glassfish.gmbal.generic.DprintUtil;
@@ -232,6 +233,7 @@ public class TypeEvaluator {
         return etype ;
     }
     
+    // Visits the various java.lang.reflect Types to generate an EvaluatedType
     private static class TypeEvaluationVisitor  {
         private final Display<String,EvaluatedType> display ;
         private final Map<Class<?>,EvaluatedClassDeclaration> partialDefinitions ;
@@ -362,6 +364,15 @@ public class TypeEvaluator {
                     dputil.exit() ;
                 }
             }
+        }
+
+        private EvaluatedFieldDeclaration visitFieldDeclaration(
+            final EvaluatedClassDeclaration cdecl, final Field fld ) {
+
+            final EvaluatedType ftype = evaluateType( fld.getGenericType() ) ;
+
+            return DeclarationFactory.efdecl(cdecl, fld.getModifiers(),
+                ftype, fld.getName(), fld ) ;
         }
 
         private EvaluatedMethodDeclaration visitMethodDeclaration(
@@ -570,6 +581,15 @@ public class TypeEvaluator {
                 if (DEBUG) {
                     dputil.info( "newDecl=" + newDecl ) ;
                 }
+
+                List<EvaluatedFieldDeclaration> newFields = Algorithms.map(
+                    Arrays.asList( decl.getDeclaredFields() ),
+                    new UnaryFunction<Field,EvaluatedFieldDeclaration>() {
+                        public EvaluatedFieldDeclaration evaluate( Field fld ) {
+                            return visitFieldDeclaration( newDecl, fld ) ;
+                        } } ) ;
+
+                newDecl.fields( newFields ) ;
 
                 List<EvaluatedMethodDeclaration> newMethods = Algorithms.map(
                     Arrays.asList( decl.getDeclaredMethods() ),

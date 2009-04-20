@@ -1,7 +1,7 @@
 /* 
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  * 
- * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 2001-2009 Sun Microsystems, Inc. All rights reserved.
  * 
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -34,22 +34,19 @@
  * holder.
  * 
  */ 
+
 package org.glassfish.gmbal.typelib;
+
+import java.util.List;
 
 /**
  *
  * @author ken
  */
-public interface Visitor<R> {
-    R visitEvaluatedType( EvaluatedType et ) ;
-    
-    R visitEvaluatedArrayType( EvaluatedArrayType eat ) ;
-    
-    R visitEvaluatedDeclaration( EvaluatedDeclaration ed ) ;
-    
-    R visitEvaluatedClassDeclaration( EvaluatedClassDeclaration ecd ) ;
+public interface EvaluatedFieldDeclaration extends EvaluatedDeclaration {
+    EvaluatedType fieldType() ;
 
-    R visitEvaluatedFieldDeclaration( EvaluatedFieldDeclaration efd ) ;
-
-    R visitEvaluatedMethodDeclaration( EvaluatedMethodDeclaration emd ) ;
+    EvaluatedClassDeclaration containingClass() ;
+    
+    java.lang.reflect.Field field() ;
 }

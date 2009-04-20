@@ -44,6 +44,10 @@ public interface EvaluatedClassDeclaration extends EvaluatedDeclaration {
 
     void freeze() ;
 
+    List<EvaluatedFieldDeclaration> fields() ;
+
+    void fields( List<EvaluatedFieldDeclaration> arg ) ;
+
     List<EvaluatedType> instantiations() ;
 
     void instantiations( List<EvaluatedType> arg ) ;

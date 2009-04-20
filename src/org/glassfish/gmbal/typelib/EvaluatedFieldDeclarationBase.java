@@ -1,7 +1,7 @@
 /* 
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  * 
- * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 2001-2009 Sun Microsystems, Inc. All rights reserved.
  * 
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -34,22 +34,51 @@
  * holder.
  * 
  */ 
+
 package org.glassfish.gmbal.typelib;
+
+import java.util.List;
+import org.glassfish.gmbal.generic.ObjectSet;
 
 /**
  *
  * @author ken
  */
-public interface Visitor<R> {
-    R visitEvaluatedType( EvaluatedType et ) ;
+public abstract class EvaluatedFieldDeclarationBase 
+    extends EvaluatedDeclarationBase
+    implements EvaluatedFieldDeclaration {
     
-    R visitEvaluatedArrayType( EvaluatedArrayType eat ) ;
-    
-    R visitEvaluatedDeclaration( EvaluatedDeclaration ed ) ;
-    
-    R visitEvaluatedClassDeclaration( EvaluatedClassDeclaration ecd ) ;
+    @Override
+    public <R> R accept( Visitor<R> visitor ) {
+        return visitor.visitEvaluatedFieldDeclaration(this) ;
+    }        
 
-    R visitEvaluatedFieldDeclaration( EvaluatedFieldDeclaration efd ) ;
+    public void containingClass( EvaluatedClassDeclaration cdecl ) {
+        throw new IllegalArgumentException( "Operation not permitted" ) ;
+    }
 
-    R visitEvaluatedMethodDeclaration( EvaluatedMethodDeclaration emd ) ;
+    void makeRepresentation( StringBuilder sb, ObjectSet set ) {
+        handleModifier( sb, modifiers() ) ;
+        sb.append( " " ) ;
+        sb.append( fieldType().toString() ) ;
+        sb.append( " " ) ;
+        sb.append( name() ) ;
+    }
+            
+    public boolean myEquals( Object obj, ObjectSet set ) {
+        EvaluatedFieldDeclaration other = (EvaluatedFieldDeclaration)obj ;
+        if (!((EvaluatedTypeBase)fieldType()).myEquals( other.fieldType(), set )
+            || !name().equals( other.name() ) )  {
+
+            return false ;
+        }
+        
+        return true ;
+    }
+    
+    @Override
+    public int hashCode( ObjectSet set ) {
+        return fieldType().hashCode() ^
+            name().hashCode() ;
+    }
 }

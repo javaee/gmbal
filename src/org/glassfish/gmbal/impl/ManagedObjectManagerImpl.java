@@ -108,6 +108,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ManagedObjectManager.RegistrationDebugLevel regDebugLevel = 
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
+
+    public void suspendJMXRegistration() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void resumeJMXRegistration() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
     
     private static final class StringComparator implements Comparator<String> {
         public int compare(String o1, String o2) {

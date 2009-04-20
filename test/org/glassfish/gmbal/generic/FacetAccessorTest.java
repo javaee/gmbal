@@ -111,12 +111,12 @@ public class FacetAccessorTest extends TestCase {
         }
 
         public Object get(Field field, boolean debug) {
-            throw new UnsupportedOperationException("Not supported yet.");
+            return delegate.get( field, debug ) ;
         }
     }
     
     private static class BImpl implements B {
-        int factor ;
+        public int factor ;
         
         public BImpl( int factor ) {
             this.factor = factor ;
@@ -182,4 +182,13 @@ public class FacetAccessorTest extends TestCase {
         assertEquals( fa.invoke( b_operation, false, 2 ), 200 ) ;
     }
 
+    public void testGet() throws NoSuchFieldException {
+        System.out.println( "get" ) ;
+        FacetAccessor fa = new TestClass() ;
+        B b = new BImpl( 10 ) ;
+        fa.addFacet( b ) ;
+
+        Field factorField = BImpl.class.getDeclaredField("factor") ;
+        assertEquals( fa.get( factorField, false ), 10 ) ;
+    }
 }
