@@ -36,6 +36,7 @@
  */ 
 package org.glassfish.gmbal.typelib ;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -94,7 +95,8 @@ public class DeclarationFactory {
     public static synchronized EvaluatedClassDeclaration ecdecl( final int modifiers,
         final String name, final List<EvaluatedClassDeclaration> inheritance,
         final List<EvaluatedMethodDeclaration> methods,
-        final List<EvaluatedFieldDeclaration> fields, final Class cls ) {
+        final List<EvaluatedFieldDeclaration> fields, final Class cls,
+        final boolean isImmutable ) {
 
         EvaluatedClassDeclaration result = null ;
         if (cls.getTypeParameters().length == 0) {
@@ -109,7 +111,7 @@ public class DeclarationFactory {
 
             try {
                 result = new EvaluatedClassDeclarationImpl( modifiers, name,
-                    inheritance, methods, fields, cls ) ;
+                    inheritance, methods, fields, cls, isImmutable ) ;
                 if (result.simpleClass()) {
                     simpleClassMap.put( name, result ) ;
                 }
@@ -170,11 +172,17 @@ public class DeclarationFactory {
     
     public static EvaluatedClassDeclaration ecdecl( final int modifiers,
         final String name, final Class cls ) {
+        return ecdecl( modifiers, name, cls, false ) ;
+    }
+
+    public static EvaluatedClassDeclaration ecdecl( final int modifiers,
+        final String name, final Class cls, boolean isImmutable ) {
 
         return ecdecl( modifiers, name, 
             new ArrayList<EvaluatedClassDeclaration>(0),
             new ArrayList<EvaluatedMethodDeclaration>(0),
-            new ArrayList<EvaluatedFieldDeclaration>(0), cls ) ;
+            new ArrayList<EvaluatedFieldDeclaration>(0), cls,
+            isImmutable ) ;
     }
 
     private static class EvaluatedArrayTypeImpl extends EvaluatedArrayTypeBase {
@@ -233,6 +241,8 @@ public class DeclarationFactory {
         public int modifiers() { return modifiers ; }
 
         public AnnotatedElement element() { return field ; }
+
+        public AccessibleObject accessible() { return field ; }
 
         public EvaluatedType fieldType() { return fieldType ; }
 
@@ -298,6 +308,8 @@ public class DeclarationFactory {
         }
 
         public AnnotatedElement element() { return method ; }
+
+        public AccessibleObject accessible() { return method ; }
     }
 
     private static class EvaluatedClassDeclarationImpl extends EvaluatedClassDeclarationBase {
@@ -315,12 +327,13 @@ public class DeclarationFactory {
         private boolean simpleClass ;
         private boolean frozen ;
         private List<EvaluatedFieldDeclaration> fields ;
+        private boolean isImmutable ;
 
         public EvaluatedClassDeclarationImpl( final int modifiers,
             final String name, final List<EvaluatedClassDeclaration> inheritance,
             final List<EvaluatedMethodDeclaration> methods,
             final List<EvaluatedFieldDeclaration> fields,
-            final Class cls ) {
+            final Class cls, final boolean isImmutable ) {
 
             this.modifiers = modifiers ;
             this.name = name ;
@@ -330,6 +343,7 @@ public class DeclarationFactory {
             this.cls = cls ;
             this.simpleClass = cls.getTypeParameters().length == 0 ;
             this.frozen = false ;
+            this.isImmutable = isImmutable ;
         }
 
         public void freeze() {
@@ -390,7 +404,6 @@ public class DeclarationFactory {
 
         public void instantiations(List<EvaluatedType> arg) {
             checkFrozen() ;
-            // XXX Should we add more consistency checking?
             if (simpleClass) {
                 throw new IllegalStateException(
                     "Cannot add instantiations to a class with no type args" ) ;
@@ -404,6 +417,10 @@ public class DeclarationFactory {
         public void fields(List<EvaluatedFieldDeclaration> arg) {
             checkFrozen();
             fields = arg ;
+        }
+
+        public boolean isImmutable() {
+            return isImmutable ;
         }
     }
 }

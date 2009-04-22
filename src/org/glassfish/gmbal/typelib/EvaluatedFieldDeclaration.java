@@ -37,13 +37,11 @@
 
 package org.glassfish.gmbal.typelib;
 
-import java.util.List;
-
 /**
  *
  * @author ken
  */
-public interface EvaluatedFieldDeclaration extends EvaluatedDeclaration {
+public interface EvaluatedFieldDeclaration extends EvaluatedAccessibleDeclaration {
     EvaluatedType fieldType() ;
 
     EvaluatedClassDeclaration containingClass() ;

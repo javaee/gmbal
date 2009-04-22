@@ -307,4 +307,8 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     public Object get(Field field, boolean debug) {
         return facetAccessorDelegate.get( field, debug ) ;
     }
+
+    public void set(Field field, Object value, boolean debug) {
+        facetAccessorDelegate.set( field, value, debug ) ;
+    }
 }

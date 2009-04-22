@@ -69,8 +69,6 @@ import javax.management.ObjectName;
  * @author ken
  */
 public class TypeEvaluator {
-    // XXX need to use Exceptions for error reporting here.
-
     private static boolean DEBUG = false ;
     private static boolean DEBUG_EVALUATE = false ;
     private static final DprintUtil dputil = (DEBUG || DEBUG_EVALUATE) ?
@@ -82,13 +80,13 @@ public class TypeEvaluator {
             super( cls, decls ) ;
         }
 
-        public static EvalMapKey OBJECT_KEY = new EvalMapKey( 
+        public static final EvalMapKey OBJECT_KEY = new EvalMapKey(
              Object.class, new ArrayList<EvaluatedType>(0) ) ;
     }
 
     private static EvaluatedClassDeclaration getECD( Class cls ) {
         return DeclarationFactory.ecdecl( PUBLIC,
-            cls.getName(), cls ) ;
+            cls.getName(), cls, true ) ;
     }
 
     // Cache of representations of classes with bound type variables.
@@ -138,7 +136,11 @@ public class TypeEvaluator {
             // inheritance, and defines a toString() method.
             // We also need to handle String separately because
             // of the toString() method signature.
+            // Also note that we will mark all of these as being immutable,
+            // which is only questionable for Date.
             final Class[] classes = {
+                int.class, byte.class, char.class, short.class, long.class,
+                boolean.class, float.class, double.class,
                 void.class, Integer.class, Byte.class, Character.class,
                 Short.class, Boolean.class, Float.class, Double.class,
                 Long.class, BigDecimal.class, BigInteger.class,
@@ -190,8 +192,7 @@ public class TypeEvaluator {
                 mapPut( ecd, cls ) ;
             }
         } catch (Exception exc) {
-            // If any of this code throws errors, the VM is broken...GIVE UP.
-            throw new RuntimeException( exc ) ;
+            throw Exceptions.self.internalTypeEvaluatorError( exc ) ;
         }
     }
 
@@ -270,11 +271,9 @@ public class TypeEvaluator {
                     WildcardType wt = (WildcardType)type ;
                     return visitWildcardType( wt ) ;
                 } else if (type instanceof Method) {
-                    throw new IllegalArgumentException(
-                        "evaluateType should not be called with a Method ("
-                        + type + ")" ) ;
+                    throw Exceptions.self.evaluateTypeCalledWithMethod(type) ;
                 } else {
-                    throw new IllegalArgumentException( "Unknown type???" + type ) ;
+                    throw Exceptions.self.evaluateTypeCalledWithUnknownType(type) ;
                 }
             } finally {
                 if (DEBUG||DEBUG_EVALUATE) {
@@ -461,7 +460,8 @@ public class TypeEvaluator {
                 List<Type> ub = Arrays.asList( wt.getUpperBounds() ) ;
                 if (ub.size() > 0) {
                     if (ub.size() > 1) {
-                        throw new UnsupportedOperationException("Not supported");
+                        throw Exceptions.self.multipleUpperBoundsNotSupported(
+                            wt) ;
                     }
 
                     result = evaluateType( ub.get(0) ) ;
@@ -492,8 +492,8 @@ public class TypeEvaluator {
                         // XXX We need to create a union of the upper bounds.
                         // For now, only support a single upper bound.
                         if (bounds.length > 1) {
-                            throw new UnsupportedOperationException(
-                                "Not supported" ) ;
+                            throw Exceptions.self
+                                .multipleUpperBoundsNotSupported( tvar ) ;
                         }
 
                         result = evaluateType( bounds[0] ) ;
@@ -660,8 +660,7 @@ public class TypeEvaluator {
             }
 
             if (types.hasNext() != tvars.hasNext()) {
-                throw new IllegalArgumentException(
-                    "Type list and TypeVariable list are not the same length");
+                throw Exceptions.self.listsNotTheSameLengthInParamType(pt) ;
             }
 
             return result ;

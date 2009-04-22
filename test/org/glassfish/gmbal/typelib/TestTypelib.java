@@ -67,9 +67,8 @@ public class TestTypelib extends TestCase {
         @Override
         protected void runTest() throws Throwable {
             System.out.println("Test " + cls);
-            final Method m;
             try {
-                m = cls.getMethod("getThing");
+                cls.getMethod("getThing");
             } catch (NoSuchMethodException e) {
                 fail( "Class " + cls + " does not have a getThing method defined") ;
             }

@@ -243,7 +243,7 @@ public class EvaluatedClassAnalyzer {
             new ArrayList<EvaluatedFieldDeclaration>() ;
 	
         // XXX Should we optimize this?  We only need to scan 
-        // interfaces, and we could keep a direct list of classes,
+        // classes, and we could keep a direct list of classes,
         // rather than scanning the full list of classes and interfaces.
         for (EvaluatedClassDeclaration c : classInheritance) {
             for (EvaluatedFieldDeclaration f : c.fields()) {

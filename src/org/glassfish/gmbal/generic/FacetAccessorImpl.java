@@ -187,6 +187,34 @@ public class FacetAccessorImpl implements FacetAccessor {
         return result ;
     }
 
+    public void set(Field field, Object value, boolean debug) {
+        if (debug) {
+            dputil.enter( "set", "field=", field, "value", value ) ;
+        }
+
+        try {
+            Object target = facet( field.getDeclaringClass(), debug ) ;
+
+            try {
+                field.set(target, value);
+            } catch (IllegalArgumentException ex) {
+                throw new GmbalException( "Exception on field get", ex ) ;
+            } catch (IllegalAccessException ex) {
+                throw new GmbalException( "Exception on field get", ex ) ;
+            }
+        } catch (RuntimeException exc) {
+            if (debug) {
+                dputil.exception( "Exception in method invoke call", exc ) ;
+            }
+
+            throw exc ;
+        } finally {
+            if (debug) {
+                dputil.exit() ;
+            }
+        }
+    }
+
     public void removeFacet( Class<?> cls ) {
         if (cls.isInstance(delegate)) {
             throw new IllegalArgumentException( 
@@ -201,4 +229,5 @@ public class FacetAccessorImpl implements FacetAccessor {
                     return false ;
                 } } ) ;
     }
+
 }

@@ -6,10 +6,9 @@
 package org.glassfish.gmbal.impl;
 
 import java.util.LinkedHashSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
+import javax.management.JMException;
 import javax.management.MBeanRegistrationException;
 import javax.management.NotCompliantMBeanException;
 
@@ -34,12 +33,8 @@ public class JMXRegistrationManager {
         for (MBeanImpl mb : deferredRegistrations) {
             try {
                 mb.register();
-            } catch (InstanceAlreadyExistsException ex) {
-                Logger.getLogger(JMXRegistrationManager.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (MBeanRegistrationException ex) {
-                Logger.getLogger(JMXRegistrationManager.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (NotCompliantMBeanException ex) {
-                Logger.getLogger(JMXRegistrationManager.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (JMException ex) {
+                Exceptions.self.deferredRegistrationException( ex, mb ) ;
             }
         }
 
@@ -62,8 +57,9 @@ public class JMXRegistrationManager {
 
         if (isSuspended) {
             deferredRegistrations.remove(mb) ;
-        } else {
-            mb.unregister() ;
         }
+
+        // Always unregister
+        mb.unregister() ;
     }
 }

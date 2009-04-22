@@ -94,4 +94,6 @@ public interface FacetAccessor {
      * @return
      */
     Object get( Field field, boolean debug ) ;
+
+    void set( Field field, Object value, boolean debug ) ;
 }

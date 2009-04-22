@@ -83,6 +83,7 @@ import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 
@@ -236,13 +237,13 @@ public class MBeanSkeleton {
             if (getter != null) {
                 desc = DescriptorUtility.union( desc,
                     DescriptorIntrospector.descriptorForElement(
-                        getter.method() ) );
+                        getter.accessible() ) );
             }
 
             if (setter != null) {
                 desc = DescriptorUtility.union( desc,
                     DescriptorIntrospector.descriptorForElement(
-                        setter.method() ) );
+                        setter.accessible() ) );
             }
 
             desc = makeValidDescriptor( desc, DescriptorType.attribute, name ) ;
@@ -333,11 +334,17 @@ public class MBeanSkeleton {
         }
         
         try {
+            final List<EvaluatedFieldDeclaration> annotatedFields =
+                ca.findFields( mom.forAnnotation( NameValue.class,
+                    EvaluatedFieldDeclaration.class )) ;
+
             final List<EvaluatedMethodDeclaration> annotatedMethods =
                 ca.findMethods( mom.forAnnotation( NameValue.class,
                     EvaluatedMethodDeclaration.class )) ;
             
-            if (annotatedMethods.size() == 0) {
+            if ((annotatedMethods.size() == 0) &&
+                (annotatedFields.size() == 0)) {
+
                 return ;
             }
             

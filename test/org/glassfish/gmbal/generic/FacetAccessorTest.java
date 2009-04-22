@@ -113,6 +113,10 @@ public class FacetAccessorTest extends TestCase {
         public Object get(Field field, boolean debug) {
             return delegate.get( field, debug ) ;
         }
+
+        public void set(Field field, Object value, boolean debug) {
+            delegate.set( field, value, debug ) ;
+        }
     }
     
     private static class BImpl implements B {

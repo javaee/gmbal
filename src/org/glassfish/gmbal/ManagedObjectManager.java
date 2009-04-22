@@ -59,7 +59,9 @@ public interface ManagedObjectManager extends Closeable {
     void suspendJMXRegistration() ;
 
     /** Causes all MBeans created since a previous call to suspendJMXRegistration
-     * to be registered with the JMX MBeanServer.
+     * to be registered with the JMX MBeanServer.  After this call, all new
+     * MBean registration calls to the JMX MBeanServer happen within the
+     * register call.
      */
     void resumeJMXRegistration() ;
 

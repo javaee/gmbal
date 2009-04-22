@@ -12,7 +12,7 @@ import org.glassfish.gmbal.typelib.TypeEvaluator;
  * @author ken
  */
 public class ProfileMain {
-    private ManagedObjectManager mom ;
+    private static ManagedObjectManager mom ;
 
     @ManagedObject
     public static class MyRoot {
@@ -23,10 +23,10 @@ public class ProfileMain {
     }
 
     public static void main( String[] args ) throws IOException {
-        new ProfileMain() ;
+        run() ;
     }
 
-    public ProfileMain() throws IOException {
+    public static void run() throws IOException {
         final MyRoot myroot = new MyRoot() ;
 
         mom = ManagedObjectManagerFactory.createStandalone("test") ;

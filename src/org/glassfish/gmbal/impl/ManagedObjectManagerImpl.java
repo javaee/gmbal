@@ -111,12 +111,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
 
-    public void suspendJMXRegistration() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public synchronized void suspendJMXRegistration() {
+        tree.suspendRegistration() ;
     }
 
-    public void resumeJMXRegistration() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public synchronized void resumeJMXRegistration() {
+        tree.resumeRegistration();
     }
     
     private static final class StringComparator implements Comparator<String> {
@@ -741,11 +741,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     // Only final fields of immutable type can be used as ManagedAttributes.
     static void checkFieldType( EvaluatedFieldDeclaration field ) {
-        // XXX implement me
-        if (Modifier.isFinal( field.modifiers() ) ) {
-        
-        } else {
-            // throw exception
+        if (!Modifier.isFinal( field.modifiers() ) ||
+            !field.fieldType().isImmutable()) {
+            Exceptions.self.illegalAttributeField(field) ;
         }
     }
 

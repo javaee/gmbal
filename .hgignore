@@ -19,3 +19,4 @@ test/run/**
 webrev/**
 webrev*
 nbproject/private/**
+make/bnd.properties
