@@ -100,4 +100,9 @@ public interface EvaluatedType {
         (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType( Number.class ) ;
 
     <R> R accept( Visitor<R> visitor ) ;
+
+    /** Returns true if the type is immutable.
+     *
+     */
+    boolean isImmutable() ;
 }

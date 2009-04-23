@@ -38,17 +38,47 @@
 package org.glassfish.gmbal.typelib;
 
 import java.util.List;
+import org.glassfish.gmbal.generic.ObjectSet;
 
 /**
  *
  * @author ken
  */
-public interface EvaluatedMethodDeclaration extends EvaluatedAccessibleDeclaration {
-    List<EvaluatedType> parameterTypes() ;
-
-    EvaluatedType returnType() ;
-
-    EvaluatedClassDeclaration containingClass() ;
+public abstract class EvaluatedFieldDeclarationBase 
+    extends EvaluatedDeclarationBase
+    implements EvaluatedFieldDeclaration {
     
-    java.lang.reflect.Method method() ;
+    @Override
+    public <R> R accept( Visitor<R> visitor ) {
+        return visitor.visitEvaluatedFieldDeclaration(this) ;
+    }        
+
+    public void containingClass( EvaluatedClassDeclaration cdecl ) {
+        throw new IllegalArgumentException( "Operation not permitted" ) ;
+    }
+
+    void makeRepresentation( StringBuilder sb, ObjectSet set ) {
+        handleModifier( sb, modifiers() ) ;
+        sb.append( " " ) ;
+        sb.append( fieldType().toString() ) ;
+        sb.append( " " ) ;
+        sb.append( name() ) ;
+    }
+            
+    public boolean myEquals( Object obj, ObjectSet set ) {
+        EvaluatedFieldDeclaration other = (EvaluatedFieldDeclaration)obj ;
+        if (!((EvaluatedTypeBase)fieldType()).myEquals( other.fieldType(), set )
+            || !name().equals( other.name() ) )  {
+
+            return false ;
+        }
+        
+        return true ;
+    }
+    
+    @Override
+    public int hashCode( ObjectSet set ) {
+        return fieldType().hashCode() ^
+            name().hashCode() ;
+    }
 }

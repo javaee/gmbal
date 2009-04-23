@@ -48,6 +48,8 @@ public interface Visitor<R> {
     R visitEvaluatedDeclaration( EvaluatedDeclaration ed ) ;
     
     R visitEvaluatedClassDeclaration( EvaluatedClassDeclaration ecd ) ;
-    
+
+    R visitEvaluatedFieldDeclaration( EvaluatedFieldDeclaration efd ) ;
+
     R visitEvaluatedMethodDeclaration( EvaluatedMethodDeclaration emd ) ;
 }

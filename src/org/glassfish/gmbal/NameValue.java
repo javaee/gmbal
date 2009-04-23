@@ -47,7 +47,7 @@ import java.lang.annotation.RetentionPolicy ;
  * class is used to construct an open MBean.
  */
 @Documented 
-@Target(ElementType.METHOD) 
+@Target( { ElementType.METHOD, ElementType.FIELD } )
 @Retention(RetentionPolicy.RUNTIME)
 public @interface NameValue {
 }

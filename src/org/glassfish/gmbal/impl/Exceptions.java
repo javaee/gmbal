@@ -34,10 +34,6 @@
  * holder.
  * 
  */ 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 package org.glassfish.gmbal.impl;
 
@@ -47,6 +43,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import javax.management.AttributeNotFoundException;
+import javax.management.JMException;
 import javax.management.MBeanException;
 import javax.management.ObjectName;
 import javax.management.openmbean.OpenType;
@@ -58,6 +55,8 @@ import org.glassfish.gmbal.logex.Log;
 import org.glassfish.gmbal.logex.Message;
 import org.glassfish.gmbal.logex.WrapperGenerator;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 
@@ -102,7 +101,11 @@ public interface Exceptions {
 
     @Message( "{0} is not a valid attribute method" )
     @Log( id=ATTRIBUTE_DESCRIPTOR_START + 2 )
-    IllegalArgumentException excForMakeFromAnnotated( EvaluatedMethodDeclaration m ) ;
+    IllegalArgumentException excForMakeFromAnnotated( EvaluatedDeclaration m ) ;
+
+    @Message( "Unknown EvaluatedDeclaration type {0}")
+    @Log( id=ATTRIBUTE_DESCRIPTOR_START + 4 )
+    IllegalArgumentException unknownDeclarationType( EvaluatedDeclaration decl ) ;
 
 // DescriptorIntrospector
     static final int DESCRIPTOR_INTROSPECTOR_START =
@@ -224,6 +227,14 @@ public interface Exceptions {
     @Message( "Name of this ManagedObject")
     String nameOfManagedObject() ;
 
+    @Message( "Error in setting attribute {0}" )
+    @Log( id=MBEAN_SKELETON_START + 8 )
+    void attributeSettingError( @Chain Exception ex, String name ) ;
+
+    @Message( "Error in getting attribute {0}" )
+    @Log( id=MBEAN_SKELETON_START + 9 )
+    void attributeGettingError( @Chain Exception ex, String name ) ;
+
 // MBeanTree
     static final int MBEAN_TREE_START =
         MBEAN_SKELETON_START + EXCEPTIONS_PER_CLASS ;
@@ -298,8 +309,14 @@ public interface Exceptions {
     @Message( "Class {0} contains both the InheritedAttribute and "
         + "the InheritedAttributes annotations" )
     @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 4 )
-    IllegalArgumentException badInheritedAttributeAnnotation( 
+    IllegalArgumentException badInheritedAttributeAnnotation(
         EvaluatedClassDeclaration cls ) ;
+
+    @Message( "Field {0} must be final and have an immutable type "
+        + "to be used as an attribute" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 4 )
+    IllegalArgumentException illegalAttributeField(
+        EvaluatedFieldDeclaration cls ) ;
 
     @Message( "No description available!" )
     String noDescriptionAvailable() ;
@@ -392,4 +409,13 @@ public interface Exceptions {
     @Log( id=TYPE_CONVERTER_IMPL_START + 15 )
     UnsupportedOperationException openToJavaNotSupported( OpenType otype, 
         EvaluatedType javaType ) ;
+
+// JMXRegistrationManager start
+    static final int JMX_REGISTRATION_MANAGER_START =
+        TYPE_CONVERTER_IMPL_START + EXCEPTIONS_PER_CLASS ;
+
+    @Message( "JMX exception on registration of MBean {0}" )
+    @Log( id=JMX_REGISTRATION_MANAGER_START + 0 )
+    void deferredRegistrationException( @Chain JMException exc,
+        MBeanImpl mbean ) ;
 }

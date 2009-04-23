@@ -49,7 +49,6 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.NotificationEmitter;
 import javax.management.ObjectName;
-import org.glassfish.gmbal.GmbalException;
 
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
@@ -73,6 +72,7 @@ public class MBeanTree {
                                 // type name/value pair?
     private ManagedObjectManagerInternal mom ;
     private DprintUtil dputil ;
+    private JMXRegistrationManager jrm ;
     
     private void addToObjectMaps( MBeanImpl mbean ) {
         ObjectName oname = mbean.objectName() ;
@@ -179,6 +179,15 @@ public class MBeanTree {
         objectMap = new HashMap<Object,MBeanImpl>() ;
         objectNameMap = new HashMap<ObjectName,Object>() ;
         dputil = new DprintUtil( getClass() ) ;
+        jrm = new JMXRegistrationManager() ;
+    }
+
+    synchronized void suspendRegistration() {
+        jrm.suspendRegistration();
+    }
+
+    synchronized void resumeRegistration() {
+        jrm.resumeRegistration() ;
     }
 
     public synchronized FacetAccessor getFacetAccessor(Object obj) {
@@ -280,7 +289,7 @@ public class MBeanTree {
 
             parentEntity.addChild( mb ) ; 
 
-            mb.register() ;
+            jrm.register( mb ) ;
 
             return mb ;
         } finally {
@@ -310,7 +319,7 @@ public class MBeanTree {
         }
 
         removeFromObjectMaps( mb ) ;
-        mb.unregister() ;
+        jrm.unregister( mb ) ;
         
         if (mb.parent() != null) {
             mb.parent().removeChild( mb ) ;

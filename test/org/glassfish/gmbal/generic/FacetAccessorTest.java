@@ -37,6 +37,7 @@
 
 package org.glassfish.gmbal.generic;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import junit.framework.TestCase;
@@ -108,10 +109,18 @@ public class FacetAccessorTest extends TestCase {
         public Collection<Object> facets() {
             return delegate.facets() ;
         }
+
+        public Object get(Field field, boolean debug) {
+            return delegate.get( field, debug ) ;
+        }
+
+        public void set(Field field, Object value, boolean debug) {
+            delegate.set( field, value, debug ) ;
+        }
     }
     
     private static class BImpl implements B {
-        int factor ;
+        public int factor ;
         
         public BImpl( int factor ) {
             this.factor = factor ;
@@ -177,4 +186,13 @@ public class FacetAccessorTest extends TestCase {
         assertEquals( fa.invoke( b_operation, false, 2 ), 200 ) ;
     }
 
+    public void testGet() throws NoSuchFieldException {
+        System.out.println( "get" ) ;
+        FacetAccessor fa = new TestClass() ;
+        B b = new BImpl( 10 ) ;
+        fa.addFacet( b ) ;
+
+        Field factorField = BImpl.class.getDeclaredField("factor") ;
+        assertEquals( fa.get( factorField, false ), 10 ) ;
+    }
 }

@@ -59,10 +59,28 @@ import java.lang.annotation.RetentionPolicy ;
  * <li>If the method is a setter, and has a name of the form setXXX, the
  * detived id is xXX.
  * <li>Otherwise the derived ID is the method name.
- * </il> 
+ * </ol>
+ * <p>
+ * In certain cases, a field annotated with @ManagedAttribute 
+ * may also represent a read-only attribute.
+ * The field must be final, and its type must be one of:
+ * <ol>
+ * <li>A primitive type (boolean, byte, short, char, int, long, float, double)
+ * <li>A primitive type wrapper (Boolean, Byte, Short, Character, Integer, 
+ * Long, Float, Double)
+ * <li>A String
+ * <li>A BigDecimal or BigInteger
+ * <li>A java.util.Date
+ * <li>An ObjectName
+ * <li>An enum (which is translated to its ordinal name)
+ * </ol>
+ * Any such field can be accessed safely by multiple threads, because its value
+ * cannot change after an instance of the containing class has completed its
+ * constructor.  Note that Date is not truly immutable (it should be!), but it's
+ * one of the Open MBean simple types, so it is included here.
  */
 @Documented 
-@Target(ElementType.METHOD) 
+@Target({ElementType.METHOD,ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ManagedAttribute {
     /** The id of the attribute.  Defaults to value derived from method name.

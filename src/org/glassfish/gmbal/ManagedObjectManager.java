@@ -53,12 +53,50 @@ import javax.management.NotificationEmitter ;
  */
 
 public interface ManagedObjectManager extends Closeable {
+    /** If called, no MBeans created after this call will be registered with
+     * the JMX MBeanServer until resumeJMXRegistration is called.
+     */
+    void suspendJMXRegistration() ;
+
+    /** Causes all MBeans created since a previous call to suspendJMXRegistration
+     * to be registered with the JMX MBeanServer.  After this call, all new
+     * MBean registration calls to the JMX MBeanServer happen within the
+     * register call.
+     */
+    void resumeJMXRegistration() ;
+
+    /** Create a default root MBean.
+     * One of the createRoot methods must be called before any of the registration
+     * methods may be called.
+     * Only one call to createRoot is permitted after an ManagedObjectManager
+     * is created.
+     * @return
+     */
     NotificationEmitter createRoot() ;
     
+    /** Create a root MBean from root, which much have a method with the
+     * @NameValue annotation.
+     * One of the createRoot methods must be called before any of the registration
+     * methods may be called.
+     * Only one call to createRoot is permitted after an ManagedObjectManager
+     * is created.
+     * @param root
+     * @return
+     */
     NotificationEmitter createRoot( Object root ) ;
     
+    /** Create a root MBean from root with the given name.
+     * One of the createRoot methods must be called before any of the registration
+     * methods may be called.
+     * Only one call to createRoot is permitted after an ManagedObjectManager
+     * is created.
+     */
     NotificationEmitter createRoot( Object root, String name ) ;
     
+    /** Return the root of this ManagedObjectManager.
+     *
+     * @return root
+     */
     Object getRoot() ;
     
     /** Construct an Open Mean for obj according to its annotations,

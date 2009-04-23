@@ -36,8 +36,10 @@
  */ 
 package org.glassfish.gmbal.typelib ;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,7 +94,9 @@ public class DeclarationFactory {
 
     public static synchronized EvaluatedClassDeclaration ecdecl( final int modifiers,
         final String name, final List<EvaluatedClassDeclaration> inheritance,
-        final List<EvaluatedMethodDeclaration> methods, final Class cls ) {
+        final List<EvaluatedMethodDeclaration> methods,
+        final List<EvaluatedFieldDeclaration> fields, final Class cls,
+        final boolean isImmutable ) {
 
         EvaluatedClassDeclaration result = null ;
         if (cls.getTypeParameters().length == 0) {
@@ -107,7 +111,7 @@ public class DeclarationFactory {
 
             try {
                 result = new EvaluatedClassDeclarationImpl( modifiers, name,
-                    inheritance, methods, cls ) ;
+                    inheritance, methods, fields, cls, isImmutable ) ;
                 if (result.simpleClass()) {
                     simpleClassMap.put( name, result ) ;
                 }
@@ -115,6 +119,28 @@ public class DeclarationFactory {
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
+            }
+        }
+
+        return result ;
+    }
+
+    public static synchronized EvaluatedFieldDeclaration efdecl(
+        final EvaluatedClassDeclaration ecdecl, final int modifiers,
+        final EvaluatedType ftype, final String name, final Field field ) {
+
+        if (DEBUG) {
+            dputil.enter( "efdecl", "name", name, "ftype", ftype ) ;
+        }
+
+        EvaluatedFieldDeclaration result = null ;
+
+        try {
+            result = new EvaluatedFieldDeclarationImpl( ecdecl, modifiers,
+                ftype, name, field ) ;
+        } finally {
+            if (DEBUG) {
+                dputil.exit( result ) ;
             }
         }
 
@@ -146,10 +172,17 @@ public class DeclarationFactory {
     
     public static EvaluatedClassDeclaration ecdecl( final int modifiers,
         final String name, final Class cls ) {
+        return ecdecl( modifiers, name, cls, false ) ;
+    }
+
+    public static EvaluatedClassDeclaration ecdecl( final int modifiers,
+        final String name, final Class cls, boolean isImmutable ) {
 
         return ecdecl( modifiers, name, 
             new ArrayList<EvaluatedClassDeclaration>(0),
-            new ArrayList<EvaluatedMethodDeclaration>(0), cls ) ;
+            new ArrayList<EvaluatedMethodDeclaration>(0),
+            new ArrayList<EvaluatedFieldDeclaration>(0), cls,
+            isImmutable ) ;
     }
 
     private static class EvaluatedArrayTypeImpl extends EvaluatedArrayTypeBase {
@@ -162,7 +195,67 @@ public class DeclarationFactory {
         public EvaluatedType componentType() { return compType ; }
     }
 
-    private static class EvaluatedMethodDeclarationImpl extends EvaluatedMethodDeclarationBase {
+    private static class EvaluatedFieldDeclarationImpl
+        extends EvaluatedFieldDeclarationBase  {
+
+        private final EvaluatedClassDeclaration container ;
+        private final int modifiers ;
+        private final EvaluatedType fieldType ;
+        private final String name ;
+        @DumpToString
+        private final Field field ;
+
+        public EvaluatedFieldDeclarationImpl(
+            final EvaluatedClassDeclaration cdecl,
+            final int modifiers, final EvaluatedType fieldType,
+            final String name,
+            final Field field ) {
+
+            this.container = cdecl ;
+            this.modifiers = modifiers ;
+            this.fieldType = fieldType ;
+            this.name = name ;
+            this.field = field ;
+        }
+
+        public <T extends Annotation> T annotation(Class<T> annotationType) {
+            if (field == null) {
+                throw new UnsupportedOperationException(
+                    "Not supported in constructed ClassDeclaration.");
+            } else {
+                return field.getAnnotation( annotationType ) ;
+            }
+        }
+
+        public List<Annotation> annotations() {
+            if (field == null) {
+                throw new UnsupportedOperationException(
+                    "Not supported in constructed ClassDeclaration.");
+            } else {
+                return Arrays.asList( field.getAnnotations() ) ;
+            }
+        }
+
+        public String name() { return name ; }
+
+        public int modifiers() { return modifiers ; }
+
+        public AnnotatedElement element() { return field ; }
+
+        public AccessibleObject accessible() { return field ; }
+
+        public EvaluatedType fieldType() { return fieldType ; }
+
+        public EvaluatedClassDeclaration containingClass() { return container ; }
+
+        public Field field() {
+            return field ;
+        }
+    }
+
+    private static class EvaluatedMethodDeclarationImpl 
+        extends EvaluatedMethodDeclarationBase  {
+
         private final EvaluatedClassDeclaration container ;
         private final int modifiers ;
         private final EvaluatedType rtype ;
@@ -215,6 +308,8 @@ public class DeclarationFactory {
         }
 
         public AnnotatedElement element() { return method ; }
+
+        public AccessibleObject accessible() { return method ; }
     }
 
     private static class EvaluatedClassDeclarationImpl extends EvaluatedClassDeclarationBase {
@@ -231,18 +326,24 @@ public class DeclarationFactory {
         // so they are cacheable.
         private boolean simpleClass ;
         private boolean frozen ;
+        private List<EvaluatedFieldDeclaration> fields ;
+        private boolean isImmutable ;
 
         public EvaluatedClassDeclarationImpl( final int modifiers,
             final String name, final List<EvaluatedClassDeclaration> inheritance,
-            final List<EvaluatedMethodDeclaration> methods, final Class cls ) {
+            final List<EvaluatedMethodDeclaration> methods,
+            final List<EvaluatedFieldDeclaration> fields,
+            final Class cls, final boolean isImmutable ) {
 
             this.modifiers = modifiers ;
             this.name = name ;
             this.inheritance = inheritance ;
             this.methods = methods ;
+            this.fields = fields ;
             this.cls = cls ;
             this.simpleClass = cls.getTypeParameters().length == 0 ;
             this.frozen = false ;
+            this.isImmutable = isImmutable ;
         }
 
         public void freeze() {
@@ -303,13 +404,23 @@ public class DeclarationFactory {
 
         public void instantiations(List<EvaluatedType> arg) {
             checkFrozen() ;
-            // XXX Should we add more consistency checking?
             if (simpleClass) {
                 throw new IllegalStateException(
                     "Cannot add instantiations to a class with no type args" ) ;
             } else {
                 this.instantiations = arg ;
             }
+        }
+
+        public List<EvaluatedFieldDeclaration> fields() { return fields ; }
+
+        public void fields(List<EvaluatedFieldDeclaration> arg) {
+            checkFrozen();
+            fields = arg ;
+        }
+
+        public boolean isImmutable() {
+            return isImmutable ;
         }
     }
 }

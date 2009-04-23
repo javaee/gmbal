@@ -38,9 +38,10 @@
 package org.glassfish.gmbal.impl ;
 
 
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method ;
 import java.lang.reflect.ReflectPermission;
-import java.lang.reflect.Type ;
 
 import java.security.AccessController;
 import java.security.Permission;
@@ -48,15 +49,15 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import javax.management.ReflectionException ;
 
-
-
 import org.glassfish.gmbal.generic.DprintUtil;
 import org.glassfish.gmbal.generic.DumpIgnore;
 import org.glassfish.gmbal.generic.DumpToString;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Pair;
 import javax.management.MBeanException;
-import org.glassfish.gmbal.GmbalException;
+import org.glassfish.gmbal.typelib.EvaluatedAccessibleDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
     
@@ -64,7 +65,7 @@ public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
 
     @DumpToString
-    private EvaluatedMethodDeclaration _method ;
+    private EvaluatedAccessibleDeclaration _decl ;
     private String _id ;
     private String _description ;
     private AttributeType _atype ;
@@ -78,21 +79,21 @@ public class AttributeDescriptor {
     private static final Permission accessControlPermission =
         new ReflectPermission( "suppressAccessChecks" ) ;
 
-    private AttributeDescriptor( final ManagedObjectManagerInternal mom, 
-        final EvaluatedMethodDeclaration method, final String id,
-        final String description, final AttributeType atype, 
+    private AttributeDescriptor( final ManagedObjectManagerInternal mom,
+        final EvaluatedAccessibleDeclaration decl, final String id,
+        final String description, final AttributeType atype,
         final EvaluatedType type ) {
-    
-        SecurityManager sman = System.getSecurityManager() ;
+                SecurityManager sman = System.getSecurityManager() ;
+
         if (sman != null) {
             sman.checkPermission( accessControlPermission ) ;
         }
 
-        this._method = AccessController.doPrivileged(
-            new PrivilegedAction<EvaluatedMethodDeclaration>() {
-                public EvaluatedMethodDeclaration run() {
-                    method.method().setAccessible(true);
-                    return method ;
+        this._decl = AccessController.doPrivileged(
+            new PrivilegedAction<EvaluatedAccessibleDeclaration>() {
+                public EvaluatedAccessibleDeclaration run() {
+                    decl.accessible().setAccessible(true);
+                    return decl ;
                 }
             }
         ) ;
@@ -104,7 +105,7 @@ public class AttributeDescriptor {
         this._tc = mom.getTypeConverter( type ) ;
     }
 
-    public final Method method() { return _method.method() ; }
+    public final AccessibleObject accessible() { return _decl.accessible() ; }
 
     public final String id() { return _id ; }
 
@@ -117,7 +118,15 @@ public class AttributeDescriptor {
     public final TypeConverter tc() { return _tc ; }
     
     public boolean isApplicable( Object obj ) {
-        return _method.method().getDeclaringClass().isInstance( obj ) ;
+        if (_decl instanceof EvaluatedMethodDeclaration) {
+            EvaluatedMethodDeclaration em = (EvaluatedMethodDeclaration)_decl ;
+            return em.method().getDeclaringClass().isInstance( obj ) ;
+        } else if (_decl instanceof EvaluatedFieldDeclaration) {
+            EvaluatedFieldDeclaration ef = (EvaluatedFieldDeclaration)_decl ;
+            return ef.field().getDeclaringClass().isInstance( obj ) ;
+        }
+
+        return false ;
     }
 
     private void checkType( AttributeType at ) {
@@ -138,7 +147,15 @@ public class AttributeDescriptor {
         Object result = null;
         
         try {
-            result = _tc.toManagedEntity(fa.invoke(_method.method(), debug ));
+            if (_decl instanceof EvaluatedMethodDeclaration) {
+                EvaluatedMethodDeclaration em = (EvaluatedMethodDeclaration)_decl ;
+                result = _tc.toManagedEntity( fa.invoke( em.method(), debug ));
+            } else if (_decl instanceof EvaluatedFieldDeclaration) {
+                EvaluatedFieldDeclaration ef = (EvaluatedFieldDeclaration)_decl ;
+                result = _tc.toManagedEntity( fa.get( ef.field(), debug )) ;
+            } else {
+                Exceptions.self.unknownDeclarationType(_decl) ;
+            }
         } catch (RuntimeException exc) {
             if (debug) {
                 dputil.exception( "Error:", exc ) ;
@@ -163,8 +180,16 @@ public class AttributeDescriptor {
         }
         
         try {
-            target.invoke(_method.method(), debug,
-                _tc.fromManagedEntity(value));
+            if (_decl instanceof EvaluatedMethodDeclaration) {
+                EvaluatedMethodDeclaration em =
+                    (EvaluatedMethodDeclaration)_decl ;
+                target.invoke( em.method(), debug, _tc.fromManagedEntity(value)) ;
+            } else if (_decl instanceof EvaluatedFieldDeclaration) {
+                EvaluatedFieldDeclaration ef = (EvaluatedFieldDeclaration)_decl ;
+                target.set( ef.field(), _tc.fromManagedEntity( value ), debug ) ;
+            } else {
+                Exceptions.self.unknownDeclarationType(_decl) ;
+            }
         } catch (RuntimeException exc) {
             if (debug) {
                 dputil.exception( "Error:", exc ) ;
@@ -246,30 +271,41 @@ public class AttributeDescriptor {
     }
 
     private static Pair<AttributeType,EvaluatedType> getTypeInfo(
-        EvaluatedMethodDeclaration method ) {
+        EvaluatedDeclaration decl ) {
 
-        final EvaluatedType rtype = method.returnType() ;
-        final List<EvaluatedType> atypes = method.parameterTypes() ;
-        AttributeType atype ;
-        EvaluatedType attrType ;
+        EvaluatedType evalType = null ;
+        AttributeType atype = null ;
+        if (decl instanceof EvaluatedMethodDeclaration) {
+            EvaluatedMethodDeclaration method =
+                (EvaluatedMethodDeclaration)decl ;
 
-        if (rtype.equals( EvaluatedType.EVOID )) {
-            if (atypes.size() != 1) {
-                return null ;
+            final List<EvaluatedType> atypes = method.parameterTypes() ;
+
+            if (method.returnType().equals( EvaluatedType.EVOID )) {
+                if (atypes.size() != 1) {
+                    return null ;
+                }
+
+                atype = AttributeType.SETTER ;
+                evalType = atypes.get(0) ;
+            } else {
+                if (atypes.size() != 0) {
+                    return null ;
+                }
+
+                atype = AttributeType.GETTER ;
+                evalType = method.returnType() ;
             }
+        } else if (decl instanceof EvaluatedFieldDeclaration) {
+            EvaluatedFieldDeclaration field = (EvaluatedFieldDeclaration)decl ;
 
-            atype = AttributeType.SETTER ;
-            attrType = atypes.get(0) ;
-        } else {
-            if (atypes.size() != 0) {
-                return null ;
-            }
-
+            evalType = field.fieldType() ;
             atype = AttributeType.GETTER ;
-            attrType = rtype ;
+        } else {
+            Exceptions.self.unknownDeclarationType( decl ) ;
         }
 
-        return new Pair<AttributeType,EvaluatedType>( atype, attrType ) ;
+        return new Pair<AttributeType,EvaluatedType>( atype, evalType ) ;
     }
 
     private static boolean empty( String arg ) {
@@ -310,26 +346,26 @@ public class AttributeDescriptor {
             ainfo.first(), ainfo.second() ) ;
     }
 
-    // Create an AttributeDescriptor from method.  This case always return an
+    // Create an AttributeDescriptor from a field or method.  Fields always
+    // correspond to getters.  This case always returns an
     // AttributeDescriptor (unless it fails, for example because an annotated
     // method had an invalid signature as an Attribute).
     // Note that extId and description may be empty strings.
     public static AttributeDescriptor makeFromAnnotated( 
         final ManagedObjectManagerInternal mom, 
-        final EvaluatedMethodDeclaration m, final String extId,
+        final EvaluatedAccessibleDeclaration decl, final String extId,
         final String description,
         final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
 
-        Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( m ) ;
+        Pair<AttributeType,EvaluatedType> ainfo = getTypeInfo( decl ) ;
         if (ainfo == null) {
-            throw Exceptions.self.excForMakeFromAnnotated( m ) ;
+            throw Exceptions.self.excForMakeFromAnnotated( decl ) ;
         }
 
         String actualId = empty(extId) ? 
-            getDerivedId( m.name(), ainfo, adt ) : extId ;
+            getDerivedId( decl.name(), ainfo, adt ) : extId ;
 
-        return new AttributeDescriptor( mom, m, actualId, description,
+        return new AttributeDescriptor( mom, decl, actualId, description,
             ainfo.first(), ainfo.second() ) ;
     }
-
 }

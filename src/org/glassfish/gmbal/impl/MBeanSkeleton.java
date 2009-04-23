@@ -83,6 +83,7 @@ import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 
@@ -236,13 +237,13 @@ public class MBeanSkeleton {
             if (getter != null) {
                 desc = DescriptorUtility.union( desc,
                     DescriptorIntrospector.descriptorForElement(
-                        getter.method() ) );
+                        getter.accessible() ) );
             }
 
             if (setter != null) {
                 desc = DescriptorUtility.union( desc,
                     DescriptorIntrospector.descriptorForElement(
-                        setter.method() ) );
+                        setter.accessible() ) );
             }
 
             desc = makeValidDescriptor( desc, DescriptorType.attribute, name ) ;
@@ -263,6 +264,20 @@ public class MBeanSkeleton {
             }
 
             mbeanAttributeInfoList.add( ainfo ) ;
+        } finally {
+            if (mom.registrationFineDebug()) {
+                dputil.exit() ;
+            }
+        }
+    }
+
+    private void analyzeFields( EvaluatedClassAnalyzer ca ) {
+        if (mom.registrationFineDebug()) {
+            dputil.enter( "analyzeFields", "ca=", ca ) ;
+        }
+
+        try {
+
         } finally {
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
@@ -319,11 +334,17 @@ public class MBeanSkeleton {
         }
         
         try {
+            final List<EvaluatedFieldDeclaration> annotatedFields =
+                ca.findFields( mom.forAnnotation( NameValue.class,
+                    EvaluatedFieldDeclaration.class )) ;
+
             final List<EvaluatedMethodDeclaration> annotatedMethods =
                 ca.findMethods( mom.forAnnotation( NameValue.class,
                     EvaluatedMethodDeclaration.class )) ;
             
-            if (annotatedMethods.size() == 0) {
+            if ((annotatedMethods.size() == 0) &&
+                (annotatedFields.size() == 0)) {
+
                 return ;
             }
             
@@ -558,6 +579,7 @@ public class MBeanSkeleton {
         mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
 
         analyzeAttributes( ca ) ;
+        analyzeFields( ca ) ;
         analyzeOperations( ca ) ;
         analyzeObjectNameKeys( ca ) ;
 
@@ -645,6 +667,7 @@ public class MBeanSkeleton {
 
             setter.set( fa, value, mom.runtimeDebug() ) ;
 
+            // XXX Can we check if a notification is needed before constructing this?
             // Note that this code assumes that emitter is also the MBean,
             // because the MBean extends NotificationBroadcasterSupport!
             AttributeChangeNotification notification =
@@ -679,24 +702,20 @@ public class MBeanSkeleton {
             AttributeList result = new AttributeList() ;
             for (String str : attributes) {
                 Object value = null ;
-                Exception exception = null ;
                 
                 try {
                     value = getAttribute(fa, str);
                 } catch (JMException ex) {
-                    exception = ex ;
+                    Exceptions.self.attributeGettingError(ex, str ) ;
+                    if (mom.runtimeDebug()) {
+                        dputil.exception( "getAttributes: ", ex ) ;
+                    }
                 }
 
                 // If value == null, we had a problem in trying to fetch it,
                 // so just ignore that attribute.  Returning null simply leads to
                 // a blank entry in jconsole.  Do not let an error in fetching
                 // one attribute prevent fetching the others.
-                
-                if (exception != null) {
-                    if (mom.runtimeDebug()) {
-                        dputil.exception( "getAttribute: ", exception ) ;
-                    }
-                }
                 
                 Attribute attr = new Attribute( str, value ) ;
                 result.add( attr ) ;
@@ -724,19 +743,15 @@ public class MBeanSkeleton {
         try {
             for (Object elem : attributes) {
                 Attribute attr = (Attribute)elem ;
-                Exception exception = null ;
+
                 try {
                     setAttribute(emitter, fa, attr);
-                } catch (JMException ex) {
-                    exception = ex ;
-                }
-                
-                if (exception == null) {
                     result.add( attr ) ;
-                } else {
+                } catch (JMException ex) {
+                    Exceptions.self.attributeSettingError(ex, attr.getName()) ;
                     if (mom.runtimeDebug()) {
-                        dputil.exception( "Error in setting attribute" 
-                            + attr.getName(), exception ) ;
+                        dputil.exception( "Error in setting attribute"
+                            + attr.getName(), ex ) ;
                     }
                 }
             }

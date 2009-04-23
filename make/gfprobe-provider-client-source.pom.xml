@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  
@@ -33,38 +34,24 @@
   only if the new code is made subject to such option by the copyright
   holder.
 -->
+<project>
     <modelVersion>4.0.0</modelVersion>
-    <groupId>@groupId@</groupId>
-    <artifactId>@artifactId@</artifactId>
+    <groupId>org.glassfish.provider</groupId>
+    <artifactId>gfprobe-provider-client-source</artifactId>
     <packaging>jar</packaging>
-    <version>@version@</version>
-    <name>@artifactId@</name>
-    <description>@jarDescription@</description>
-    <url>http://kenai.com/hg/gmbal~master</url>
-    <developers>
-        <developer>
-            <id>kcavanaugh</id>
-            <name>Ken Cavanaugh</name>
-            <email>ken.cavanaugh@sun.com</email>
-        </developer>
-    </developers>
+    <version>3.0.0-b002</version>
+    <name>GlassFish Probe Provider Client</name>
+
     <organization>
         <name>Sun Microsystems</name>
         <url>http://www.sun.com</url>
     </organization>
+
     <licenses>
         <license>
             <name>CDDL+GPL</name>
             <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
         </license>
     </licenses>
-    <issueManagement>
-        <system>JIRA</system>
-        <url>http://kenai.com/jira/browse/GMBAL</url>
-    </issueManagement>
-    <mailingLists>
-        <mailingList>
-            <name>Gmbal Developer</name>
-            <archive>dev@gmbal.kenai.com</archive>
-        </mailingList>
-    </mailingLists>
+</project>
+

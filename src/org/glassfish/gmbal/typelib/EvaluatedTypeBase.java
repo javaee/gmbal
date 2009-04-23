@@ -199,4 +199,8 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
     }
 
     abstract int hashCode( ObjectSet map ) ;
+
+    public boolean isImmutable() {
+        return false ;
+    }
 }

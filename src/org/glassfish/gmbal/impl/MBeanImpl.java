@@ -37,6 +37,7 @@
 
 package org.glassfish.gmbal.impl ;
 
+import java.lang.reflect.Field;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.FacetAccessorImpl;
 import java.lang.reflect.Method;
@@ -301,5 +302,13 @@ public class MBeanImpl extends NotificationBroadcasterSupport
 
     public Collection<Object> facets() {
         return facetAccessorDelegate.facets() ;
+    }
+
+    public Object get(Field field, boolean debug) {
+        return facetAccessorDelegate.get( field, debug ) ;
+    }
+
+    public void set(Field field, Object value, boolean debug) {
+        facetAccessorDelegate.set( field, value, debug ) ;
     }
 }

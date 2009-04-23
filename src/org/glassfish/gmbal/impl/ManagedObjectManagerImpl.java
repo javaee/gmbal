@@ -51,6 +51,7 @@ import java.lang.annotation.Annotation ;
 import java.lang.management.ManagementFactory ;
 
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Modifier;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -82,6 +83,7 @@ import java.util.TreeSet;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
+import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
@@ -108,6 +110,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ManagedObjectManager.RegistrationDebugLevel regDebugLevel = 
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
+
+    public synchronized void suspendJMXRegistration() {
+        tree.suspendRegistration() ;
+    }
+
+    public synchronized void resumeJMXRegistration() {
+        tree.resumeRegistration();
+    }
     
     private static final class StringComparator implements Comparator<String> {
         public int compare(String o1, String o2) {
@@ -729,6 +739,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
 
+    // Only final fields of immutable type can be used as ManagedAttributes.
+    static void checkFieldType( EvaluatedFieldDeclaration field ) {
+        if (!Modifier.isFinal( field.modifiers() ) ||
+            !field.fieldType().isImmutable()) {
+            Exceptions.self.illegalAttributeField(field) ;
+        }
+    }
+
     // Returns a pair of maps defining all managed attributes in the ca.  The first map
     // is all setters, and the second is all getters.  Only the most derived version is present.
     public synchronized Pair<Map<String,AttributeDescriptor>,
@@ -752,7 +770,37 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         Map<String,AttributeDescriptor>>( getters, setters ) ;
             
             final List<InheritedAttribute> ias = getInheritedAttributes( ca ) ;
-            
+
+            ca.findFields( new Predicate<EvaluatedFieldDeclaration>() {
+                public boolean evaluate( EvaluatedFieldDeclaration field ) {
+                    ManagedAttribute ma = field.annotation(
+                        ManagedAttribute.class ) ;
+                    if (ma == null) {
+                        return false ;
+                    } else {
+                        checkFieldType( field ) ;
+
+                        Description desc = getAnnotation( field,
+                            Description.class ) ;
+                        String description ;
+                        if (desc == null) {
+                            description = "No description available for "
+                                + field.name() ;
+                        } else {
+                            description = desc.value() ;
+                        }
+
+                        AttributeDescriptor ad =
+                            AttributeDescriptor.makeFromAnnotated(
+                                 ManagedObjectManagerImpl.this, field,
+                                 ma.id(), description, adt ) ;
+
+                        putIfNotPresent( getters, ad.id(), ad ) ;
+
+                        return true ;
+                    }
+                } } ) ;
+
             ca.findMethods( new Predicate<EvaluatedMethodDeclaration>() {
                 public boolean evaluate( EvaluatedMethodDeclaration method ) {
                     ManagedAttribute ma = method.annotation(
@@ -762,15 +810,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         ad = getAttributeDescriptorIfInherited( method, ias,
                             adt ) ;
                     } else {
-                        Description desc = getAnnotation( method, Description.class ) ;
+                        Description desc = getAnnotation( method,
+                            Description.class ) ;
                         String description ;
                         if (desc == null) {
-                            description = "No description available for " + method.name() ;
+                            description = "No description available for "
+                                + method.name() ;
                         } else {
                             description = desc.value() ;
                         }
 
-                        ad = AttributeDescriptor.makeFromAnnotated( ManagedObjectManagerImpl.this,
+                        ad = AttributeDescriptor.makeFromAnnotated(
+                            ManagedObjectManagerImpl.this,
                             method, ma.id(), description, adt ) ;
                     }
                     
