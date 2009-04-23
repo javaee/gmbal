@@ -49,7 +49,6 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.NotificationEmitter;
 import javax.management.ObjectName;
-import org.glassfish.gmbal.GmbalException;
 
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.

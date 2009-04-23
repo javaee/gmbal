@@ -121,11 +121,11 @@
         <delete file="coverage.ec"/>
     </target>
 
-    <target name="init">
+    <target name="gmbal-init">
         <echo message="Current version is ${version}"/>
     </target>
 
-    <target name="all" depends="init,clean,jar,emma-instr,test,test-report,emma-report,make-bundles"/>
+    <target name="all" depends="gmbal-init,clean,jar,emma-instr,test,test-report,emma-report"/>
 
     <target name="findbugs-html" depends="-post-jar">
         <property name="findbugs.home" value="lib/findbugs-1.3.3"/>
@@ -168,7 +168,6 @@
         <pathelement location="lib/emma_ant.jar"/>
     </path>
 
-    <!-- path element used by EMMA taskdef below: -->
     <target name="emma-init">
         <property name="emma-jar" value="lib/emma.jar"/>
         <property name="emma.classes.dir" value="${emma.dir}/classes"/>
@@ -183,7 +182,6 @@
                 <instrpath>
                     <pathelement location="build/classes"/>
                 </instrpath>
-                <!-- include typelib or typeresolver once we start using one of them -->
                 <filter includes="org.glassfish.gmbal.*"/>
                 <filter includes="org.glassfish.gmbal.util.*"/>
                 <filter includes="org.glassfish.gmbal.impl.*"/>
@@ -194,7 +192,6 @@
         </emma>
     </target>
 
-    <!-- this loads <emma> and <emmajava> custom tasks: -->
     <taskdef resource="emma_ant.properties" classpathref="emma.lib" />
 
     <target name="emma-report" depends="emma-init">
@@ -204,11 +201,6 @@
                 <sourcepath>
                     <pathelement location="src"/>
                 </sourcepath>
-                <!--
-                <fileset dir=".">
-                    <include name="coverage.ec"/>
-                </fileset>
-                -->
                 <fileset dir="${emma.dir}" >
                     <include name="*.ec" />
                     <include name="*.em" />
@@ -256,15 +248,12 @@
         <echo message="Bundle-Version: ${version}${line.separator}" file="make/bnd.properties"/>
     </target>
 
-    <target name="make-bundles" depends="init,make-source-bundle,make-bnd-properties">
+    <target name="make-bundles" depends="gmbal-init,make-source-bundle,make-bnd-properties">
         <make-bundle file="gmbal-api"/>
         <make-bundle file="gmbal-impl"/>
         <make-bundle file="gfprobe-provider-client"/>
     </target>
 
-<!-- ================================================================== -->
-<!--      Bootstrap - a task for getting the Maven-Ant library         -->
-<!-- ================================================================== -->
 <target name="bootstrap" 
 	description="Fetch Maven library - needed only the first time.">
    <get
@@ -274,7 +263,6 @@
        usetimestamp="true"/>
 </target>
 
-<!-- ================================================================== -->
 <target name="testAntJar"
     description="Check if the mavn-ant-tasks jar is already present in the lib dir.. .">
     <condition property="maven.lib.present">
@@ -282,7 +270,6 @@
     </condition>
 </target>
 
-<!-- ================================================================== -->
 <target name="checkmaven" depends="testAntJar"  unless="maven.lib.present">
     <echo>
         Missing ${maven.ant.file} library. 
@@ -293,17 +280,14 @@
      <antcall target="bootstrap"/>
 </target>
 
-<!-- ================================================================== -->
-<target name="mavenize" depends="init, checkmaven" description="initialize maven ">
+<target name="mavenize" depends="gmbal-init, checkmaven" description="initialize maven ">
     <path id="maven-ant-tasks.classpath" 
 	  path="lib/${maven.ant.file}" />
     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
         uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath">
     </typedef>
-    <!-- ============Download the SVN provider ====================== -->
     <artifact:install-provider artifactId="wagon-svn" groupId="org.jvnet.wagon-svn" version="1.7">
     <artifact:remoteRepository id="java.net.maven2.repository" url="http://download.java.net/maven/2/" />
-    <!-- store the provider in temp local repository-->
     <artifact:localRepository path="/tmp/test"/>
     </artifact:install-provider>
 </target>
@@ -344,7 +328,6 @@ The modules             (and their dependencies):
         pom template:       make/${m}.template.pom
         resulting jar:      dist/bundles/${m}.jar
 -->
-
 <macrodef name="make-file">
     <attribute name="module"/>
     <attribute name="description"/>
@@ -370,16 +353,6 @@ The modules             (and their dependencies):
     </sequential>
 </macrodef>
 
-<!--  
-Note that we use a temporary file to store the pom because maven is based on 'single 
-project produces single jar file'. But, we are producing 9 jars from a single 
-project. Hence, we need a template to for each pom that generates the POM we use each
-time we publish.
-
-Refer: http://maven.apache.org/guides/mini/guide-using-one-source-directory.html
-Section: Producing Multiple JARs from a single POM (maven limitations)
--->
-
 <macrodef name="push-to-maven">
     <attribute name="module"/>
     <attribute name="description"/>
@@ -397,13 +370,13 @@ Section: Producing Multiple JARs from a single POM (maven limitations)
     </sequential>
 </macrodef>
 
-<target name="release" depends="init,mavenize">
+<target name="release" depends="gmbal-init,mavenize">
     <push-to-maven module="gmbal-api" description="gmbal API" repo="${repo.url}"/>
     <push-to-maven module="gmbal-impl" description="gmbal implementation" repo="${repo.url}"/>
     <push-to-maven module="gmbal-source" description="gmbal source code" repo="${repo.url}"/>
 </target>
 
-<target name="release-local" depends="init,mavenize">
+<target name="release-local" depends="gmbal-init,mavenize">
     <push-to-maven module="gmbal-api" description="gmbal API" repo="${local.url}"/>
     <push-to-maven module="gmbal-impl" description="gmbal implementation" repo="${local.url}"/>
     <push-to-maven module="gmbal-source" description="gmbal source code" repo="${local.url}"/>
@@ -436,4 +409,3 @@ Section: Producing Multiple JARs from a single POM (maven limitations)
 </target>
 
 </project>
-
