@@ -48,6 +48,7 @@ import javax.management.ObjectName;
 public final class ManagedObjectManagerFactory {
     private ManagedObjectManagerFactory() {}
   
+    // XXX How do we make this work properly with OSGi?
     private static GenericConstructor<ManagedObjectManager> objectNameCons =
         new GenericConstructor<ManagedObjectManager>( 
             ManagedObjectManager.class, 
@@ -90,7 +91,12 @@ public final class ManagedObjectManagerFactory {
     public static ManagedObjectManager createStandalone(
         final String domain ) {
 	
-        return stringCons.create( domain ) ;
+        ManagedObjectManager result = stringCons.create( domain ) ;
+	if (result == null) {
+	    return ManagedObjectManagerNOPImpl.self ;
+	} else {
+	    return result ;
+	}
     }
     
     /** Alternative form of the create method to be used when the
@@ -107,7 +113,12 @@ public final class ManagedObjectManagerFactory {
     public static ManagedObjectManager createFederated(
         final ObjectName rootParentName ) {
 	
-        return objectNameCons.create( rootParentName ) ;
+        ManagedObjectManager result = objectNameCons.create( rootParentName ) ;
+	if (result == null) {
+	    return ManagedObjectManagerNOPImpl.self ;
+	} else {
+	    return result ;
+	}
     }
 }
 
