@@ -36,8 +36,7 @@
  only if the new code is made subject to such option by the copyright
  holder.
  
--->
-<!-- 
+--><!-- 
   Document : FunctionalSpec
   Created on : Nov 17, 2008, 4:25:47 PM
   Author : ken
@@ -275,8 +274,7 @@ build
 time.<br>
 <h3>1.1. Alignment with related projects</h3>
 JMX is also defining similar annotations in JSR 255 for JDK 7.&nbsp;
-You can obtain
-the spec from the download <a
+The JSR 255 spec is available at the download <a
  href="http://jcp.org/aboutJava/communityprocess/edr/jsr255/index.html">page</a>.
 Gmbal is mostly (but not completely) aligned with the JSR 255
 annotations.&nbsp;
@@ -663,9 +661,8 @@ starting from 0<br>
         <li>String description</li>
         <li>String id (default "" which means take from method name)</li>
         <li>String methodName (default "" which means use id)</li>
-        <li>one of methodName or id must NOT be ""<br>
-        </li>
       </ul>
+one of methodName or id must NOT be ""<br>
       <br>
       </td>
       <td style="vertical-align: top;">Class or Interface<br>
@@ -696,20 +693,23 @@ inherited attributes<br>
       </td>
       <td style="vertical-align: top;">
       <ul>
-        <li>String pathPart (the type to use in an ObjectName or in an
-admin CLI path expression:&nbsp; defaults to class name, but see
-also&nbsp; <a href="#filterPrefix">filterPrefix</a>)</li>
-        <li>boolean isLeaf (true if this MBean can not contain other
-MBeans)</li>
-        <li>boolean isSingleton (true&nbsp; if only one MBean of this
+        <li>boolean isSingleton() (true&nbsp; if only one MBean of this
 type is allowed as a child of&nbsp; another MBean)</li>
-        <li>&nbsp;boolean isMBeanInfoInvariant (true if the MBeanInfo
-can never change)</li>
         <li>String group() (value is the group for this mbean, defaults
 to "other")</li>
         <li>String[] subTypes() (value is the list of allowable types
-for children of this bean)<br>
+for children of this bean)</li>
+        <li>String genericInterfaceName() (used in AMX proxy
+construction)<br>
         </li>
+        <li>&nbsp;boolean immutableInfo() (true if the MBeanInfo
+can never change)</li>
+        <li>String interfaceClassName() (also used in AMX proxy
+construction)<br>
+        </li>
+        <li>String type() (the type to use in an ObjectName or in an
+admin CLI path expression:&nbsp; defaults to class name, but see
+also&nbsp; <a href="#filterPrefix">filterPrefix</a>)</li>
       </ul>
 &nbsp;(This is just an application of @DescriptionKey, with a little
 special support in the gmbal implementation)<br>
@@ -786,7 +786,8 @@ passed to the
 create call.&nbsp; Note that the root parent MBean MUST be managed by
 the same
 MBeanServer as the ManagedObjectManager.&nbsp; The ObjectName MUST be
-an AMX-compliant ObjectName: in particular, it MUST define type and
+an AMX-compliant ObjectName: in particular, it MUST define pp, type,
+and
 name attributes.<br>
 <br>
 For examples of the usage of these methods, see "<a
@@ -1005,7 +1006,7 @@ information to System.out, but the code has a flag that can be set to
 dump
 information to a Logger.&nbsp; The Logger may become the <br>
 default dump mechanism in the future.<br>
-<h3><a name="3.2.10._Close"></a>3.2.10. Close</h3>
+<h4><a name="3.2.10._Close"></a>3.2.10. Close</h4>
 <p>The close call is provided to unregister all MBeans still registered
 with the MBeanServer, and to release all internal state maintained by
 the ManagedObjectManager. Note that the registered MBeans are
@@ -1015,6 +1016,22 @@ that children cannot exist without their parent existing (see section
  href="https://glassfish.dev.java.net/nonav/v3/admin/planning/V3Changes/V3_AMX_SPI.html">AMX
 SPI specification</a>).<br>
 </p>
+<h4>3.2.11. suspend/resume</h4>
+It is sometimes useful to be able to suspend and resume registration of
+gmbal-generated MBeans with the MBean server. This is mainly useful
+when it is necessary to create one or more MBeans in a constructor in
+order to avoid complex refactoring of the code. Normally
+ManagedObjectManager.register( this ) should NOT be used in a
+constructor, because it exposes a partially constructed object to the
+MBean server, which may then invoke methods on the partially
+constructed object in order to execute operations, or get or set
+attributes. However, gmbal itself will NEVER invoke any method or
+access any field of an object unless an MBean operation requires it, so
+it is safe to pass partially constructed objects into gmbal itself. So
+avoiding MBeanServer registration by suspending registration allows
+this case to be handled easily.<br>
+<br>
+<p></p>
 <h2>4. Further notes on the API<br>
 </h2>
 There are a number of details about how the APIs work that require

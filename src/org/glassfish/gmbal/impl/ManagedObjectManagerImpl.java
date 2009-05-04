@@ -75,7 +75,6 @@ import org.glassfish.gmbal.generic.Predicate;
 import org.glassfish.gmbal.generic.UnaryFunction;
 import org.glassfish.gmbal.generic.FacetAccessor ;
 import org.glassfish.gmbal.generic.FacetAccessorImpl;
-import org.glassfish.gmbal.generic.Holder;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.SortedSet;
@@ -189,7 +188,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     @ManagedObject
-    @AMXMetadata( pathPart="GMBALROOT")
+    @AMXMetadata( type="gmbal-root")
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
         // No methods: will simply implement an AMX container

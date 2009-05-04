@@ -48,6 +48,8 @@ import java.lang.annotation.RetentionPolicy ;
  * Note that this is simply an application of the general @DescriptorKey
  * mechanism, but these particular metadata attributes control some of the
  * behavior of the AMX API.
+ * <p>Note that supportsAdoption is not included here, because that attribute
+ * is always false for gmbal.
  *
  * @author ken
  */
@@ -63,26 +65,30 @@ public @interface AMXMetadata {
     @DescriptorKey( AMX.META_SINGLETON )
     boolean isSingleton() default false ;
 
-    /** An explicit type name to be used for a ManagedObject.
-     * Defaults to the name derived from the Class name.
-     * @return The optional type value.
+    /** String denoting classification of MBean.  Predefined values are
+     * configuration, monitoring, jsr77, utility, and other.
+     * @return The group type.
      */
-    @DescriptorKey( AMX.META_PATH_PART )
-    String pathPart() default "" ;
+    @DescriptorKey( AMX.META_GROUP_TYPE )
+    String group() default "other" ;
 
-
-    /** An explicit type to use for the MBean.  The default is derived from
-     * the class name.
-     * @return The type for this MBean.
+    /** Return the list of types that are legal as types of children of this
+     * type.  If unknown, must be an empty array.  Not used is isLeaf is true.
+     * @return Array of child types
      */
-    @DescriptorKey( AMX.META_TYPE )
-    String type() default "" ;
+    @DescriptorKey( AMX.META_SUB_TYPES )
+    String[] subTypes() default {} ;
+
+    /** Return the generic AMX interface to be used.
+     */
+    @DescriptorKey( AMX.META_GENERIC_INTERFACE_NAME )
+    String genericInterfaceName() default "" ;
 
     /** True if the MBeanInfo is invariant, that is, has the same
-     * value for the lifetime of the MBean.  This may be used as a hint
+     * value for thehttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.html lifetime of the MBean.  This may be used as a hint
      * to clients that the MBeanInfo can be cached.
      *
-     * @return True if the MBeanInfo is invariant.
+     * @return True if the MBeanInfo is invarianthttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.htmlhttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.html.
      */
     @DescriptorKey( AMX.META_MBEANINFO_INVARIANT )
     boolean immutableInfo() default true ;
@@ -91,27 +97,17 @@ public @interface AMXMetadata {
      * for this class.  Defaults to a generic interface.
      * @return
      */
-    @DescriptorKey( AMX.META_PROXY_INTERFACE_NAME )
+    @DescriptorKey( AMX.META_INTERFACE_NAME )
     String interfaceClassName() default "" ;
 
-    /** String denoting classification of MBean.  Predefined values are
-     * configuration, monitoring, jsr77, utility, and other.
-     * @return The group type.
+    /** An explicit type to use for the MBean.  The default is derived from
+     * the class name.
+     * <p>Note that this is NOT part of the AMX-defined metadata, but gmbal
+     * needs it here to have a place to override the type.  This could also
+     * be specified on the @ManagedObject annotation, but the metadata seems
+     * a better choice.
+     * @return The type for this MBean.
      */
-    @DescriptorKey( AMX.META_GROUP_TYPE )
-    String group() default "other" ;
-
-    /** Return true if this MBean may contain other MBeans, otherwise false.
-     * 
-     * @return whether or not this MBean is a container.
-     */
-    @DescriptorKey( AMX.META_LEAF )
-    boolean isLeaf() default true ;
-
-    /** Return the list of types that are legal as types of children of this
-     * type.  If unknown, must be an empty array.  Not used is isLeaf is true.
-     * @return Array of child types
-     */
-    @DescriptorKey( AMX.META_SUB_TYPES )
-    String[] subTypes() default {} ;
+    @DescriptorKey( AMX.META_TYPE )
+    String type() default "" ;
 } 

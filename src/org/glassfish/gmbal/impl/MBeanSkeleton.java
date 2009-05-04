@@ -544,8 +544,8 @@ public class MBeanSkeleton {
         final Class<?> cls ) {
         
         String result ;
-        if (mbt.pathPart().length() > 0) {
-            result = mbt.pathPart() ;
+        if (mbt.type().length() > 0) {
+            result = mbt.type() ;
         } else {
             result = mom.getStrippedName( cls ) ;
         }

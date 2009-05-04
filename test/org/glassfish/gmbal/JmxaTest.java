@@ -826,7 +826,7 @@ public class JmxaTest extends TestCase {
     private static final String ROOT_TYPE = "RootType" ;
     
     @ManagedObject
-    @AMXMetadata( pathPart=ROOT_TYPE, isLeaf=false )
+    @AMXMetadata( type=ROOT_TYPE)
     public static class RootObject {
         private int value ;
         
@@ -839,7 +839,7 @@ public class JmxaTest extends TestCase {
     }
     
     @ManagedObject
-    @AMXMetadata( pathPart=ROOT_TYPE, isLeaf=false )
+    @AMXMetadata( type=ROOT_TYPE)
     public static class NamedRootObject extends RootObject{
         String name ;
         
@@ -1000,7 +1000,7 @@ public class JmxaTest extends TestCase {
     private static final String NMD_TYPE = "NestedManagedDataTest" ;
     
     @ManagedObject
-    @AMXMetadata( pathPart=NMD_TYPE )
+    @AMXMetadata( type=NMD_TYPE )
     @Description( "Nested Managed Data test")
     public static class NestedManagedDataTest {
         Person person ;
@@ -1031,7 +1031,7 @@ public class JmxaTest extends TestCase {
             mom.registerAtRoot( nmdt ) ;
             ObjectName oname = mom.getObjectName( nmdt ) ;
             String expectedName = 
-                "this.test:GMBALROOT=na,type=NestedManagedDataTest,name=na" ;
+                "this.test:gmbal-root=na,type=NestedManagedDataTest,name=na" ;
             ObjectName expectedObjectName = null ;
             try {
                 expectedObjectName = new ObjectName(expectedName);

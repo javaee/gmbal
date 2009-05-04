@@ -52,52 +52,31 @@ import java.util.Map;
 @ManagedObject
 @Description( "Base interface for any MBean that works in the AMX framework" )
 public interface AMX {
-    /** the JMX domain for all AMX MBeans */
-    public static final String DOMAIN = "amx";
     /** the ObjectName name property key */
     public static final String NAME_PROP_KEY = "name";
+
     /** the ObjectName type property key */
     public static final String TYPE_PROP_KEY = "type";
 
-    /** Usually the same as the ObjectName 'name' property, but can differ
-        if the actual name contains characters that must be escaped for an ObjectName and/or
-        if the MBean has a mutable name attribute.
-       The type property can be obtained from the ObjectName */
-    @ManagedAttribute
-    @Description( "Return the name of this MBean.")
-    public String getName();
+    /** the ObjectName parentPath property key */
+    public static final String PARENT_PATH_PROP_KEY = "pp" ;
 
-    /** boolean indicating that the MBean type can have only 1 instance */
+    // AMX required metadata names.
     public static final String META_SINGLETON = "amx.isSingleton";
 
-    /** The name part to be used for this item's "path".
-     *  By convention this is the MBean's type, but could be something else,
-     *  such as its XML element type (for config MBeans).
-     */
-    public static final String META_PATH_PART = "amx.pathPart";
+    public static final String META_GROUP_TYPE = "amx.group" ;
+    
+    public static final String META_SUPPORTS_ADOPTION = "amx.supportsAdoption" ;
 
-    /** boolean indicating that MBeanInfo is immutable */
-    public static final String META_MBEANINFO_INVARIANT =
-        "immutableInfo";
-
-    /** Name of proxy interfae, if any (defaults to a generic interface).
-     */
-    public static final String META_PROXY_INTERFACE_NAME =
-        "amx.interfaceClassName" ;
-
-    public static final String META_GROUP_TYPE =
-        "amx.group" ;
-
-    /** boolean indicating that the MBean may not contain other MBeans.
-     * See getContained()
-     */
-    public static final String META_LEAF = "amx.isLeaf";
-
-    /** Gives the allowed subtypes of this node.  If empty (the default),
-     * any types are allowed.
-     */
     public static final String META_SUB_TYPES = "amx.subTypes" ;
 
+    public static final String META_GENERIC_INTERFACE_NAME = "amx.genericInterfaceName" ;
+
+    public static final String META_MBEANINFO_INVARIANT = "immutableInfo";
+
+    public static final String META_INTERFACE_NAME = "interfaceClassName" ;
+
+    // Additional gmbal metadata
     public static final String META_TYPE = "type" ;
 
     /** Get all metadata about this MBean.  See {@link #META_SINGLETON} et al.
@@ -106,6 +85,14 @@ public interface AMX {
     // This is not mapped to an attribute, because it is always available on a
     // dynamic MBean simply by calling getMBeanInfo().
     public Map<String,?> getMeta();
+
+    /** Usually the same as the ObjectName 'name' property, but can differ
+        if the actual name contains characters that must be escaped for an ObjectName and/or
+        if the MBean has a mutable name attribute.
+       The type property can be obtained from the ObjectName */
+    @ManagedAttribute
+    @Description( "Return the name of this MBean.")
+    public String getName();
 
     /** "go up one level": the MBean containing this one, can be null for root
      * @return The container of this MBean (null if already at root).
