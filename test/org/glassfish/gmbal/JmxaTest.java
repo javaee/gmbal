@@ -736,7 +736,7 @@ public class JmxaTest extends TestCase {
 	    assertEquals( domain, moeName.getDomain() ) ;
 	    
 	    Hashtable expectedProperties = new Hashtable() ;
-	    expectedProperties.put( "name", "na" ) ;
+	    // expectedProperties.put( "name", "na" ) ;
 	    expectedProperties.put( "type", ManagedObjectExample.class.getName() ) ;
 	    
 	    assertEquals( expectedProperties, moeName.getKeyPropertyList() ) ;
