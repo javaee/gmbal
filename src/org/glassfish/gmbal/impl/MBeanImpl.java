@@ -82,7 +82,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
 
         this.skel = skel ;
         this.type = type ;
-        this.name = null ;
+        this.name = "" ;
         this.oname = null ;
         this.parent = null ;
         this.children = new HashMap<String,Map<String,MBeanImpl>>() ;
@@ -208,10 +208,13 @@ public class MBeanImpl extends NotificationBroadcasterSupport
             restNameHelper( sb, mb.parent() ) ;
         } 
 
+        sb.append( '/' ) ;
         sb.append( mb.type() ) ;
-        sb.append( '=' ) ;
-        sb.append( mb.name() ) ;
-        sb.append( ',' ) ;
+	if (!name.equals("")) {
+            sb.append( '[' ) ;
+	    sb.append( name ) ;
+            sb.append( ']' ) ;
+	}
     }
 
     public synchronized String restName() {

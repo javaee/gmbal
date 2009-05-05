@@ -333,7 +333,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             if (objName == null) {
                 objName = skel.getNameValue( result ) ;
                 if (objName == null) {
-                    objName = "na" ;
+                    objName = "" ;
                 }
             }  
            

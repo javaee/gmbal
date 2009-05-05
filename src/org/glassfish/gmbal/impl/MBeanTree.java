@@ -206,7 +206,19 @@ public class MBeanTree {
         
         throw Exceptions.self.notPartOfThisTree(entity) ;
     }
-    
+
+    private String parentPath( ObjectName oname ) {
+	String pp = oname.getKeyProperty("pp") ;
+	String type = oname.getKeyProperty("type") ;
+	String name = oname.getKeyProperty("name") ;
+	if (name == null) {
+	    return pp + "/" + type ;
+	} else {
+	    return pp + "/" + type +"[" + name + "]" ;
+	}
+
+    }
+
     public synchronized ObjectName objectName( MBeanImpl parent,
         String type, String name ) 
         throws MalformedObjectNameException {
@@ -225,17 +237,21 @@ public class MBeanTree {
         }
 
         if (parent != null) {
+	    result.append( "pp" ) ;
             result.append( parent.restName() ) ;
+	    result.append( ',' ) ;
         }
 
         result.append( typeString ) ;
         result.append( "=" ) ;
         result.append( type ) ;
 
-        result.append( ',') ;
-        result.append( "name" ) ;
-        result.append( "=" ) ;
-        result.append( name ) ;
+	if (name.length() > 0) {
+	    result.append( ',') ;
+	    result.append( "name" ) ;
+	    result.append( "=" ) ;
+	    result.append( name ) ;
+	}
 
         return new ObjectName( result.toString() ) ; 
     }
