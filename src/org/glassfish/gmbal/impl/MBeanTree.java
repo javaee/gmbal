@@ -238,6 +238,7 @@ public class MBeanTree {
 
         if (parent != null) {
 	    result.append( "pp" ) ;
+            result.append( "=" ) ;
             result.append( parent.restName() ) ;
 	    result.append( ',' ) ;
         }
