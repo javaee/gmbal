@@ -20,3 +20,8 @@ webrev/**
 webrev*
 nbproject/private/**
 make/bnd.properties
+\.orig\..*$
+\.orig$
+\.chg\..*$
+\.rej$
+\.conflict\~$

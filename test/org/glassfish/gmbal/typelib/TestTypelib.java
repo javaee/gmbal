@@ -56,6 +56,8 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 public class TestTypelib extends TestCase {
+    private static final boolean VERBOSE = false ;
+
     private static class TypelibTestCase extends TestCase {
         private Class cls ;
 
@@ -66,7 +68,10 @@ public class TestTypelib extends TestCase {
 
         @Override
         protected void runTest() throws Throwable {
-            System.out.println("Test " + cls);
+            if (VERBOSE) {
+                System.out.println("Test " + cls);
+            }
+
             try {
                 cls.getMethod("getThing");
             } catch (NoSuchMethodException e) {
@@ -101,11 +106,16 @@ public class TestTypelib extends TestCase {
                     + " has getThing() method " + "but not expect field");
             }
 
-            System.out.print("..." + rtype);
+            if (VERBOSE) {
+                System.out.print("..." + rtype);
+            }
+
             // check expected value, and incidentally equals method defined
             // by private implementations of the various Type interfaces
             if (expect.equals(rtype) && rtype.equals(expect)) {
-                System.out.println( "result = " + rtype + ", as expected");
+                if (VERBOSE) {
+                    System.out.println( "result = " + rtype + ", as expected");
+                }
             } else {
                 fail( "rtype = " + rtype + " BUT SHOULD BE " + expect );
             }
@@ -345,11 +355,13 @@ public class TestTypelib extends TestCase {
         }
     }
 
+    /* Too much output in tests
     private static class DumpTestCase extends TestCase {
         public void runTest() {
             TypeEvaluator.dumpEvalClassMap();
         }
     }
+    */
 
     private static final Comparator<Class<?>> classNameComparator =
             new ClassNameComparator();
@@ -361,7 +373,7 @@ public class TestTypelib extends TestCase {
         for (Class<?> n : nested) {
             main.addTest( new TypelibTestCase( n )) ;
         }
-        main.addTest( new DumpTestCase() ) ;
+        // main.addTest( new DumpTestCase() ) ;
 
         return main ;
     }

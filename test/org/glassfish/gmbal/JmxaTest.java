@@ -736,7 +736,7 @@ public class JmxaTest extends TestCase {
 	    assertEquals( domain, moeName.getDomain() ) ;
 	    
 	    Hashtable expectedProperties = new Hashtable() ;
-	    // expectedProperties.put( "name", "na" ) ;
+            expectedProperties.put( "pp", "/" ) ;
 	    expectedProperties.put( "type", ManagedObjectExample.class.getName() ) ;
 	    
 	    assertEquals( expectedProperties, moeName.getKeyPropertyList() ) ;
@@ -821,7 +821,8 @@ public class JmxaTest extends TestCase {
     }
 
     private static final String ROOT_DOMAIN = "this.test" ;
-    private static final String ROOT_PARENT_NAME = ROOT_DOMAIN + ":type=FruitBat,name=Sam,foo=bar" ;
+    private static final String ROOT_PARENT_NAME = ROOT_DOMAIN 
+        + ":pp=/Test/Root/Name,type=FruitBat,name=Sam" ;
     
     private static final String ROOT_TYPE = "RootType" ;
     
@@ -858,12 +859,16 @@ public class JmxaTest extends TestCase {
         final Object rootObject = new RootObject( value ) ;
         ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
             new ObjectName( ROOT_PARENT_NAME ) ) ;
+        // mom.setRegistrationDebug(
+            // ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
         mom.createRoot( rootObject, rootName ) ;
         mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
-            String expectedName = "this.test:type=RootType,name=MyRoot,FruitBat=Sam,foo=bar" ;
+            String expectedName = 
+                "this.test:pp=/Test/Root/Name/FruitBat[Sam],"
+                + "type=RootType,name=MyRoot" ;
             ObjectName expectedObjectName = null ;
             try {
                 expectedObjectName = new ObjectName(expectedName);
@@ -887,12 +892,16 @@ public class JmxaTest extends TestCase {
         final Object rootObject = new NamedRootObject( rootName, value ) ;
         ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
             new ObjectName( ROOT_PARENT_NAME ) ) ;
+        // mom.setRegistrationDebug(
+            // ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
         mom.createRoot( rootObject ) ;
         mom.stripPrefix("org.glassfish.gmbal");
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
-            String expectedName = "this.test:type=RootType,name=MyRoot,FruitBat=Sam,foo=bar" ;
+            String expectedName = 
+                "this.test:pp=/Test/Root/Name/FruitBat[Sam],"
+                + "type=RootType,name=MyRoot" ;
             ObjectName expectedObjectName = null ;
             try {
                 expectedObjectName = new ObjectName(expectedName);

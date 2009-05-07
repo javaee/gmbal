@@ -252,7 +252,17 @@ public interface ManagedObjectManager extends Closeable {
      * @param flag true to enable runtime debug, false to disable.
      */
     void setRuntimeDebug( boolean flag ) ;
-    
+
+    /** Enabled generation of debug log for type evaluator debugging.  This
+     * happens as part of the registration process for the first time a particular
+     * class is processed.
+     *
+     * @param level set to 1 to just see the results of the TypeEvaluator, >1 to
+     * see lots of details.  WARNING: values >1 will result in a large amount
+     * of output.
+     */
+    void setTypelibDebug( int level ) ;
+
     /** Dump the skeleton used in the implementation of the MBean for obj.
      * Obj must be currently registered.
      * 
