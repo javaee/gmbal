@@ -13,12 +13,15 @@ import javax.management.MBeanServer;
 import javax.management.NotificationEmitter;
 import javax.management.ObjectName;
 
-/**
+/** NOP impl of ManagedObjectManager used when annotations and ManagedObjectManager
+ * are needed, but MBeans are not.  This allows using gmbal to optionally support
+ * MBeans.  This is the implementation of the ManagedObjectManager that is used when
+ * the full implementation is not available.
  *
  * @author ken_admin
  */
-public class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
-    public static final ManagedObjectManager self =
+class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
+    static final ManagedObjectManager self =
         new ManagedObjectManagerNOPImpl() ;
 
     private ManagedObjectManagerNOPImpl() {}
