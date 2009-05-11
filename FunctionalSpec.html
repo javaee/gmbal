@@ -843,14 +843,14 @@ There are two forms of register: register( Object parent, Object obj )
 and
 register( Object parent, Object obj, String name ).&nbsp; The first
 form obtains
-the name from obj (either via @NameValue, or by default using the
-type),
-the second allows explicit specification.&nbsp; The returned result is
+the name from obj (by using @NameValue),
+the second allows explicit specification of the name.&nbsp; The
+returned result is
 an instance
 of NotificationEmitter that may be used to register a
 NoticationListener to
-listen for attribute change notifications on that particular
-MBean.&nbsp; <br>
+listen for attribute change notifications on the
+MBean that was created for obj.&nbsp; <br>
 <br>
 There are also two forms of registerAtRoot: registerAtRoot( Object obj
 ) and
@@ -1099,7 +1099,7 @@ are a few differences:<br>
 Enumeration types where MXBeans support List, Set, and SortedSet.</li>
   <li>Gmbal also maps Dictionary as well as Map to TabularType.</li>
   <li>Gmbal maps all @ManagedObject types to ObjectName (in MXBeans,
-this is any MXBean interface.</li>
+this is any MXBean interface).</li>
   <li>Gmbal only maps other types to CompositeData if the type has an
 @ManagedData annotation.&nbsp; If not, gmbal maps the type to a String
 using its toString() method.</li>
@@ -1111,7 +1111,7 @@ based on the actual type parameters supplied to an instance of the
 generic type.</li>
 </ol>
 Gmbal does not currently provide support for setting attributes with
-CompositeData values (but this would be easy to add, following<br>
+CompositeData values (but this would be easy to add,&nbsp; following
 the rules used for MXBeans).<br>
 <h3><a name="4.4._Metadata_support_"></a>4.4. Metadata support<br>
 </h3>
@@ -1126,21 +1126,19 @@ an annotation @AMXMetadata (which itself uses
 the meta-annotation @DescriptorKey) in order to support the metadata
 needed by AMX.<br>
 <br>
-@AMXMetadata can be used most easily on a simple MBean which cannot
-have
-children:<br>
+@AMXMetadata can be used most easily on a simple mbean::<br>
 <pre>@AMXMetadata<br>public interface MyBean1 { ... }<br></pre>
 <p>In this case, MyBean1 is a singleton (only one of this type may
 appear in the same parent), its MBean info never changes, the proxy
 interface name defaults to a generic implementation, the group is
-other, and MyBean1 is a leaf (may not have children).&nbsp; Note that
+other, and the list of valid subtypes is empty, which means any type
+may appear as a child.&nbsp; Note that
 the @AMXMetadata annotation is not needed at all in this case. <br>
 </p>
 <p>Something like<br>
 </p>
-<pre>@AMXMetadata( isSingleton=false, pathPart=Widget, isLeaf=false )<br>public interface MyBean2 { ... }<br></pre>
-<p>defines an AMX MBean which is not a singleton, and is also not a
-leaf, so it may contain any other MBeans as chilcren.&nbsp; Also, the
+<pre>@AMXMetadata( isSingleton=false, type=Widget )<br>public interface MyBean2 { ... }<br></pre>
+<p>defines an AMX MBean which is not a singleton.&nbsp; Also, the
 type will be set to Widget in the ObjectName created for an instance of
 MyBean2.<br>
 </p>
@@ -1150,7 +1148,7 @@ Java 6 Javadoc for <a
 Eamonn McManus discusses @DescriptorKey and @DescriptorFields in a
 rather lengthy blog post "<a
  href="http://weblogs.java.net/blog/emcmanus/archive/2007/08/defining_mbeans.html">Defining
-MBeans with Annotations</a>".&nbsp; Either of these annotations allows
+MBeans with Annotations</a>".&nbsp; Either annotation allows
 almost any sort of metadata to be added to MBeans defined by gmbal,
 with no changes to gmbal required to add the additional metadata.<span
  style="font-weight: bold;"></span>
@@ -1235,7 +1233,7 @@ instances of which are registered as MBeans. Each of these classes
 extends a base interface called Named defined as follows:<br>
 </p>
 <pre>public interface Named {<br>    /** Return the TimerFactory that created this Named.<br>     */<br>    @ManagedAttribute<br>    @Description( "TimerFactory that created this Timer or TimerGroup" ) <br>    TimerFactory factory() ;<br><br>    /** A short name for this Controllable.<br>     */<br>    @ManagedAttribute<br>    @NameValue<br>    @Description( "Name of this Timer or TimerGroup" ) <br>    String name() ;<br>}<br></pre>
-<p>Note that the name() attribute carries the @ObjectKeyName
+<p>Note that the name() attribute carries the @NameValue
 attribute.&nbsp; This simplifies the registration which takes place in
 TimerFactoryImpl.&nbsp; The TimerFactoryImpl contains all of the
 factory methods for creating the various timer interfaces mentioned
@@ -1247,13 +1245,18 @@ is present, which may be a useful pattern in other cases. For example,
 Grizzly must be able to run in as small a configuration as possible,
 but Grizzly would like to have MBeans available as an option.
 Consequentyl, the gmbal annotations and API (plus one small utility
-class) are defined in the gmbal-api <a href="#7._Project_Details">bundle</a>
-(about 13K).&nbsp; gmbal-api needed to be present in all cases, and all
-of the code in this example requires ONLY gmbal-api.&nbsp; If <a
- href="#7._Project_Details">gmbal-impl</a> (about 155K) is NOT
+class) are defined in the gmbal-api-only <a href="#7._Project_Details">bundle</a>
+(about 14K).&nbsp; Another bundle (gmbal, about 240K) includes
+everything in gmbal-api-only, plus a full implementation.&nbsp;
+One&nbsp; of the bundles gmbal-api-only or gmbal needs to be present in
+all cases, and all
+of the code in this example requires ONLY gmbal-api-only.&nbsp; If <a
+ href="#7._Project_Details">gmbal</a> is NOT
 available, ManagedObjectManagerFactory.<a href="#3.1.2._create">createStandalone</a>
-and <a href="#3.1.2._create">createFederated</a> will return null
-(corresponding to a null mom in the above code).<br>
+and <a href="#3.1.2._create">createFederated</a> will return an
+instance of a no-op implementation of ManagedObjectManager. This would
+allow the above code to avoid the null check, which was required in an
+older version of gmbal.<br>
 </p>
 <p>Now consider actually creating instances of various timer classes.
 FIrst, the TimerManager is itself represented by an MBean, so it must
@@ -1272,6 +1275,25 @@ is used at an attribute or operation <span style="font-weight: bold;">MUST
 </span>be thread safe, as such a method can be invoked at any by one or
 more threads from remote JMX connectors.<br>
 </p>
+<p>However, there are times when the constructor is the only reasonable
+place to do the registration. This happen in situations where:<br>
+</p>
+<ul>
+  <li>There is a top-level constructor that initializes a large
+hierarchy of objects.</li>
+  <li>The top-level constructor needs to create the
+ManagedObjectManager and root before it initializes the other objects
+that need a ManagedObjectManager.</li>
+  <li>Since creating the root registers an MBean, we don't normally
+want to do this in the constructor</li>
+</ul>
+To avoid this problem, the ManagedObjectManager now supports
+suspend/resume on registration of MBeans with the MBeanServer through
+the methods suspendJMXRegistration() and resumeJMXRegistration(). When
+registration is suspended, newly created MBeanImpl instances are kept
+in a queue.&nbsp; Once resume is called, all enqueued MBeanImpl
+instances are registered with the MBeanServer.<br>
+<p></p>
 <p>In the timer library case, the TimerFactory is constructed by a
 TimerFactoryBuilder as follows:<br>
 </p>
@@ -1298,7 +1320,8 @@ MBean constructed for timerGroup.<br>
 </p>
 <p>Finally, when an object is no longer needed, the
 ManagedObjectManager.<a href="#3.2.4._unregister">unregister</a> method
-must be called. In some case this handles through an explicit method to
+must be called. In some case this is handled through an explicit method
+to
 remove the object, e.g. for TimerEventHandle in the
 TimerFactory.removeTimerEventHandler method:<br>
 </p>
@@ -1306,8 +1329,7 @@ TimerFactory.removeTimerEventHandler method:<br>
 <p>If the mbeans should be registered as long as the module exists,
 ManagedObjectManager.<a href="#3.2.10._Close">close</a>() can be used
 to unregister everything. In the case of the ORB, the close call should
-happen in the ORB.destroy code.&nbsp; This seems to be missing in the
-corba-gmbal workspace as of this writing.<br>
+happen in the ORB.destroy code.&nbsp; <br>
 </p>
 <h3><a name="4.7._Handling_Polymorphism"></a>4.7. Handling Polymorphism</h3>
 There are cases where an attribute has a type defined by a base class
@@ -1358,7 +1380,7 @@ expose as an Attribute).<br>
 interfaces defined
 as follows:<br>
 </p>
-<pre>@ManagedData<br>public interface ExampleData&lt;S,T&gt; {<br>    S        getInfo() ;<br><br>    List&lt;T&gt; getData() ;<br>}<br><br>public interface Example&lt;S,T&gt; {<br>    @ManagedAttribute<br>    ExampleData&lt;S,T&gt; getInfo() ;<br>}<br><br>@ManagedObject<br>public interface MyBean extends Example&lt;Date,List&lt;String&gt;&gt; {<br>}<br></pre>
+<pre>@ManagedData<br>public interface ExampleData&lt;S,T&gt; {<br>    S       getInfo() ;<br><br>    List&lt;T&gt; getData() ;<br>}<br><br>public interface Example&lt;S,T&gt; {<br>    @ManagedAttribute<br>    ExampleData&lt;S,T&gt; getInfo() ;<br>}<br><br>@ManagedObject<br>public interface MyBean extends Example&lt;Date,List&lt;String&gt;&gt; {<br>}<br></pre>
 What sort of MBean should we create for MyBean?&nbsp; If we just use
 reflection on
 MyBean, we find an attribute info that returns an
@@ -1366,12 +1388,15 @@ ExampleData&lt;S,T&gt;, which would turn into a CompositeData with
 two attributes:<br>
 <ul>
   <li>id=info, type=Object (since type is type variable S)</li>
-  <li>id=data, type=List&lt;Object&gt; (since type is List&lt;type
-variable&gt;</li>
+  <li>id=data, type=Object (since type is type variable T)<br>
+  </li>
 </ul>
 But we actually have a lot more information than this: if we "evaluate"
 the
-types, we should see attributes on the CompositeData like:<br>
+types, we see that MyBean extends
+Example&lt;Data,List&lt;String&gt;&gt;, so the Example.getInfo method
+has type MethodData&lt;Date,List&lt;String&gt;&gt;, and so
+MyBean.getInfo returns a composite data with 2 attributes:<br>
 <ul>
   <li>id=info, type=Date</li>
   <li>id=data, type=List&lt;List&lt;String&gt;&gt;</li>
@@ -1402,7 +1427,7 @@ that one
 of the classes refers to the other indirectly. For example, support A
 has a convenient String name attribute we can use (which
 is a key for instances of A).&nbsp; Then the above can be expressed as:<br>
-<pre>@ManagedData <br>public interface A {<br>    @ManagedAttribute<br>    String getName() ;<br><br>    @ManagedAttribute<br>    B getB() ;<br>}<br><br>@ManagedData<br>public interface B {<br>    @ManagedAttribute( id="b" ) <br>    String getARef() ; // returns getA().getName()<br><br>    A getA() ;<br>}<br></pre>
+<pre>@ManagedData <br>public interface A {<br>    @ManagedAttribute<br>    String getName() ;<br><br>    @ManagedAttribute<br>    B getB() ;<br>}<br><br>@ManagedData<br>public interface B {<br>    @ManagedAttribute( id="A" ) <br>    String getARef() ; // returns getA().getName()<br><br>    A getA() ;<br>}<br></pre>
 In this way the relationship between A and B can still be represented
 in the
 management API without needing recursive references between different
@@ -1415,19 +1440,67 @@ no plans to extend gmbal to automatically handle this problem.<br>
 <h2>5. Dependencies</h2>
 The only dependency that gmbal has is JDK 5.&nbsp; It does not require
 anything
-from JMX that is not in JDK 5.&nbsp; It also has no dependencies on
+from JMX that is not in JDK 5.&nbsp; It also has noant<br>
+&nbsp;dependencies on
 GlassFish v3&nbsp; or
 CORBA.<br>
 <h2>6. Testing</h2>
 All tests for gmbal are written in Java using JUnit, and reside in the
 test
 directory in the project.<br>
+<br>
+The following tests are currently available:<br>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">Test
+Package Name</span><br>
+      </td>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">Tests
+Included</span><br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal<br>
+      </td>
+      <td style="vertical-align: top;">ManagedObjectManager and basic
+annotation processing<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.generic<br>
+      </td>
+      <td style="vertical-align: top;">Facet mechanism used for dynamic
+inheritance<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.impl<br>
+      </td>
+      <td style="vertical-align: top;">TypeConverter test<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.logex<br>
+      </td>
+      <td style="vertical-align: top;">Testing the log wrapper generator<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.typelib<br>
+      </td>
+      <td style="vertical-align: top;">Tests the typelib (derived from
+a JDK 7 test suite)<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
 <h2><a name="7._Project_Details"></a>7. Project Details</h2>
 The gmbal project is available in a mercurial workspace at <a
- href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a>
-This workspace is currently private and visible ONLY to members of the
-gmbal project, but I will have the project moved to public status as
-soon as the gmbal Open Source Review is completed. Note that gmbal will
+ href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a>&nbsp;
+Note that gmbal will
 NOT be built as part of the&nbsp; GFv3 build.&nbsp; This is
 necessary because gmbal is also used outside of GFv3, and we need to
 avoid
@@ -1450,41 +1523,83 @@ Bundle</span><br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.gmbal<br>
+      <td style="vertical-align: top;">org.glassfish.gmbal<br>
       </td>
-      <td style="vertical-align: top;">gmbal-api<br>
+      <td style="vertical-align: top;">gmbal-api-only, gmbal<br>
       </td>
       <td style="vertical-align: top;">all public interfaces<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.gmbal.util<br>
+      <td style="vertical-align: top;">org.glassfish.gmbal.util<br>
       </td>
-      <td style="vertical-align: top;">gmbal-api<br>
+      <td style="vertical-align: top;">gmbal-api-only, gmbal<br>
       </td>
       <td style="vertical-align: top;">contains code needed to support
 the API-Impl split (reflective construction of the implementation)<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.gmbal.generic<br>
+      <td style="vertical-align: top;">org.glassfish.gmbal.generic<br>
       </td>
-      <td style="vertical-align: top;">gmbal-impl<br>
+      <td style="vertical-align: top;">gmbal<br>
       </td>
       <td style="vertical-align: top;">General-purpose code for
 debugging, plus simple function programming support<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">com.sun.gmbal.impl<br>
+      <td style="vertical-align: top;">org.glassfish.gmbal.impl<br>
       </td>
-      <td style="vertical-align: top;">gmbal-impl<br>
+      <td style="vertical-align: top;">gmbal<br>
       </td>
       <td style="vertical-align: top;">The full implementation.&nbsp; <br>
       </td>
     </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.logex<br>
+      </td>
+      <td style="vertical-align: top;">gmbal<br>
+      </td>
+      <td style="vertical-align: top;">Log wrapper code for logging
+exceptions and managing other I18N data<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.tools.argparser<br>
+      </td>
+      <td style="vertical-align: top;">build only<br>
+      </td>
+      <td style="vertical-align: top;">argument parser used in
+copyright utilities (from CORBA)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.tools.file<br>
+      </td>
+      <td style="vertical-align: top;">build only<br>
+      </td>
+      <td style="vertical-align: top;">file handling utilities and
+copyright process (from CORBA)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">org.glassfish.gmbal.typelib<br>
+      </td>
+      <td style="vertical-align: top;">gmbal<br>
+      </td>
+      <td style="vertical-align: top;">utility library for type
+evaluation<br>
+      </td>
+    </tr>
   </tbody>
 </table>
+<br>
+Gmbal also contains the package
+org.glassfish.probe.provider.annotations, which is present in gmbal so
+that projects that are not part of GFv3 may support GlassFish
+monitoring probes without depending at build-time or runtime on
+anything other than a single probe bundle.<br>
 <br>
 The resulting OSGi bundles are currently (version 2.0.0-b001) sized at:<br>
 <br>
@@ -1494,18 +1609,19 @@ The resulting OSGi bundles are currently (version 2.0.0-b001) sized at:<br>
     <tr>
       <td style="vertical-align: top;">gmbal-api<br>
       </td>
-      <td style="vertical-align: top;">13410 bytes<br>
+      <td style="vertical-align: top;">14931 bytes<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;">gmbal-impl<br>
       </td>
-      <td style="vertical-align: top;">155067 bytes<br>
+      <td style="vertical-align: top;">249814 bytes<br>
       </td>
     </tr>
   </tbody>
 </table>
 <br>
-<br>
+The probe annotations are in the gfprobe-provider-client bundle, which
+is currently 2576 bytes.<br>
 </body>
 </html>
