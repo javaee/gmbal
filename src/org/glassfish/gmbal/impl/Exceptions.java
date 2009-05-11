@@ -283,6 +283,14 @@ public interface Exceptions {
     @Log( id=MBEAN_TREE_START + 10 )
     IllegalArgumentException objectNotFound( Object obj ) ;
 
+    @Message( "The ObjectName of the root parent MUST contain pp key")
+    @Log( id=MBEAN_TREE_START + 11 )
+    IllegalArgumentException ppNullInRootParent() ;
+
+    @Message( "The ObjectName of the root parent MUST contain pp key")
+    @Log( id=MBEAN_TREE_START + 12 )
+    IllegalArgumentException typeNullInRootParent() ;
+
 // ManagedObjectManagerImpl
     static final int MANAGED_OBJECT_MANAGER_IMPL_START =
         MBEAN_TREE_START + EXCEPTIONS_PER_CLASS ;

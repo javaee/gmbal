@@ -130,35 +130,24 @@ public class MBeanTree {
         }   
     }
 
-    private String getRootParentPrefix( final ObjectName rootParentName ) {
-        final String[] keys =
-            rootParentName.getKeyPropertyListString().split( "," ) ;
+    private String parentPath( final ObjectName rootParentName ) {
+        final String pp = rootParentName.getKeyProperty("pp") ;
+        final String type = rootParentName.getKeyProperty("type") ;
+        final String name = rootParentName.getKeyProperty("name") ;
 
-        final StringBuilder res = new StringBuilder() ;
-        String typeValue = null ;
-        String nameValue = null ;
-        for (String str : keys) {
-            int index = str.indexOf( '=' ) ;
-            String key = str.substring( 0, index ) ;
-            String value = str.substring( index+1 ) ;
-            if (key.equals( "type" ) || key.equals( "j2eeType" ) ) {
-                typeValue = value ;
-            } else if (key.equals( "name" ) ) {
-                nameValue = value ;
-            } else {
-                res.append( key ) ;
-                res.append( '=' ) ;
-                res.append( value ) ;
-                res.append( ',' ) ;
-            }
+        if (pp == null) {
+            Exceptions.self.ppNullInRootParent() ;
         }
 
-        if (typeValue == null || nameValue == null) {
-            throw Exceptions.self.invalidRootParentName(rootParentName) ;
+        if (type == null) {
+            Exceptions.self.typeNullInRootParent() ;
         }
 
-        final String result = res + typeValue + '=' + nameValue ;
-        return result ;
+        if (name == null) {
+            return pp + '/' + type ;
+        } else {
+            return pp + '/' + type + '[' + name + ']' ;
+        }
     }
 
     public MBeanTree( final ManagedObjectManagerInternal mom,
@@ -172,7 +161,7 @@ public class MBeanTree {
         if (rootParentName == null) {
             rootParentPrefix = null ;
         } else {
-            rootParentPrefix = getRootParentPrefix( rootParentName ) ;
+            rootParentPrefix = parentPath( rootParentName ) ;
         }
 
         this.typeString = typeString ;
@@ -207,54 +196,75 @@ public class MBeanTree {
         throw Exceptions.self.notPartOfThisTree(entity) ;
     }
 
-    private String parentPath( ObjectName oname ) {
-	String pp = oname.getKeyProperty("pp") ;
-	String type = oname.getKeyProperty("type") ;
-	String name = oname.getKeyProperty("name") ;
-	if (name == null) {
-	    return pp + "/" + type ;
-	} else {
-	    return pp + "/" + type +"[" + name + "]" ;
-	}
-
-    }
-
     public synchronized ObjectName objectName( MBeanImpl parent,
         String type, String name ) 
         throws MalformedObjectNameException {
-        
-        if (parent != null) {
-            checkCorrectRoot( parent ) ;
+        if (mom.registrationDebug()) {
+            dputil.enter( "objectName", "parent=", parent, 
+                "type=", type, "name=", name ) ;
         }
 
-        StringBuilder result = new StringBuilder() ;
+        ObjectName oname = null ;
 
-        result.append( domain ) ;
-        result.append( ":" ) ;
-        if (rootParentPrefix != null) {
-            result.append( rootParentPrefix ) ;
-            result.append( ',' ) ;
-        }
+        try {
+            if (parent != null) {
+                checkCorrectRoot( parent ) ;
+            }
 
-        if (parent != null) {
-	    result.append( "pp" ) ;
+            StringBuilder result = new StringBuilder() ;
+
+            result.append( domain ) ;
+            result.append( ":" ) ;
+
+            if (mom.registrationDebug()) {
+                dputil.info( "rootParentPrefix=", rootParentPrefix ) ;
+                if (parent != null) {
+                    dputil.info( "parent.restName()=", parent.restName() ) ;
+                } else {
+                    dputil.info( "parent is null" ) ;
+                }
+            }
+            
+            // pp
+            result.append( "pp" ) ;
             result.append( "=" ) ;
-            result.append( parent.restName() ) ;
-	    result.append( ',' ) ;
+
+            if ((rootParentPrefix == null) && (parent == null)) {
+                result.append( '/' ) ;
+            } else {
+                if (rootParentPrefix != null) {
+                    result.append( rootParentPrefix ) ;
+                }
+
+                if (parent != null) {
+                    result.append( '/' ) ;
+                    result.append( parent.restName() ) ;
+                }
+            }
+
+            result.append( ',' ) ;
+
+            // type
+            result.append( typeString ) ;
+            result.append( "=" ) ;
+            result.append( type ) ;
+
+            // name
+            if (name.length() > 0) {
+                result.append( ',') ;
+                result.append( "name" ) ;
+                result.append( "=" ) ;
+                result.append( name ) ;
+            }
+
+            oname =  new ObjectName( result.toString() ) ;
+        } finally {
+            if (mom.registrationDebug()) {
+                dputil.exit( oname ) ;
+            }
         }
 
-        result.append( typeString ) ;
-        result.append( "=" ) ;
-        result.append( type ) ;
-
-	if (name.length() > 0) {
-	    result.append( ',') ;
-	    result.append( "name" ) ;
-	    result.append( "=" ) ;
-	    result.append( name ) ;
-	}
-
-        return new ObjectName( result.toString() ) ; 
+        return oname ;
     }
     
     public synchronized NotificationEmitter register( 

@@ -574,7 +574,7 @@ public class CopyrightProcessor {
         addToProcMap( new FileProcessing( "IGNORE", af.getSkipAction() )
             .suffixes( "bnd", "sxc", "sxi", "sxw", "odp", "gif", "png", "jar", 
                 "zip", "jpg", "pom", "pdf", "doc", "mif", "fm", "book",
-                "cvsignore", "hgignore", "list", "old", "orig", "rej",
+                "cvsignore", "hgignore", "hgtags", "list", "old", "orig", "rej",
                 "swp", "swo", "class", "o", "css" )
             .fileNames( "NORENAME", "errorfile" ) ) ;
     }

@@ -857,6 +857,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized void setRuntimeDebug( boolean flag ) {
         runDebugFlag = flag ;
     }
+
+    public synchronized void setTypelibDebug( int level ) {
+        TypeEvaluator.setDebugLevel(level);
+    }
     
     public synchronized String dumpSkeleton( Object obj ) {
         MBeanImpl impl = tree.getMBeanImpl( obj ) ;

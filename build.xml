@@ -187,7 +187,6 @@
                 <filter includes="org.glassfish.gmbal.impl.*"/>
                 <filter includes="org.glassfish.gmbal.generic.*"/>
                 <filter includes="org.glassfish.gmbal.typelib.*"/>
-                <filter excludes="org.glassfish.gmbal.typeresolver.*"/>
             </instr>
         </emma>
     </target>
@@ -249,8 +248,8 @@
     </target>
 
     <target name="make-bundles" depends="gmbal-init,make-source-bundle,make-bnd-properties">
-        <make-bundle file="gmbal-api"/>
-        <make-bundle file="gmbal-impl"/>
+        <make-bundle file="gmbal-api-only"/>
+        <make-bundle file="gmbal"/>
         <make-bundle file="gfprobe-provider-client"/>
     </target>
 
@@ -371,14 +370,14 @@ The modules             (and their dependencies):
 </macrodef>
 
 <target name="release" depends="gmbal-init,mavenize">
-    <push-to-maven module="gmbal-api" description="gmbal API" repo="${repo.url}"/>
-    <push-to-maven module="gmbal-impl" description="gmbal implementation" repo="${repo.url}"/>
+    <push-to-maven module="gmbal-api-only" description="gmbal API" repo="${repo.url}"/>
+    <push-to-maven module="gmbal" description="gmbal implementation" repo="${repo.url}"/>
     <push-to-maven module="gmbal-source" description="gmbal source code" repo="${repo.url}"/>
 </target>
 
 <target name="release-local" depends="gmbal-init,mavenize">
-    <push-to-maven module="gmbal-api" description="gmbal API" repo="${local.url}"/>
-    <push-to-maven module="gmbal-impl" description="gmbal implementation" repo="${local.url}"/>
+    <push-to-maven module="gmbal-api-only" description="gmbal API" repo="${local.url}"/>
+    <push-to-maven module="gmbal" description="gmbal implementation" repo="${local.url}"/>
     <push-to-maven module="gmbal-source" description="gmbal source code" repo="${local.url}"/>
 </target>
 
