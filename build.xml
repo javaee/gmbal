@@ -114,7 +114,6 @@
     <property environment="env"/>
     <property name="local.url"                      value="file://${env.HOME}/.m2"/>
     <property name="emma.dir"                       value="build/coverage"/>
-    <property name="emma.coverage.out.file"         value="${emma.dir}/coverage.ec"/>
 
     <target name="-post-clean">
         <delete dir="coverage"/>
@@ -194,6 +193,7 @@
     <taskdef resource="emma_ant.properties" classpathref="emma.lib" />
 
     <target name="emma-report" depends="emma-init">
+        <move file="coverage.ec" todir="${emma.dir}" verbose="true"/>
         <emma>
             <report sort="+block,+name,+method,+class"
                 metrics="method:80,block:70,line:70,class:80">
@@ -406,5 +406,7 @@ The modules             (and their dependencies):
 <target name="release-probe-local" depends="mavenize">
     <push-probe-to-maven repo="${local.url}"/>
 </target>
+
+<target name="hudson-job" depends="clean,jar,emma-instr,test,javadoc,test-report,findbugs-xml,emma-report,make-bundles"/>
 
 </project>
