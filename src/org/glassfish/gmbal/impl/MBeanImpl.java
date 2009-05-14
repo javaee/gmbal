@@ -116,7 +116,11 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     
     @Override
     public synchronized int hashCode() {
-        return name.hashCode() ^ type.hashCode() ^ parent.hashCode() ;
+        if (parent == null) {
+            return name.hashCode() ^ type.hashCode() ;
+        } else {
+            return name.hashCode() ^ type.hashCode() ^ parent.hashCode() ;
+        }
     }
  
     @Override
