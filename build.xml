@@ -409,4 +409,13 @@ The modules             (and their dependencies):
 
 <target name="hudson-job" depends="clean,jar,emma-instr,test,javadoc,test-report,findbugs-xml,emma-report,make-bundles"/>
 
+<target name="copy-docs" depends="gmbal-init">
+    <mkdir dir="gmbal/gmbal/javadoc"/>
+    <copy file="FunctionalSpec.html" todir="gmbal"/>
+    <copy file="Gmbal.png" todir="gmbal"/>
+    <copy todir="gmbal/gmbal/javadoc">
+        <fileset dir="dist/javadoc"/>
+    </copy>
+</target>
+
 </project>

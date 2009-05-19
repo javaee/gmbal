@@ -208,7 +208,7 @@ a[href] {
 <h1>GlassFish MBean Annotation Library (gmbal)</h1>
 <h1>Functional Specification</h1>
 by Ken Cavanaugh<br>
-Spec version .9<span style="background-color: rgb(250, 255, 221);"></span><br>
+Version .9<span style="background-color: rgb(250, 255, 221);"></span><br>
 5/19/09<span style="background-color: rgb(255, 249, 200);"></span><br>
 <h2>1. Introduction</h2>
 <p>The GlassFish MBean Annotation Library (gmbal, pronounced as in
@@ -692,7 +692,7 @@ construction)<br>
         </li>
         <li>String type() (the type to use in an ObjectName or in an
 admin CLI path expression:&nbsp; defaults to class name, but see
-also&nbsp; <a href="#filterPrefix">filterPrefix</a>)</li>
+also&nbsp; <a href="#filterPrefix">stripPrefix</a>)</li>
       </ul>
 &nbsp;(This is just an application of @DescriptorKey, with a little
 special support in the gmbal implementation)<br>
@@ -863,7 +863,7 @@ exactly
 equivalent to mom.register( mom.getRoot(), obj ) and mom.register(
 mom.getRoot(), obj, name ). <br>
 <br>
-All of these methods can only be called after a successul createRoot
+All of these methods can only be called after a successful createRoot
 call.<br>
 <h4><a name="3.2.4._unregister"></a>3.2.4. unregister</h4>
 unregister( Object ) unregisters an object that was previously
@@ -874,7 +874,7 @@ removes the generated MBean from the ManagedObjectManager and also
 unregisters
 the MBean from the ManagedObjectManager's MBeanServer.<br>
 <br>
-Unregister can only be called after a successul createRoot call.<br>
+Unregister can only be called after a successful createRoot call.<br>
 <h4>3.2.5. getObject/getObjectName</h4>
 The register methods return a NotificationEmitter which can be used to
 register
@@ -891,7 +891,7 @@ implementation object passed to a register method, NOT the internally
 created
 dynamic MBean (which is not directly provided).<br>
 <br>
-These methods can only be called after a successul createRoot call.<br>
+These methods can only be called after a successful createRoot call.<br>
 <h4>3.2.6. stripPrefix and stripPackagePrefix<a name="filterPrefix"></a></h4>
 A type prefix is simply a prefix of a fully qualified Java class name.
 By
@@ -1265,7 +1265,7 @@ previously. TimerFactoryImpl defines several private methods as follows:<br>
 is present, which may be a useful pattern in other cases. For example,
 Grizzly must be able to run in as small a configuration as possible,
 but Grizzly would like to have MBeans available as an option.
-Consequentyl, the gmbal annotations and API (plus one small utility
+Consequently, the gmbal annotations and API (plus one small utility
 class) are defined in the gmbal-api-only <a href="#7._Project_Details">bundle</a>
 (about 14K).&nbsp; Another bundle (gmbal, about 240K) includes
 everything in gmbal-api-only, plus a full implementation.&nbsp;
@@ -1508,10 +1508,44 @@ to a createRoot method:</li>
   </ul>
 </ul>
 Any violation of this requirement results in an IllegalStateException.<br>
+<h3>4.11. Computing the type name</h3>
+The type name used in the ObjectName is computed as follows from the
+class of the registered object:<br>
+<ol>
+  <li>If the class contains a final static field of type String name
+AMX_TYPE, the value of the field is the type.</li>
+  <li>Otherwise, if the class has an annotation @AMXMetadata and the
+type field is not "", the type field is the type.</li>
+  <li>Otherwise, if the package prefix of the class name matches one of
+the stripPrefix call arguments, that part of the package prefix is
+removed from the full class name, and the remainder (minus the initial
+dot) is the type name.</li>
+  <li>Otherwise, if stripPackagePrefix was called, the entire package
+prefix is removed (if any), and the remaining class name is the type
+name.</li>
+  <li>Otherwise, the full class name is the type name.</li>
+</ol>
+The same algorithm is used for determining the name of a CompositeData
+type for @ManagedData, with a few slight differences:<br>
+<ol>
+  <li>If the class contains a final static field of type String name
+GMBAL_TYPE, the value of the field is the name.</li>
+  <li>Otherwise, if the class's @ManagedData annotation has a name
+element with a value other than "", the value of the name element is
+the name.</li>
+  <li>Otherwise, if the package prefix of the class name matches one of
+the stripPrefix call arguments, that part of the package prefix is
+removed from the full class name, and the remainder (minus the initial
+dot) is the name.</li>
+  <li>Otherwise, if stripPackagePrefix was called, the entire package
+prefix is removed (if any), and the remaining class name is the type
+name.</li>
+  <li>Otherwise, the full class name is the name.</li>
+</ol>
 <h2>5. Dependencies</h2>
 The only dependency that gmbal has is JDK 5.&nbsp; It does not require
 anything
-from JMX that is not in JDK 5.&nbsp; It also has noant<br>
+from JMX that is not in JDK 5.&nbsp; It also has no ant<br>
 &nbsp;dependencies on
 GlassFish v3&nbsp; or
 CORBA.<br>
@@ -1569,7 +1603,7 @@ a JDK 7 test suite)<br>
   </tbody>
 </table>
 <br>
-<h2><a name="7._Project_Details"></a>7. Project Details/ee</h2>
+<h2><a name="7._Project_Details"></a>7. Project Details</h2>
 The gmbal project is available in a mercurial workspace at <a
  href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a>&nbsp;
 Note that gmbal will
@@ -1698,6 +1732,9 @@ both.&nbsp; Both bundles are available in the standard place in the
 maven repository, with group ID org.glassfish.gmbal.<br>
 <br>
 The probe annotations are in the gfprobe-provider-client bundle, which
-is currently 2576 bytes.<br>
+is currently 2576 bytes.
+<br>
+Source bundles are also provided for both gmbal (gmbal-source) and
+grprobe-provider-client (gfprobe-provider-client-source).
 </body>
 </html>
