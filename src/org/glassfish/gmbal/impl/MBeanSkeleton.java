@@ -547,7 +547,7 @@ public class MBeanSkeleton {
         if (mbt.type().length() > 0) {
             result = mbt.type() ;
         } else {
-            result = mom.getStrippedName( cls ) ;
+            result = mom.getDefaultTypeName( cls ) ;
         }
         
         return result ;

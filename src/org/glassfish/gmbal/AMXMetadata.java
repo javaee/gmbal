@@ -85,10 +85,10 @@ public @interface AMXMetadata {
     String genericInterfaceName() default "" ;
 
     /** True if the MBeanInfo is invariant, that is, has the same
-     * value for thehttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.html lifetime of the MBean.  This may be used as a hint
+     * value for the lifetime of the MBean.  This may be used as a hint
      * to clients that the MBeanInfo can be cached.
      *
-     * @return True if the MBeanInfo is invarianthttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.htmlhttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.html.
+     * @return True if the MBeanInfo is invariant
      */
     @DescriptorKey( AMX.META_MBEANINFO_INVARIANT )
     boolean immutableInfo() default true ;

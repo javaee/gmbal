@@ -55,11 +55,11 @@ import java.lang.reflect.Modifier;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
-import javax.management.NotificationEmitter;
 
 import org.glassfish.gmbal.generic.Pair ;
 import org.glassfish.gmbal.generic.Algorithms ;
 
+import org.glassfish.gmbal.GmbalMBean ;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.Description ;
 import org.glassfish.gmbal.IncludeSubclass ;
@@ -117,6 +117,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized void resumeJMXRegistration() {
         tree.resumeRegistration();
     }
+
+    public void stripPackagePrefix() {
+        stripPackagePrefix = true ;
+    }
     
     private static final class StringComparator implements Comparator<String> {
         public int compare(String o1, String o2) {
@@ -129,6 +133,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     // we strip the longest prefix first.
     private final SortedSet<String> typePrefixes = new TreeSet<String>( 
         revComp ) ;
+    private boolean stripPackagePrefix = false ;
 
     @Override
     public String toString( ) {
@@ -194,15 +199,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         // No methods: will simply implement an AMX container
     }
     
-    public synchronized NotificationEmitter createRoot() {
+    public synchronized GmbalMBean createRoot() {
         return tree.setRoot( new Root(), null ) ;
     }
 
-    public synchronized NotificationEmitter createRoot(Object root) {
+    public synchronized GmbalMBean createRoot(Object root) {
         return tree.setRoot( root, null ) ;
     }
 
-    public synchronized NotificationEmitter createRoot(Object root, String name) {
+    public synchronized GmbalMBean createRoot(Object root, String name) {
         return tree.setRoot( root, name ) ;
     }
 
@@ -296,7 +301,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return result ;
     }
 
-    public String getStrippedName( Class<?> cls ) {
+    public String getDefaultTypeName( Class<?> cls ) {
+        // First, check to see if cls defines a AMX_TYPE static final field.
+	// Next, check for annotations?
+	// Next, check stripPrefixes
         String arg = cls.getName() ;
         for (String str : typePrefixes ) {
             if (arg.startsWith( str ) ) {
@@ -304,7 +312,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
         }
         
-        return arg ;
+        // The result is either the class name, or the class name without
+	// package prefixes if stripPackagePrefix has been set.
+	return arg ;
     }
     
     public synchronized MBeanImpl constructMBean( Object obj, String name ) {
@@ -356,7 +366,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     @SuppressWarnings("unchecked")
-    public synchronized NotificationEmitter register( final Object parent,
+    public synchronized GmbalMBean register( final Object parent,
         final Object obj, final String name ) {
 
         if (registrationDebug()) {
@@ -384,18 +394,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public synchronized NotificationEmitter register( final Object parent,
+    public synchronized GmbalMBean register( final Object parent,
         final Object obj ) {
 
         return register( parent, obj, null ) ;
     }
 
     
-    public synchronized NotificationEmitter registerAtRoot(Object obj, String name) {
+    public synchronized GmbalMBean registerAtRoot(Object obj, String name) {
         return register( tree.getRoot(), obj, name ) ;
     }
 
-    public synchronized NotificationEmitter registerAtRoot(Object obj) {
+    public synchronized GmbalMBean registerAtRoot(Object obj) {
         return register( tree.getRoot(), obj, null ) ;
     }
     

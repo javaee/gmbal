@@ -49,6 +49,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.NotificationEmitter;
 import javax.management.ObjectName;
+import org.glassfish.gmbal.GmbalMBean;
 
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
@@ -91,7 +92,7 @@ public class MBeanTree {
         objectNameMap.remove( oname ) ;
     }
     
-    public synchronized NotificationEmitter setRoot( Object root, String rootName ) {
+    public synchronized GmbalMBean setRoot( Object root, String rootName ) {
         if (rootIsSet) {
             throw Exceptions.self.rootAlreadySet() ;
         } else {
@@ -267,7 +268,7 @@ public class MBeanTree {
         return oname ;
     }
     
-    public synchronized NotificationEmitter register( 
+    public synchronized GmbalMBean register(
         final Object parent, 
         final Object obj, 
         final MBeanImpl mb ) throws InstanceAlreadyExistsException, 

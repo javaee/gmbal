@@ -46,10 +46,18 @@ import java.lang.annotation.Annotation ;
 
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
-import javax.management.NotificationEmitter ;
 
 /** An interface used to managed Open MBeans created from annotated
  * objects.  This is mostly a facade over MBeanServer.
+ * Note that certain methods must be called in the correct order:
+ * <ol>
+ * <li> In particular, all calls to addAnnotation, stripPrefix, and 
+ * stripPackageName must occur before any call to a createRoot method.
+ * <li>No other methods may be called until after a createRoot method is called.
+ * <li>Only one call to a createRoot method is permitted on any 
+ * ManagedObjectManager.
+ * </ol>
+ * If these constraints are violated, an IllegalStateException is thrown.
  */
 
 public interface ManagedObjectManager extends Closeable {
@@ -69,21 +77,22 @@ public interface ManagedObjectManager extends Closeable {
      * One of the createRoot methods must be called before any of the registration
      * methods may be called.
      * Only one call to createRoot is permitted after an ManagedObjectManager
-     * is created.
+     * is created.  Note that the result also implements DynamicMBean.
      * @return
      */
-    NotificationEmitter createRoot() ;
+    GmbalMBean createRoot() ;
     
     /** Create a root MBean from root, which much have a method with the
      * @NameValue annotation.
      * One of the createRoot methods must be called before any of the registration
      * methods may be called.
      * Only one call to createRoot is permitted after an ManagedObjectManager
-     * is created.
+     * is created. Note that the result also implements DynamicMBean.
      * @param root
+     * @exception IllegalStateException if called more than once.
      * @return
      */
-    NotificationEmitter createRoot( Object root ) ;
+    GmbalMBean createRoot( Object root ) ;
     
     /** Create a root MBean from root with the given name.
      * One of the createRoot methods must be called before any of the registration
@@ -91,7 +100,7 @@ public interface ManagedObjectManager extends Closeable {
      * Only one call to createRoot is permitted after an ManagedObjectManager
      * is created.
      */
-    NotificationEmitter createRoot( Object root, String name ) ;
+    GmbalMBean createRoot( Object root, String name ) ;
     
     /** Return the root of this ManagedObjectManager.
      *
@@ -121,42 +130,30 @@ public interface ManagedObjectManager extends Closeable {
      * @param parent The parent object that contains obj.
      * @param obj The managed object we are registering.
      * @param name The name to use for registering this object.
-     * 
-     * @return The NotificationEmitter that can be used to register 
-     * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.
      */
-    NotificationEmitter register( Object parent, Object obj, String name ) ;
+    GmbalMBean register( Object parent, Object obj, String name ) ;
 
     /** Same as register( Object, Object, String ), but here the name
      * is derived from an @ObjectKeyName annotation.
      * 
      * @param parent The parent object that contains obj.
      * @param obj The managed object we are registering.
-     * 
-     * @return The NotificationEmitter that can be used to register 
-     * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.
      */
-    NotificationEmitter register( Object parent, Object obj ) ;
+    GmbalMBean register( Object parent, Object obj ) ;
     
     /** Registers the MBean for obj at the root MBean for the ObjectManager,
      * using the given name.
      * @param obj The object for which we construct and register an MBean.
      * @param name The name of the MBean.
-     * @return A NotificationEmitter for this MBean.
      */
-    NotificationEmitter registerAtRoot( Object obj, String name ) ;
+    GmbalMBean registerAtRoot( Object obj, String name ) ;
     
     /** Same as registerAtRoot( Object, String ), but here the name
      * is derived from an @ObjectKeyName annotation.
      * 
      * @param obj The managed object we are registering.
-     * @return The NotificationEmitter that can be used to register 
-     * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.
      */
-    NotificationEmitter registerAtRoot( Object obj ) ;
+    GmbalMBean registerAtRoot( Object obj ) ;
     
 
     /** Unregister the Open MBean corresponding to obj from the
@@ -180,11 +177,21 @@ public interface ManagedObjectManager extends Closeable {
     Object getObject( ObjectName oname ) ;
     
     /** Add a type prefix to strip from type names, to shorten the names for
-     * a better presentation to the user.
+     * a better presentation to the user.  This may only be called before a
+     * createRot method is called.
      *
-     * @param str Class package name to strip from type name
+     * @param str Class package name to strip from type name.
+     * @exception IllegalStateException if called after createRoot method.
      */
     void stripPrefix( String... str ) ;
+
+    /** Change the default type name algorithm so that if nothing else 
+     * applies, the entire package prefix is stripped form the Class name.
+     * Otherwise, the full Class name is the type.
+     * 
+     * @exception IllegalStateException if called after a createRoot method.
+     */
+    void stripPackagePrefix() ;
     
     /** Return the domain name that was used when this ManagedObjectManager
      * was created.
@@ -228,6 +235,8 @@ public interface ManagedObjectManager extends Closeable {
      * implementation with @InheritedAttributes.
      * @param element The annotated element (class or method for our purposes).
      * @param annotation The annotation we wish to add to the element.
+     * @exception IllegalStateException if called after a call to a createRoot
+     * method.
      */
     void addAnnotation( AnnotatedElement element, Annotation annotation ) ;
         

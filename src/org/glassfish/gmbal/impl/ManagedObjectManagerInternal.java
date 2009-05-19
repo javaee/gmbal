@@ -110,7 +110,7 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     <K,V> void putIfNotPresent( final Map<K,V> map,
         final K key, final V value ) ;
         
-    String getStrippedName( Class<?> cls ) ;
+    String getDefaultTypeName( Class<?> cls ) ;
     
     <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(
         Class<? extends Annotation> annotation,

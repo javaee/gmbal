@@ -413,7 +413,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         try {
             String name = md.name() ;
             if (name.equals( "" )) {
-                name = mom.getStrippedName( cls.cls() ) ;
+                name = mom.getDefaultTypeName( cls.cls() ) ;
             }
 
             if (mom.registrationDebug()) {

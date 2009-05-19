@@ -54,7 +54,6 @@ import javax.management.MBeanRegistrationException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ReflectionException ;
 import javax.management.MBeanInfo ;
-import javax.management.DynamicMBean ;
 import javax.management.NotificationBroadcasterSupport ;
 import javax.management.MBeanNotificationInfo ;
 import javax.management.AttributeChangeNotification ;
@@ -62,9 +61,10 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.util.Map ;
 import java.util.HashMap ;
+import org.glassfish.gmbal.GmbalMBean;
 
 public class MBeanImpl extends NotificationBroadcasterSupport 
-    implements FacetAccessor, DynamicMBean {
+    implements FacetAccessor, GmbalMBean{
     
     private final MBeanSkeleton skel ;
     private final String type ;
