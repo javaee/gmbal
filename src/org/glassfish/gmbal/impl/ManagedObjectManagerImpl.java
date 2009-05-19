@@ -51,7 +51,12 @@ import java.lang.annotation.Annotation ;
 import java.lang.management.ManagementFactory ;
 
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -96,6 +101,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             .useToString( EvaluatedType.class )
             .useToString( ManagedObjectManager.class ) ;
 
+    private boolean rootCreated = false ;
+
     private String domain ;
     private ResourceBundle resourceBundle ;
     private MBeanServer server ; 
@@ -110,15 +117,30 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
 
+    private void checkRootNotCreated( String methodName ) {
+        if (rootCreated) {
+            throw Exceptions.self.createRootCalled(methodName) ;
+        }
+    }
+
+    private void checkRootCreated( String methodName ) {
+        if (!rootCreated) {
+            throw Exceptions.self.createRootNotCalled(methodName) ;
+        }
+    }
+
     public synchronized void suspendJMXRegistration() {
+        // Can be called anytime
         tree.suspendRegistration() ;
     }
 
     public synchronized void resumeJMXRegistration() {
+        // Can be called anytime
         tree.resumeRegistration();
     }
 
     public void stripPackagePrefix() {
+        checkRootNotCreated("stripPackagePrefix");
         stripPackagePrefix = true ;
     }
     
@@ -137,6 +159,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     @Override
     public String toString( ) {
+        // Can be called anytime
         return "ManagedObjectManagerImpl[domain=" + domain + "]" ;
     }
     
@@ -168,8 +191,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
     }
 
-
     public void close() throws IOException {
+        // Can be called anytime
         if (registrationDebug()) {
             dputil.enter( "close" ) ;
         }
@@ -189,6 +212,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized ObjectName getRootParentName() {
+        checkRootCreated("getRootParentName");
         return tree.getRootParentName() ;
     }
 
@@ -200,22 +224,36 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized GmbalMBean createRoot() {
-        return tree.setRoot( new Root(), null ) ;
+        checkRootNotCreated( "createRoot" ) ;
+
+        GmbalMBean result = tree.setRoot( new Root(), null ) ;
+        rootCreated = true ;
+        return result ;
     }
 
     public synchronized GmbalMBean createRoot(Object root) {
-        return tree.setRoot( root, null ) ;
+        checkRootNotCreated( "createRoot" ) ;
+
+        GmbalMBean result = tree.setRoot( root, null ) ;
+        rootCreated = true ;
+        return result ;
     }
 
     public synchronized GmbalMBean createRoot(Object root, String name) {
-        return tree.setRoot( root, name ) ;
+        checkRootNotCreated( "createRoot" ) ;
+
+        GmbalMBean result = tree.setRoot( root, name ) ;
+        rootCreated = true ;
+        return result ;
     }
 
     public synchronized Object getRoot() {
+        // Can be called anytime.
         return tree.getRoot() ;
     }
     
     public synchronized MBeanSkeleton getSkeleton( EvaluatedClassDeclaration cls ) {
+        // can be called anytime, otherwise we can't create the root itself!
         if (registrationDebug()) {
             dputil.enter( "getSkeleton", cls ) ;
         }
@@ -258,6 +296,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized TypeConverter getTypeConverter( EvaluatedType type ) {
+        // Can be called anytime
         if (registrationFineDebug()) {
             dputil.enter( "getTypeConverter", type ) ;
         }
@@ -301,23 +340,71 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return result ;
     }
 
-    public String getDefaultTypeName( Class<?> cls ) {
-        // First, check to see if cls defines a AMX_TYPE static final field.
+    private String getAMXTypeFromField( Class<?> cls, String fieldName ) {
+        try {
+            final Field fld = cls.getDeclaredField(fieldName);
+            if (Modifier.isFinal( fld.getModifiers()) &&
+                Modifier.isStatic(fld.getModifiers()) &&
+                fld.getType().equals( String.class )) {
+
+                AccessController.doPrivileged(
+                    new PrivilegedAction<Object>() {
+                        public Object run() {
+                            fld.setAccessible(true);
+                            return null ;
+                        } } ) ;
+
+                return (String)fld.get(null) ;
+            } else {
+                return "" ;
+            }
+        } catch (Exception ex) {
+            return "" ;
+        }
+    }
+
+    private boolean goodResult( String str ) {
+        return str!=null && str.length()>0 ;
+    }
+
+    public String getTypeName( Class<?> cls, String fieldName,
+        String nameFromAnnotation ) {
+        // Can be called anytime
+        String result = getAMXTypeFromField( cls, fieldName ) ;
+        if (goodResult( result)) {
+            return result ;
+        }
+
 	// Next, check for annotations?
+        if (goodResult( nameFromAnnotation)) {
+            return nameFromAnnotation ;
+        }
+
+        String className = cls.getName() ;
+
 	// Next, check stripPrefixes
-        String arg = cls.getName() ;
         for (String str : typePrefixes ) {
-            if (arg.startsWith( str ) ) {
-                return arg.substring( str.length() + 1 ) ;
+            if (className.startsWith( str ) ) {
+                return className.substring( str.length() + 1 ) ;
             }
         }
         
         // The result is either the class name, or the class name without
-	// package prefixes if stripPackagePrefix has been set.
-	return arg ;
+	// package prefix (if any) if stripPackagePrefix has been set.
+        if (stripPackagePrefix) {
+            int lastDot = className.lastIndexOf( '.' ) ;
+            if (lastDot == -1) {
+                return className ;
+            } else {
+                return className.substring( lastDot + 1 ) ;
+            }
+        } else {
+            return className ;
+        }
     }
     
     public synchronized MBeanImpl constructMBean( Object obj, String name ) {
+        // Can be called anytime
         MBeanImpl result = null ;
         
         if (registrationDebug()) {
@@ -368,7 +455,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @SuppressWarnings("unchecked")
     public synchronized GmbalMBean register( final Object parent,
         final Object obj, final String name ) {
-
+        checkRootCreated("register");
         if (registrationDebug()) {
             dputil.enter( "register", 
                 "parent=", parent, 
@@ -410,6 +497,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized void unregister( Object obj ) {
+        checkRootCreated("unregister");
         if (registrationDebug()) {
             dputil.enter( "unregister", "obj=", obj ) ;
         }
@@ -426,6 +514,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized ObjectName getObjectName( Object obj ) {
+        checkRootCreated("getObjectName");
         if (registrationDebug()) {
             dputil.enter( "getObjectName", obj ) ;
         }
@@ -443,6 +532,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized Object getObject( ObjectName oname ) {
+        checkRootCreated("getObject");
         if (registrationDebug()) {
             dputil.enter( "getObject", oname ) ;
         }
@@ -460,6 +550,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized FacetAccessor getFacetAccessor( Object obj ) {
+        // Can be called anytime
         MBeanImpl mb = tree.getMBeanImpl( obj ) ;
         if (mb != null) {
             return tree.getFacetAccessor( obj ) ;
@@ -469,26 +560,32 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }   
     
     public synchronized String getDomain() {
+        // Can be called anytime
 	return domain ;
     }
 
     public synchronized void setMBeanServer( MBeanServer server ) {
+        checkRootNotCreated("setMBeanServer");
 	this.server = server ;
     }
 
     public synchronized MBeanServer getMBeanServer() {
+        // Can be called anytime
 	return server ;
     }
 
     public synchronized void setResourceBundle( ResourceBundle rb ) {
+        checkRootCreated("setResourceBundle");
         this.resourceBundle = rb ;
     }
 
     public synchronized ResourceBundle getResourceBundle() {
+        // Can be called anytime
         return resourceBundle ;
     }
     
     public synchronized String getDescription( EvaluatedDeclaration element ) {
+        // Can be called anytime
         Description desc = element.annotation( Description.class ) ;
         String result ;
         if (desc == null) {
@@ -507,7 +604,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
     public synchronized void addAnnotation( AnnotatedElement element,
         Annotation annotation ) {
-        
+        checkRootNotCreated("addAnnotation");
         if (registrationDebug()) {
             dputil.enter( "addAnnotation", "element = ", element,
                 "annotation = ", annotation ) ;
@@ -545,7 +642,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @SuppressWarnings({"unchecked"})
     public synchronized <T extends Annotation> T getAnnotation( 
         EvaluatedDeclaration element, Class<T> type ) {
-        
+        // Can be called anytime
         if (registrationFineDebug()) {
             dputil.enter( "getAnnotation", "element=", element,
                 "type=", type.getName() ) ;
@@ -581,7 +678,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer>
         getClassAnalyzer( final EvaluatedClassDeclaration cls,
         final Class<? extends Annotation> annotationClass ) {
-
+        // Can be called anytime
         if (registrationDebug()) {
             dputil.enter( "getClassAnalyzer", "cls = ", cls,
                 "annotationClass = ", annotationClass ) ;
@@ -635,6 +732,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
     public synchronized List<InheritedAttribute> getInheritedAttributes( 
         final EvaluatedClassAnalyzer ca ) {
+        // Can be called anytime
         
         if (registrationDebug()) {
             dputil.enter( "getInheritedAttributes", "ca=", ca ) ;
@@ -724,7 +822,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     public synchronized <K,V> void putIfNotPresent( final Map<K,V> map,
         final K key, final V value ) {
-    
+        // Can be called anytime
         if (registrationFineDebug()) {
             dputil.enter( "putIfNotPresent", "key=", key,
                 "value=", value ) ;
@@ -763,7 +861,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         getAttributes( 
             final EvaluatedClassAnalyzer ca,
             final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
-
+        // Can be called anytime
         if (registrationDebug()) {
             dputil.enter( "getAttributes" ) ;
         }
@@ -855,7 +953,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     public synchronized void setRegistrationDebug( 
         ManagedObjectManager.RegistrationDebugLevel level ) {
-        
+        // can be called anytime
         regDebugLevel = level ;
         if (level != ManagedObjectManager.RegistrationDebugLevel.NONE ) {
             dputil = new DprintUtil( getClass() ) ;
@@ -865,14 +963,17 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized void setRuntimeDebug( boolean flag ) {
+        // can be called anytime
         runDebugFlag = flag ;
     }
 
     public synchronized void setTypelibDebug( int level ) {
+        // can be called anytime
         TypeEvaluator.setDebugLevel(level);
     }
     
     public synchronized String dumpSkeleton( Object obj ) {
+        // can be called anytime
         MBeanImpl impl = tree.getMBeanImpl( obj ) ;
         if (impl == null) {
             return obj + " is not currently registered with mom " + this ;
@@ -885,19 +986,23 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized boolean registrationDebug() {
+        // can be called anytime
         return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.NORMAL 
             || regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
     }
     
     public synchronized boolean registrationFineDebug() {
+        // can be called anytime
         return regDebugLevel == ManagedObjectManager.RegistrationDebugLevel.FINE ;
     }
     
     public synchronized boolean runtimeDebug() {
+        // can be called anytime
         return runDebugFlag ;
     }
     
     public synchronized void stripPrefix( String... args ) {
+        checkRootNotCreated("stripPrefix" ) ;
         for (String str : args) {
             typePrefixes.add( str ) ;
         }
@@ -906,6 +1011,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(
         final Class<? extends Annotation> annotation,
         final Class<T> cls ) {
+        // Can be called anytime
 
         return new Predicate<T>() {
             public boolean evaluate( T elem ) {
@@ -913,5 +1019,4 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
         } ;
     }
-
 }

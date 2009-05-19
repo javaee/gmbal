@@ -540,19 +540,6 @@ public class MBeanSkeleton {
         }
     }
     
-    private String getTypeName( final AMXMetadata mbt,
-        final Class<?> cls ) {
-        
-        String result ;
-        if (mbt.type().length() > 0) {
-            result = mbt.type() ;
-        } else {
-            result = mom.getDefaultTypeName( cls ) ;
-        }
-        
-        return result ;
-    }
-
     @AMXMetadata
     private static class DefaultMBeanTypeHolder{} 
     private static AMXMetadata defaultMBeanType =
@@ -570,7 +557,8 @@ public class MBeanSkeleton {
             mbeanType = defaultMBeanType ;
         }
         
-        type = getTypeName( mbeanType, annotatedClass.cls() ) ;
+        type = mom.getTypeName( annotatedClass.cls(), "AMX_TYPE",
+            mbeanType.type() ) ;
         sequenceNumber = new AtomicLong() ;
         setters = new HashMap<String,AttributeDescriptor>() ;
         getters = new HashMap<String,AttributeDescriptor>() ;

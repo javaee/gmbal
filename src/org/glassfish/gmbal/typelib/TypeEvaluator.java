@@ -389,6 +389,10 @@ public class TypeEvaluator {
 
                 result = DeclarationFactory.efdecl(cdecl, fld.getModifiers(),
                     ftype, fld.getName(), fld ) ;
+            } catch (Exception exc) {
+                if (DEBUG) {
+                    dputil.info( "Caught exception ", exc, " for field ", fld ) ;
+                }
             } finally {
                 if (DEBUG) {
                     dputil.exit( result ) ;

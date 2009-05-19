@@ -208,8 +208,8 @@ a[href] {
 <h1>GlassFish MBean Annotation Library (gmbal)</h1>
 <h1>Functional Specification</h1>
 by Ken Cavanaugh<br>
-Spec version .41<span style="background-color: rgb(250, 255, 221);"></span><br>
-12/17/08<span style="background-color: rgb(255, 249, 200);"></span><br>
+Spec version .9<span style="background-color: rgb(250, 255, 221);"></span><br>
+5/19/09<span style="background-color: rgb(255, 249, 200);"></span><br>
 <h2>1. Introduction</h2>
 <p>The GlassFish MBean Annotation Library (gmbal, pronounced as in
 "gumball")
@@ -235,48 +235,17 @@ admin tools.</p>
 module:
 instrumenting the module implementation, and providing a client
 interface that
-may be accessed remotely.&nbsp; This is what AMX has done in GlassFish,
-and gmbal
-will follow the same model.<br>
-<br>
-The details on the client model still need to be worked out, but
-basically
-gmbal will generate Java interfaces from annotated classes to provide
-client-side proxies for remote access to the gmbal-generated MBeans.
-The
-proxies will take care of mapping MBean ObjectNames to a type-specific
-interface that extends the AMX interface, mapping OpenTypes to
-application-domain types (e.g. map CompositeData to a Java class
-containing
-getters for its various data elements), and any other details that make
-the
-client side API simple to use.<br>
-<br>
-The source code generation will be in two parts:<br>
+may be accessed remotely. This is closely related to the AMX work in
+GFv3.&nbsp; AMX defines the interface for AMX MBeans, and provides
+tools and libraries for clients accessing AMX MBeans.&nbsp; Gmbal is a
+library that provides a mechanism for implementing AMXv3-compliant
+MBeans.<br>
 </p>
-<ol>
-  <li>A set of interfaces for MBean and OpenType definitions that can
-have as extensive JavaDocs written as needed. The description
-information will be filled in as a default and starting point for the
-JavaDocs. This should be generated once and maintained separately&nbsp;
-to serve the JavaDocs, rather than generated for each build.<br>
-  </li>
-  <li>A set of implementations of the interfaces that is generated for
-each build. This will detect inconsistencies between the interfaces and
-implementations.</li>
-</ol>
-The source code generation will be driven from the meta data produced
-by
-analyzing the classes, using the same code. The tool itself will be
-packaged
-separately from the main implementation, since it is only needed at
-build
-time.<br>
 <h3>1.1. Alignment with related projects</h3>
 JMX is also defining similar annotations in JSR 255 for JDK 7.&nbsp;
 The JSR 255 spec is available at the download <a
  href="http://jcp.org/aboutJava/communityprocess/edr/jsr255/index.html">page</a>.
-Gmbal is mostly (but not completely) aligned with the JSR 255
+Gmbal is mostly aligned with the JSR 255
 annotations.&nbsp;
 <br>
 <br>
@@ -291,12 +260,9 @@ is the same.</li>
   <li><a href="gmbal/javadoc/org/glassfish/gmbal/DescriptorFields.html">@DescriptorFields</a>
 is the same.</li>
   <li><a href="gmbal/javadoc/org/glassfish/gmbal/Description.html">@Description</a>
-is similar, but gmbal only has a value() attribute, while JSR 255 has
-key and bundleBaseName. Gmbal takes the approach that I18N support is
-handled by using keys on the annotation only, then providing a separate
-resource bundle which can be registered with the <a
- href="gmbal/javadoc/org/glassfish/gmbal/ManagedObjectManager.html">ManagedObjectManager</a>
-(see the discussion <a href="#MBeanServer_and_ResourceBundle">below</a>).<br>
+is similar to JSR 255, but does not support a bundleBaseName attribute.
+The bundle is set in gmbal through the
+ManagedObjectManager.setResourceBundle call.<br>
   </li>
 </ul>
 Differences:<br>
@@ -307,7 +273,7 @@ gmbal, javax.management for JSR 255.</li>
  href="gmbal/javadoc/org/glassfish/gmbal/ManagedObject.html">@ManagedObject</a>
 instead of @MBean (part of JSR 255) or <a
  href="http://java.sun.com/javase/6/docs/api/javax/management/MXBean.html">@MXBean</a>.</li>
-  <li>Gmbal only supports attribute change notifications (so far), so
+  <li>Gmbal only supports attribute change notifications, so
 the @NotificationInfo annotation (from JSR 255) does not exist in
 Gmbal.&nbsp; See "<a href="#3.2.3._register_and_registerAtRoot">register
 and registerAtRoot</a>" for a discussion on notification support.<br>
@@ -369,9 +335,8 @@ V3 AMX SPI</a> specification). Gmbal will follow all mandatory and most
 of the
 optional requirements of this specification so that any module that
 uses gmbal
-to define MBeans will automatically participate in the GFv3 admin
-console and
-CLI when run in a GFv3 container.&nbsp; However, this will not prevent
+to define MBeans will automatically participate in the GFv3 admin tools
+when run in a GFv3 container.&nbsp; However, this will not prevent
 the use of
 gmbal in these same modules as a standalone MBean definition library.<br>
 <br>
@@ -385,17 +350,25 @@ The createStandalone method is needed for running outside of GFv3, and
 takes
 the domain name as an argument. createFedederated must be called inside
 of
-GFv3, and this require the ObjectName of the ManagedObjectManager root
+GFv3, and this requires the AMXv3-compliant ObjectName of the
+ManagedObjectManager root
 MBean's
 parent.&nbsp; Calling the appropriate method is probably best handled
-in many cases
-by having a OSGi bundle for a module that is responsible for
+in most cases
+by having an OSGi bundle for a module that is responsible for
 integrating the
-module into GFv3.&nbsp; For example, the ORB will need such a module to
-handle
+module into GFv3.&nbsp; <br>
+<br>
+For example, the orb-iiop bundle integrates the standalone ORB bundles
+into GFv3. orb-iiop handles
 registration of all of the GFv3-specific interceptors and other
 initialization
-when the GFv3 ORB instance is created.<br>
+when the GFv3 ORB instance is created. orb-iiop will also need to set
+the ORB property com.sun.corba.ee.ORBGmbalRootParentName to the string
+representation of the ObjectName of the ORB's gmbal root parent.&nbsp;
+The ORB will then use this property to call either createStandalone (if
+it is not set) or createFederated (with the value of the property as
+the ObjectName passed into the call).<br>
 <h3>1.2. Similar projects</h3>
 Besides JSR 255 (discussed in the previous section), there are at least
 two other
@@ -444,27 +417,37 @@ managed by the ManagedObjectManager.<br>
       </li>
     </ul>
   </li>
-  <li>From a POJO with annotations, an MBeanImpl is constructed.&nbsp;
-An MBeanImpl has a number of objects associated with it:
+  <li>From a POJO with annotations, an MBeanImpl is constructed, which
+implements the dynamic MBean API.&nbsp; This dynamic MBean is
+associated with additional classes:
     <ul>
       <li>0 or more Attributes, which may be getters or setters or both
-(note that AMX will give as at least Name and Parent attributes, and
-often Children as well).<br>
+(note that AMX will give as at least Name, Parent, and Children
+attributes).<br>
       </li>
       <li>0 or more Operations, which may be invoked.</li>
       <li>Metadata, represented by ModelMBeanInfoSupport (so that
-metadata Descriptors are available on JDK 5 as well as JDK 6).</li>
+metadata Descriptors are available on JDK 5 as well as JDK 6). The
+Metadata is extensible through the use of the @DescriptorKey and
+@DescriptorField meta-annotations.<br>
+      </li>
       <li>A single parent MBeanImpl, which may be null (this is one end
 of the contains relation).</li>
       <li>0 or more child MBeanImpls (this is the other end of the
 contains relation).</li>
-      <li>Following JSR 77, a type and a name String, which together
-with the ObjectName of the parent are used to form the ObjectName of
-the MBeanImpl. Note that JSR 77 also allows the use of "j2eeType" as
-well as type, but currently gmbal will not support the creation of JSR
-77 MBeans, since we already have a full implementation in GlassFish of
-the standard JSR 77 MBeans.<br>
-      </li>
+      <li>Following AMXv3, the ObjectName of the MBean will contain 3
+name/value pairs:</li>
+      <ul>
+        <li>pp, which is the AMXv3 parent path, or the path name of the
+parent of this MBean</li>
+        <li>type, which is derived from the Class using annotations or
+other mechanisms</li>
+        <li>name, which is derived either from the registration call,
+or a method on the object.&nbsp; The name is absent in the case of a
+singleton.&nbsp; In any case, the type and name (if present) must be
+unique within the scope of the parent.<br>
+        </li>
+      </ul>
     </ul>
   </li>
   <li>Attributes and Operations have ids, which are generally derived
@@ -484,14 +467,13 @@ instances of OpenTypes.<br>
 <br>
 This diagram is a simplification of the actual implementation of
 gmbal.&nbsp; In
-particular, <br>
-the metadata, attributes, and operations are maintained in a
+particular,&nbsp; the metadata, attributes, and operations are
+maintained in a
 MBeanSkeleton
-class, which is<br>
-shared by all MBeanImpls for instances of the same class.&nbsp; The
-TypeConverter
-that handles<br>
-conversion between Java types and the corresponding OpenType is also
+class, which is shared by all MBeanImpls for instances of the same
+class.&nbsp; The TypeConverter
+that handles conversion between Java types and the corresponding
+OpenType is also
 not
 included here.<br>
 <h2>3. Interfaces</h2>
@@ -562,7 +544,7 @@ are process into Open data for Open Mbeans.<br>
       <td style="vertical-align: top;">String id (defaults to value
 from Method name)<br>
       </td>
-      <td style="vertical-align: top;">Method<br>
+      <td style="vertical-align: top;">Method or field<br>
       </td>
       <td style="vertical-align: top;">Same<br>
       </td>
@@ -594,7 +576,8 @@ an operation in ManagedObject <br>
 String key (the key to use in a generated resource bundle; default ""
 means to derive key from name of annotated element)<br>
       </td>
-      <td style="vertical-align: top;">Class, Interface, or Method<br>
+      <td style="vertical-align: top;">Class, Interface,&nbsp; Method,
+or Field<br>
       </td>
       <td style="vertical-align: top;">Same (but JSR 255 includes I18N)<br>
       </td>
@@ -711,7 +694,7 @@ construction)<br>
 admin CLI path expression:&nbsp; defaults to class name, but see
 also&nbsp; <a href="#filterPrefix">filterPrefix</a>)</li>
       </ul>
-&nbsp;(This is just an application of @DescriptionKey, with a little
+&nbsp;(This is just an application of @DescriptorKey, with a little
 special support in the gmbal implementation)<br>
       </td>
       <td style="vertical-align: top;">Class or Interface<br>
@@ -725,7 +708,7 @@ metadata to be defined for MBeans (see "<a
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">@DescriptionKey<br>
+      <td style="vertical-align: top;">@DescriptorKey<br>
       </td>
       <td style="vertical-align: top;">String value<br>
       </td>
@@ -739,7 +722,7 @@ Support</a>" for details)<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">@DescriptionField<br>
+      <td style="vertical-align: top;">@DescriptorField<br>
       </td>
       <td style="vertical-align: top;">String value (must be name=value)<br>
       </td>
@@ -755,6 +738,25 @@ details)<br>
   </tbody>
 </table>
 <br>
+Note that @ManagedAttribute and @Description may be used on fields.
+There is however a limitation: any such field MUST be final, and have a
+known immutable type.&nbsp; This is necessary to guarantee that access
+to the field is safe in the presence of multiple thread.&nbsp; The
+legal types are basically the SimpleTypes from JMX OpenType, with a
+couple of additions:<br>
+<ul>
+  <li>The primitives (boolean, byte, char, short, int, long, float,
+double) and the corresponding java.lang wrapper classes (Boolean, Byte,
+Character, Short, Integer, Long, Float, Double).</li>
+  <li>String</li>
+  <li>BigDecimal, BigInteger</li>
+  <li>Date</li>
+  <li>ObjectName</li>
+  <li>Class</li>
+  <li>Number</li>
+  <li>Object<br>
+  </li>
+</ul>
 <h3>3.1. The ManagedObjectManagerFactory</h3>
 The ManagedObjectManagerFactory is primarily used to create
 ManagedObjectManagers.&nbsp; It is the only concrete class in the gmbal
@@ -826,7 +828,9 @@ used, or there are multiple ManagedObjectManager instances with the
 same root
 type that share the same parent.&nbsp; In this case, it is essential
 that each root
-have a distinct name.last<br>
+have a distinct name.last.&nbsp; There is also a createRoot() method,
+which creates a simple internal root that only provides the required
+AMXv3 attributes.<br>
 <br>
 createRoot may only be called when the ManagedObjectManager does not
 already
@@ -857,7 +861,10 @@ There are also two forms of registerAtRoot: registerAtRoot( Object obj
 registerAtRoot( Object obj, String name).&nbsp; These methods are
 exactly
 equivalent to mom.register( mom.getRoot(), obj ) and mom.register(
-mom.getRoot(), obj, name ).<br>
+mom.getRoot(), obj, name ). <br>
+<br>
+All of these methods can only be called after a successul createRoot
+call.<br>
 <h4><a name="3.2.4._unregister"></a>3.2.4. unregister</h4>
 unregister( Object ) unregisters an object that was previously
 registered.&nbsp; It
@@ -866,6 +873,8 @@ Unregister
 removes the generated MBean from the ManagedObjectManager and also
 unregisters
 the MBean from the ManagedObjectManager's MBeanServer.<br>
+<br>
+Unregister can only be called after a successul createRoot call.<br>
 <h4>3.2.5. getObject/getObjectName</h4>
 The register methods return a NotificationEmitter which can be used to
 register
@@ -881,7 +890,9 @@ is the
 implementation object passed to a register method, NOT the internally
 created
 dynamic MBean (which is not directly provided).<br>
-<h4>3.2.6. <a name="filterPrefix"></a>filterPrefix</h4>
+<br>
+These methods can only be called after a successul createRoot call.<br>
+<h4>3.2.6. stripPrefix and stripPackagePrefix<a name="filterPrefix"></a></h4>
 A type prefix is simply a prefix of a fully qualified Java class name.
 By
 default, the MBean ObjectName type field is set to the full qualified
@@ -902,6 +913,11 @@ This helps keep the ObjectNames to a reasonable length.&nbsp;
 Applications of gmbal
 are also free to specify the exact type name to use through an
 annotation.<br>
+<br>
+stripPackagePrefix is used to indicate that ALL package prefixes should
+be removed from the class name for the default type.<br>
+<br>
+These methods may only be called before a successful createRoot call.<br>
 <h4>3.2.7. <a name="MBeanServer_and_ResourceBundle"></a>MBeanServer
 and
 ResourceBundle</h4>
@@ -993,6 +1009,10 @@ operations involved in registering an MBean.</li>
   <li>setRuntimeDebugLevel( boolean flag ).&nbsp; If this is enabled,
 the operations involved in getting or setting attributes or calling an
 operation on an MBean are traced.</li>
+  <li>setTypelibDebug( int level ).&nbsp; This is used to trace typelib
+operations.&nbsp; 1 traces only basic operation, while &gt;1 gives full
+details (produces a lot of output).<br>
+  </li>
   <li>String dumpSkeleton( Object obj ).&nbsp; If obj is an object that
 has been registered with the ManagedObjectManager, this returns a
 String dump of the MBeanSkeleton object, which provides detailed
@@ -1016,7 +1036,7 @@ that children cannot exist without their parent existing (see section
  href="https://glassfish.dev.java.net/nonav/v3/admin/planning/V3Changes/V3_AMX_SPI.html">AMX
 SPI specification</a>).<br>
 </p>
-<h4>3.2.11. suspend/resume</h4>
+<h4>3.2.11. suspendJMXRegistration/resumeJMXRegistration</h4>
 It is sometimes useful to be able to suspend and resume registration of
 gmbal-generated MBeans with the MBean server. This is mainly useful
 when it is necessary to create one or more MBeans in a constructor in
@@ -1030,7 +1050,6 @@ access any field of an object unless an MBean operation requires it, so
 it is safe to pass partially constructed objects into gmbal itself. So
 avoiding MBeanServer registration by suspending registration allows
 this case to be handled easily.<br>
-<br>
 <p></p>
 <h2>4. Further notes on the API<br>
 </h2>
@@ -1210,8 +1229,10 @@ ORB repository from the GFv3 ORB project on Kenai.com):<br>
 <br>
 First, from the
 com.sun.corba.se.spi.orb.ORB.createORBManagedObjectManager method:<br>
-<pre>    // mom is declared the ORB object, which stays around the entire time the ORB is in use.<br>    // Here I am using createStandalone.  This needs to be replaced with a call to createFederated<br>    // when running in GlassFish v3.  This will be driven through the ORB configuration.<br>    mom = ManagedObjectManagerFactory.createStandalone( "com.sun.corba" ) ;<br>    // Here I am using the guaranteed to be unique ORB id as the name of the topmost ORB mbean.<br>    mom.createRoot( this, getUniqueOrbId() ) ;<br><br>    // The ORB already has a system for setting debug options, so I just extended it for gmbal.<br>    if (mbeanFineDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.FINE ) ;<br>    } else if (mbeanDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;<br>    } else {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NONE ) ;<br>    }<br><br>    mom.setRuntimeDebug( mbeanRuntimeDebugFlag ) ;<br><br>    // Here I add all of the package prefixes that I do NOT want to see in ObjectNames.<br>    // The longest match is stripped from the class name to create the default value for the<br>    // type.<br>    mom.filterPrefix( "com.sun.corba.se" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.spi" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.impl" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.spi.orbutil" ) ;<br>    mom.filterPrefix( "com.sun.corba.se.impl.orbutil" ) ;<br></pre>
-<p>In order to integrate the ORB with GlassFish v3, there is quite a
+<pre>    // mom is declared the ORB object, which stays around the entire time the ORB is in use.<br>    // Here I am using createStandalone.  This needs to be replaced with a call to createFederated<br>    // when running in GlassFish v3.  This will be driven through the ORB configuration.<br>    mom = ManagedObjectManagerFactory.createStandalone( "com.sun.corba" ) ;<br><br>    // The ORB already has a system for setting debug options, so I just extended it for gmbal.<br>    if (mbeanFineDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.FINE ) ;<br>    } else if (mbeanDebugFlag) {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;<br>    } else {<br>        mom.setRegistrationDebug( ManagedObjectManager.RegistrationDebugLevel.NONE ) ;<br>    }<br><br>    mom.setRuntimeDebug( mbeanRuntimeDebugFlag ) ;<br><br>    // Here I add all of the package prefixes that I do NOT want to see in ObjectNames.<br>    // The longest match is stripped from the class name to create the default value for the<br>    // type.<br>    mom.stripPrefix( "com.sun.corba.se" ) ;<br>    mom.stripPrefix( "com.sun.corba.se.spi" ) ;<br>    mom.stripPrefix( "com.sun.corba.se.impl" ) ;<br>    mom.stripPrefix( "com.sun.corba.se.spi.orbutil" ) ;<br>    mom.stripPrefix( "com.sun.corba.se.impl.orbutil" ) ;<br></pre>
+<pre>    // Here I am using the guaranteed to be unique ORB id as the name of the topmost ORB mbean.<br>    mom.createRoot( this, getUniqueOrbId() ) ;</pre>
+<p><br>
+In order to integrate the ORB with GlassFish v3, there is quite a
 bit of GlassFish v3-specific code that initializes the ORB. This code
 will need to be placed in an appropriate OSGi bundle (either in the EJB
 remote bundle, or possible in a separate embedded ORB support bundle).
@@ -1311,7 +1332,7 @@ follows:<br>
 <pre>@ManagedObject<br>@Description( "A group of Timers or other TimerGroups, which may be enabled or disabled together" ) <br>public interface TimerGroup extends Controllable {<br>    @ManagedOperation<br>    @Description( "Add a new Timer or TimerGroup to this TimerGroup" ) <br>    boolean add( Controllable con ) ;<br><br>    @ManagedOperation<br>    @Description( "Remove a new Timer or TimerGroup from this TimerGroup" ) <br>    boolean remove( Controllable con ) ;<br>}<br></pre>
 <p>Controllable is fairly complex, and defines a number of attributes:<br>
 </p>
-<pre>@ManagedObject<br>@IncludeSubclass( { Timer.class, TimerGroup.class, TimerFactory.class } ) <br>public interface Controllable extends Named {<br>&nbsp;&nbsp;&nbsp; /** A longer description giving some details of the meaning of this<br>&nbsp;&nbsp;&nbsp;&nbsp; * Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "The purpose of the Timer or TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; String description() ;<br><br>&nbsp;&nbsp;&nbsp; /** A small id for this controllable.&nbsp; Each controllable created from<br>&nbsp;&nbsp;&nbsp;&nbsp; * the same TimerFactory will have a unique ID.&nbsp; All ids will be small<br>&nbsp;&nbsp;&nbsp;&nbsp; * integers starting at 0 (so indexing tables by timer ID is supported).<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "An internal identifier for the Timer or TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; int id() ;<br><br>&nbsp;&nbsp;&nbsp; /** Return an unmodifiable set of the contents of this Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; * May always be empty for some subclasses of Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "Set of Timers or TimerGroups contained in a TimerGroup" )<br>&nbsp;&nbsp;&nbsp; Set&lt;? extends Controllable&gt; contents() ;<br><br>&nbsp;&nbsp;&nbsp; /** Enable this controllable.&nbsp; All Timers that are either enabled, or<br>&nbsp;&nbsp;&nbsp;&nbsp; * reachable via contents() from an enabled Controllable are activated,<br>&nbsp;&nbsp;&nbsp;&nbsp; * and will cause TimerEvents to be generated when passed to the<br>&nbsp;&nbsp;&nbsp;&nbsp; * TimerEventController enter and exit methods.<br>&nbsp;&nbsp;&nbsp;&nbsp; */ <br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "Enable this Timer, or all Timers and TimerGroups contained in this TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; void enable() ;<br><br>&nbsp;&nbsp;&nbsp; /** Disable this controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "Disable this Timer, or all Timers and TimerGroups contained in this TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; void disable() ;<br><br>&nbsp;&nbsp;&nbsp; /** Return true if enable() was called, otherwise false if enable() was never<br>&nbsp;&nbsp;&nbsp;&nbsp; * called, or disable() was last called.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "True if this Timer or TimerGroup is enabled" ) <br>&nbsp;&nbsp;&nbsp; boolean isEnabled() ;<br>}<br></pre>
+<pre>@ManagedObject<br>@IncludeSubclass( { Timer.class, TimerGroup.class, TimerFactory.class } ) <br>public interface Controllable extends Named {<br>&nbsp;&nbsp;&nbsp; /** A longer description giving some details of the meaning of this<br>&nbsp;&nbsp;&nbsp;&nbsp; * Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "The purpose of the Timer or TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; String description() ;<br><br>&nbsp;&nbsp;&nbsp; /** A small id for this controllable.&nbsp; Each controllable created from<br>&nbsp;&nbsp;&nbsp;&nbsp; * the same TimerFactory will have a unique ID.&nbsp; All ids will be small<br>&nbsp;&nbsp;&nbsp;&nbsp; * integers starting at 0 (so indexing tables by timer ID is supported).<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "An internal identifier for the Timer or TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; int id() ;objectClass<br><br>&nbsp;&nbsp;&nbsp; /** Return an unmodifiable set of the contents of this Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; * May always be empty for some subclasses of Controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedAttribute<br>&nbsp;&nbsp;&nbsp; @Description( "Set of Timers or TimerGroups contained in a TimerGroup" )<br>&nbsp;&nbsp;&nbsp; Set&lt;? extends Controllable&gt; contents() ;<br><br>&nbsp;&nbsp;&nbsp; /** Enable this controllable.&nbsp; All Timers that are either enabled, or<br>&nbsp;&nbsp;&nbsp;&nbsp; * reachable via contents() from an enabled Controllable are activated,<br>&nbsp;&nbsp;&nbsp;&nbsp; * and will cause TimerEvents to be generated when passed to the<br>&nbsp;&nbsp;&nbsp;&nbsp; * TimerEventController enter and exit methods.<br>&nbsp;&nbsp;&nbsp;&nbsp; */ <br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "Enable this Timer, or all Timers and TimerGroups contained in this TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; void enable() ;<br><br>&nbsp;&nbsp;&nbsp; /** Disable this controllable.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "Disable this Timer, or all Timers and TimerGroups contained in this TimerGroup" ) <br>&nbsp;&nbsp;&nbsp; void disable() ;<br><br>&nbsp;&nbsp;&nbsp; /** Return true if enable() was called, otherwise false if enable() was never<br>&nbsp;&nbsp;&nbsp;&nbsp; * called, or disable() was last called.<br>&nbsp;&nbsp;&nbsp;&nbsp; */<br>&nbsp;&nbsp;&nbsp; @ManagedOperation<br>&nbsp;&nbsp;&nbsp; @Description( "True if this Timer or TimerGroup is enabled" ) <br>&nbsp;&nbsp;&nbsp; boolean isEnabled() ;<br>}<br></pre>
 <p>Because TimerGroup extends Controllable extends Named, the
 TimerGroup inherits the name() attribute which is annotated with
 @NameValue. This means that the result of calling timerGroup.name()
@@ -1437,6 +1458,56 @@ CompositeData.<br>
 Note that it is possible to automate this to some extent, but I
 currently have
 no plans to extend gmbal to automatically handle this problem.<br>
+<h3>4.10 Method call order requirements</h3>
+As noted in the methods on the ManagedObjectManager, there are
+constraints on the order in which certain methods may be called. This
+is done to avoid problems where some MBeans are created, then other
+methods are called (like addAnnotation or stripPrefix) which could
+change the attributes, operations, ObjectNames, or metadata on any
+Gmbal MBean that has already been created.&nbsp; This divides the
+methods up into 3 categories:<br>
+<ul>
+  <li>Methods that can only be called before the first successful call
+to a createRoot method: <br>
+  </li>
+  <ul>
+    <li>the 3 createRoot methods<br>
+    </li>
+    <li>stripPrefix</li>
+    <li>stripPackagePrefix</li>
+    <li>setResourceBundle</li>
+    <li>setMBeanServer<br>
+    </li>
+    <li>addAnnotation</li>
+  </ul>
+  <li>Methods that can only be called after the first successful call
+to a createRoot method:</li>
+  <ul>
+    <li>The 2 register methods</li>
+    <li>The 2 registerAtRoot methods</li>
+  </ul>
+  <ul>
+    <li>unregister</li>
+    <li>getRoot</li>
+    <li>getObject</li>
+    <li>getObjectName<br>
+    </li>
+  </ul>
+  <li>Methods that can be called at any time:</li>
+  <ul>
+    <li>getResourceBundle</li>
+    <li>getMBeanServer</li>
+    <li>getDomain<br>
+    </li>
+    <li>suspendJMXRegistration</li>
+    <li>resumeJMXRegistration</li>
+    <li>setRuntimeDebug</li>
+    <li>setRegistrationDebug</li>
+    <li>setTypelibDebug<br>
+    </li>
+  </ul>
+</ul>
+Any violation of this requirement results in an IllegalStateException.<br>
 <h2>5. Dependencies</h2>
 The only dependency that gmbal has is JDK 5.&nbsp; It does not require
 anything
@@ -1450,6 +1521,7 @@ test
 directory in the project.<br>
 <br>
 The following tests are currently available:<br>
+<br>
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2"
  cellspacing="2">
   <tbody>
@@ -1497,7 +1569,7 @@ a JDK 7 test suite)<br>
   </tbody>
 </table>
 <br>
-<h2><a name="7._Project_Details"></a>7. Project Details</h2>
+<h2><a name="7._Project_Details"></a>7. Project Details/ee</h2>
 The gmbal project is available in a mercurial workspace at <a
  href="https://kenai.com/hg/gmbal%7Emaster">https://kenai.com/hg/gmbal~master.</a>&nbsp;
 Note that gmbal will
@@ -1508,7 +1580,7 @@ circular build dependencies (e.g. GFv3 dependsOn CORBA dependsOn gmbal,
 which
 creates a build loop if GFv3 also contains gmbal).<br>
 <br>
-gmbal uses the following packages:<br>
+gmbal uses the following Java packages:<br>
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2"
  cellspacing="2">
   <tbody>
@@ -1595,31 +1667,35 @@ evaluation<br>
   </tbody>
 </table>
 <br>
-Gmbal also contains the package
+The gmbal project also contains the package
 org.glassfish.probe.provider.annotations, which is present in gmbal so
 that projects that are not part of GFv3 may support GlassFish
 monitoring probes without depending at build-time or runtime on
 anything other than a single probe bundle.<br>
 <br>
-The resulting OSGi bundles are currently (version 2.0.0-b001) sized at:<br>
+The resulting OSGi bundles are currently (version 3.0.0-b002) sized at:<br>
 <br>
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2"
  cellspacing="2">
   <tbody>
     <tr>
-      <td style="vertical-align: top;">gmbal-api<br>
+      <td style="vertical-align: top;">gmbal-api-only<br>
       </td>
-      <td style="vertical-align: top;">14931 bytes<br>
+      <td style="vertical-align: top;">14 KBytes<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;">gmbal-impl<br>
+      <td style="vertical-align: top;">gmbal<br>
       </td>
-      <td style="vertical-align: top;">249814 bytes<br>
+      <td style="vertical-align: top;">243 Kbytes<br>
       </td>
     </tr>
   </tbody>
 </table>
+<br>
+Any gmbal client needs to use either gmbal-api-only or gmbal, but not
+both.&nbsp; Both bundles are available in the standard place in the
+maven repository, with group ID org.glassfish.gmbal.<br>
 <br>
 The probe annotations are in the gfprobe-provider-client bundle, which
 is currently 2576 bytes.<br>

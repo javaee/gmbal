@@ -329,6 +329,14 @@ public interface Exceptions {
     @Message( "No description available!" )
     String noDescriptionAvailable() ;
 
+    @Message( "Method {0} cannot be called before a successful createRoot call")
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 5 )
+    IllegalStateException createRootNotCalled( String methodName ) ;
+
+    @Message( "Method {0} cannot be called after a successful createRoot call")
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 6 )
+    IllegalStateException createRootCalled( String methodName ) ;
+
 // TypeConverterImpl
     static final int TYPE_CONVERTER_IMPL_START =
         MANAGED_OBJECT_MANAGER_IMPL_START + EXCEPTIONS_PER_CLASS ;
