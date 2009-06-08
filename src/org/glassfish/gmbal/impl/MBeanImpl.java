@@ -66,6 +66,7 @@ import java.util.HashMap ;
 public class MBeanImpl extends NotificationBroadcasterSupport 
     implements FacetAccessor, DynamicMBean {
     
+    private boolean registered ;
     private final MBeanSkeleton skel ;
     private final String type ;
     private String name ;
@@ -80,6 +81,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         final Object obj, final MBeanServer server,
         final String type ) {
 
+        this.registered = false ;
         this.skel = skel ;
         this.type = type ;
         this.name = "" ;
@@ -226,13 +228,19 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     public synchronized void register() throws InstanceAlreadyExistsException, 
         MBeanRegistrationException, NotCompliantMBeanException {
         
-        server.registerMBean( this, oname ) ;
+        if (!registered) {
+            server.registerMBean( this, oname ) ;
+            registered = true ;
+        }
     }
     
     public synchronized void unregister() throws InstanceNotFoundException, 
         MBeanRegistrationException {
         
-        server.unregisterMBean( oname );
+        if (registered) {
+            server.unregisterMBean( oname );
+            registered = false ;
+        }
     }
     
     // Methods for DynamicMBean

@@ -54,11 +54,15 @@ import javax.management.NotificationEmitter ;
 
 public interface ManagedObjectManager extends Closeable {
     /** If called, no MBeans created after this call will be registered with
-     * the JMX MBeanServer until resumeJMXRegistration is called.
+     * the JMX MBeanServer until resumeJMXRegistration is called.  Each call
+     * increments a counter, so that nested and overlapping calls from multiple
+     * threads work correctly.
      */
     void suspendJMXRegistration() ;
 
-    /** Causes all MBeans created since a previous call to suspendJMXRegistration
+    /** Decrements the suspend counter, if the counter is greater than 0.
+     * When the counter goes to zero, it causes all MBeans created since
+     * a previous call to suspendJMXRegistration incremented the counter from 0 to 1
      * to be registered with the JMX MBeanServer.  After this call, all new
      * MBean registration calls to the JMX MBeanServer happen within the
      * register call.

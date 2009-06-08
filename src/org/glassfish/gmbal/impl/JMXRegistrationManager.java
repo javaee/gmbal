@@ -56,32 +56,34 @@ import javax.management.NotCompliantMBeanException;
  * @author ken
  */
 public class JMXRegistrationManager {
-    private boolean isSuspended = false ;
+    int suspendCount = 0 ;
     private LinkedHashSet<MBeanImpl> deferredRegistrations =
         new LinkedHashSet<MBeanImpl>() ;
 
     public synchronized void suspendRegistration() {
-        isSuspended = true ;
+        suspendCount++ ;
     }
 
     public synchronized void resumeRegistration() {
-        isSuspended = false ;
-        for (MBeanImpl mb : deferredRegistrations) {
-            try {
-                mb.register();
-            } catch (JMException ex) {
-                Exceptions.self.deferredRegistrationException( ex, mb ) ;
+        suspendCount-- ;
+        if (suspendCount == 0) {
+            for (MBeanImpl mb : deferredRegistrations) {
+                try {
+                    mb.register();
+                } catch (JMException ex) {
+                    Exceptions.self.deferredRegistrationException( ex, mb ) ;
+                }
             }
-        }
 
-        deferredRegistrations.clear() ;
+            deferredRegistrations.clear() ;
+        }
     }
 
     public synchronized void register( MBeanImpl mb )
         throws InstanceAlreadyExistsException, MBeanRegistrationException,
         NotCompliantMBeanException {
 
-        if (isSuspended) {
+        if (suspendCount>0) {
             deferredRegistrations.add( mb ) ;
         } else {
             mb.register() ;
@@ -91,7 +93,7 @@ public class JMXRegistrationManager {
     public synchronized void unregister( MBeanImpl mb )
         throws InstanceNotFoundException, MBeanRegistrationException {
 
-        if (isSuspended) {
+        if (suspendCount>0) {
             deferredRegistrations.remove(mb) ;
         }
 
