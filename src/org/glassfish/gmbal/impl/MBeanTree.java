@@ -197,6 +197,45 @@ public class MBeanTree {
         throw Exceptions.self.notPartOfThisTree(entity) ;
     }
 
+    private String getQuotedName( String name ) {
+        // Adapted from the ObjectName.quote method.
+        // Here we only quote if needed, and save a lot of
+        // extra processing for String.equals or regex.
+
+        // Allow a little extra space for quoting.  buf will re-size
+        // if necessary.
+        final StringBuilder buf = new StringBuilder( name.length() + 10 );
+        buf.append( '"' ) ;
+        final int len = name.length();
+        boolean needsQuotes = false ;
+        for (int i = 0; i < len; i++) {
+            char c = name.charAt(i);
+            switch (c) {
+                case '\n':
+                    c = 'n';
+                    buf.append('\\');
+                    needsQuotes = true ;
+                    break;
+
+                case '\\':
+                case '\"':
+                case '*':
+                case '?':
+                    buf.append('\\');
+                    needsQuotes = true ;
+                    break;
+            }
+            buf.append(c);
+        }
+
+        if (needsQuotes) {
+            buf.append('"');
+            return buf.toString();
+        } else {
+            return name ;
+        }
+    }
+
     public synchronized ObjectName objectName( MBeanImpl parent,
         String type, String name ) 
         throws MalformedObjectNameException {
@@ -239,7 +278,7 @@ public class MBeanTree {
 
                 if (parent != null) {
                     result.append( '/' ) ;
-                    result.append( parent.restName() ) ;
+                    result.append( getQuotedName( parent.restName() ) ) ;
                 }
             }
 
@@ -248,14 +287,14 @@ public class MBeanTree {
             // type
             result.append( typeString ) ;
             result.append( "=" ) ;
-            result.append( type ) ;
+            result.append( getQuotedName( type ) ) ;
 
             // name
             if (name.length() > 0) {
                 result.append( ',') ;
                 result.append( "name" ) ;
                 result.append( "=" ) ;
-                result.append( name ) ;
+                result.append( getQuotedName( name ) ) ;
             }
 
             oname =  new ObjectName( result.toString() ) ;

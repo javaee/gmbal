@@ -367,6 +367,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return str!=null && str.length()>0 ;
     }
 
+    // XXX Needs Test
     public String getTypeName( Class<?> cls, String fieldName,
         String nameFromAnnotation ) {
         // Can be called anytime

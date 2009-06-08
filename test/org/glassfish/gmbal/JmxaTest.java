@@ -863,6 +863,39 @@ public class JmxaTest extends TestCase {
             // ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
         mom.stripPrefix("org.glassfish.gmbal");
         mom.createRoot( rootObject, rootName ) ;
+
+        try {
+            ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
+            String expectedName =
+                "this.test:pp=/Test/Root/Name/FruitBat[Sam],"
+                + "type=RootType,name=MyRoot" ;
+            ObjectName expectedObjectName = null ;
+            try {
+                expectedObjectName = new ObjectName(expectedName);
+            } catch (MalformedObjectNameException ex) {
+                fail( "Could not create ObjectName: ex="  + ex ) ;
+            }
+
+            assertEquals( expectedObjectName, rootObjectName ) ;
+        } finally {
+            try {
+                mom.close();
+            } catch (IOException ex) {
+                fail( "Exception on close: " + ex ) ;
+            }
+        }
+    }
+
+    public void testRootMBean3() throws MalformedObjectNameException {
+        final int value = 42 ;
+        final String rootName = "MyRoot" ;
+        final Object rootObject = new RootObject( value ) ;
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createFederated(
+            new ObjectName( ROOT_PARENT_NAME ) ) ;
+        // mom.setRegistrationDebug(
+            // ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
+        mom.stripPackagePrefix() ;
+        mom.createRoot( rootObject, rootName ) ;
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
