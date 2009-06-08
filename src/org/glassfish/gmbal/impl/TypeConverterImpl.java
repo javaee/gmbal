@@ -413,7 +413,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
         try {
             String name = md.name() ;
             if (name.equals( "" )) {
-                name = mom.getStrippedName( cls.cls() ) ;
+                name = mom.getTypeName( cls.cls(), "GMBAL_TYPE",
+                    md.name() ) ;
             }
 
             if (mom.registrationDebug()) {

@@ -53,7 +53,23 @@ import java.lang.annotation.RetentionPolicy ;
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ManagedData {
-    /** The name of the ManagedData.  A default of "" is interpreted as the class name.
+    /** The name of the ManagedData.  
+     * <P>
+     * Gmbal determines the ManagedData name as follows:
+     * <ol>
+     * <li>If the class has a final static field of type String with the
+     * name "GMBAL_TYPE", the value of the field is the ManagedData name.
+     * <li>Otherwise, if the class has an @ManagedData annotation, and the
+     * value of the name is not "", the value of the name is the ManagedData name.
+     * <li>Otherwise, if the package prefix of the class name matches one of
+     * the type prefixes added by an stripPrefix call to the ManagedObjectManager,
+     * the ManagedData name is the full class name with the matching prefix removed.
+     * <li>Otherwise, if the stripPackagePrefix method was called on the
+     * ManagedObjectManager, the ManagedData name is the class name without any
+     * package prefixes.
+     * <li>Otherwise, the ManagedData name is the class name.
+     * </ol>
+     *
      */
     String name() default "" ;
 }

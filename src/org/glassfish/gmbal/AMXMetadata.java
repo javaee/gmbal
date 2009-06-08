@@ -85,10 +85,10 @@ public @interface AMXMetadata {
     String genericInterfaceName() default "" ;
 
     /** True if the MBeanInfo is invariant, that is, has the same
-     * value for thehttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.html lifetime of the MBean.  This may be used as a hint
+     * value for the lifetime of the MBean.  This may be used as a hint
      * to clients that the MBeanInfo can be cached.
      *
-     * @return True if the MBeanInfo is invarianthttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.htmlhttp://jpgserv.red.iplanet.com/webcasts/corba/internals-vol1/CorbaTraining.html.
+     * @return True if the MBeanInfo is invariant
      */
     @DescriptorKey( AMX.META_MBEANINFO_INVARIANT )
     boolean immutableInfo() default true ;
@@ -100,12 +100,25 @@ public @interface AMXMetadata {
     @DescriptorKey( AMX.META_INTERFACE_NAME )
     String interfaceClassName() default "" ;
 
-    /** An explicit type to use for the MBean.  The default is derived from
-     * the class name.
-     * <p>Note that this is NOT part of the AMX-defined metadata, but gmbal
-     * needs it here to have a place to override the type.  This could also
-     * be specified on the @ManagedObject annotation, but the metadata seems
-     * a better choice.
+    /** An explicit type to use for the MBean.  
+     * <p>
+     * Note that this is NOT part of the AMX-defined metadata, but gmbal
+     * needs it here to have a place to override the type.
+     * <p>
+     * Gmbal determines the type name as follows:
+     * <ol>
+     * <li>If the class has a final static field of type String with the
+     * name "AMX_TYPE", the value of the field is the type name.
+     * <li>Otherwise, if the class has an @AMXMetadata annotations, and the
+     * value of the type is not "", the value of the type is the type name.
+     * <li>Otherwise, if the package prefix of the class name matches one of
+     * the type prefixes added by an stripPrefix call to the ManagedObjectManager,
+     * the type name is the full class name with the matching prefix removed.
+     * <li>Otherwise, if the stripPackagePrefix method was called on the
+     * ManagedObjectManager, the type name is the class name without any
+     * package prefixes.
+     * <li>Otherwise, the type name is the class name.
+     * </ol>
      * @return The type for this MBean.
      */
     @DescriptorKey( AMX.META_TYPE )

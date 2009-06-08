@@ -56,6 +56,7 @@ import static java.lang.reflect.Modifier.* ;
 import java.lang.reflect.Type ;
 import java.lang.reflect.GenericArrayType ;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.WildcardType ;
 import java.lang.reflect.ParameterizedType ;
 import java.lang.reflect.TypeVariable ;
@@ -384,11 +385,29 @@ public class TypeEvaluator {
 
             EvaluatedFieldDeclaration result = null ;
 
+            // Only looking at final fields
+            if (!Modifier.isFinal(fld.getModifiers())) {
+                return null ;
+            }
+
+            // Do a simpler type check, since we've seen getGenericType fail.
+            // But it is not the full type; so leave the full type case to the
+            // try block below.
+            Class fieldType = fld.getType() ;
+            EvaluatedType et = evaluateType( fieldType ) ;
+            if (!et.isImmutable()) {
+                return null ;
+            }
+
             try {
                 final EvaluatedType ftype = evaluateType( fld.getGenericType() ) ;
 
                 result = DeclarationFactory.efdecl(cdecl, fld.getModifiers(),
                     ftype, fld.getName(), fld ) ;
+            } catch (Exception exc) {
+                if (DEBUG) {
+                    dputil.info( "Caught exception ", exc, " for field ", fld ) ;
+                }
             } finally {
                 if (DEBUG) {
                     dputil.exit( result ) ;

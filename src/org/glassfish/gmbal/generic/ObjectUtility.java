@@ -407,18 +407,27 @@ public final class ObjectUtility {
 	Class cls = obj.getClass() ;
 
 	try {
-	    Field[] fields;  
-	    // If the security manager is not null, throw a security exception
-	    // if cls is NOT accessible from the caller.
-	    SecurityManager security = System.getSecurityManager();  
-	    if (security != null && !Modifier.isPublic(cls.getModifiers())) {  
-		fields = new Field[0];  
-	    } else {  
-		fields = getDeclaredFields(cls);  
-            }  
+            SecurityManager security = System.getSecurityManager();
+            List<Field> allFields = new ArrayList<Field>() ;
+            Class current = cls ;
+            while (!current.equals(Object.class) ) {
+                Field[] fields;
+                // If the security manager is not null, throw a security exception
+                // if current is NOT accessible from the caller.
+                if (security != null && !Modifier.isPublic(current.getModifiers())) {
+                    fields = new Field[0];
+                } else {
+                    fields = getDeclaredFields(current);
+                }
 
-	    for (int ctr=0; ctr<fields.length; ctr++ ) {
-		final Field fld = fields[ctr] ;
+                for (Field fld : fields) {
+                    allFields.add( fld ) ;
+                }
+
+                current = current.getSuperclass() ;
+            }
+
+            for (final Field fld : allFields) {
 		int modifiers = fld.getModifiers() ;
                 if (fld.isAnnotationPresent(DumpIgnore.class)) {
                     continue ;

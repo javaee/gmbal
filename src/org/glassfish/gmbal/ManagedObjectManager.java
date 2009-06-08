@@ -46,10 +46,24 @@ import java.lang.annotation.Annotation ;
 
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
-import javax.management.NotificationEmitter ;
 
 /** An interface used to managed Open MBeans created from annotated
  * objects.  This is mostly a facade over MBeanServer.
+ * Note that certain methods must be called in the correct order:
+ * <ol>
+ * <li> Methods suspendJMXRegistration, resumeJMXRegistration,
+ * getDomain, getMBeanServer, getResourceBundle, setRuntimeDebug, 
+ * setRegistrationDebugLevel, and setTypelibDebug may be 
+ * called at any time.
+ * <li> All calls to addAnnotation, stripPrefix, and
+ * stripPackageName must occur before any call to a createRoot method.
+ * <li>All of the register and registerAtRoot methods and unregister, getObject,
+ * getObjectName, and dumpSkeleton may only be called after
+ * a createRoot method is called.
+ * <li>Only one call to a createRoot method is permitted on any 
+ * ManagedObjectManager.
+ * </ol>
+ * If these constraints are violated, an IllegalStateException is thrown.
  */
 
 public interface ManagedObjectManager extends Closeable {
@@ -57,6 +71,7 @@ public interface ManagedObjectManager extends Closeable {
      * the JMX MBeanServer until resumeJMXRegistration is called.  Each call
      * increments a counter, so that nested and overlapping calls from multiple
      * threads work correctly.
+	 * May be called at any time.
      */
     void suspendJMXRegistration() ;
 
@@ -66,40 +81,52 @@ public interface ManagedObjectManager extends Closeable {
      * to be registered with the JMX MBeanServer.  After this call, all new
      * MBean registration calls to the JMX MBeanServer happen within the
      * register call.
+     * May be called at any time.
      */
     void resumeJMXRegistration() ;
 
     /** Create a default root MBean.
      * One of the createRoot methods must be called before any of the registration
      * methods may be called.
-     * Only one call to createRoot is permitted after an ManagedObjectManager
-     * is created.
-     * @return
+     * Only one call to a createRoot method is permitted after an
+     * ManagedObjectManager is created.
+     * @exception IllegalStateException if called after a call to any
+     * createRoot method.
+     * @return A default root MBean which supports only the AMX attributes.
      */
-    NotificationEmitter createRoot() ;
+    GmbalMBean createRoot() ;
     
     /** Create a root MBean from root, which much have a method with the
      * @NameValue annotation.
      * One of the createRoot methods must be called before any of the registration
      * methods may be called.
      * Only one call to createRoot is permitted after an ManagedObjectManager
-     * is created.
-     * @param root
-     * @return
+     * is created. 
+     * @param root The Java object to be used to construct the root.
+     * @exception IllegalStateException if called after a call to any
+     * createRoot method.
+     * @return The newly constructed MBean.
      */
-    NotificationEmitter createRoot( Object root ) ;
+    GmbalMBean createRoot( Object root ) ;
     
     /** Create a root MBean from root with the given name.
      * One of the createRoot methods must be called before any of the registration
      * methods may be called.
      * Only one call to createRoot is permitted after an ManagedObjectManager
      * is created.
+     * @param root The Java object to be used to construct the root.
+     * @param name The ObjectName name field to be used in the ObjectName of
+     * the MBean constructed from root.
+     * @exception IllegalStateException if called after a call to any
+     * createRoot method.
+     * @return The newly constructed MBean.
      */
-    NotificationEmitter createRoot( Object root, String name ) ;
+    GmbalMBean createRoot( Object root, String name ) ;
     
     /** Return the root of this ManagedObjectManager.
-     *
-     * @return root
+     * May be called at any time.
+     * @return the root constructed in a createRoot operation, or null if called
+     * before a createRoot call.
      */
     Object getRoot() ;
     
@@ -107,70 +134,71 @@ public interface ManagedObjectManager extends Closeable {
      * and register it with domain getDomain() and the appropriate
      * ObjectName.  The MBeanServer from setMBeanServer (or its default) is used.
      * Here parent is considered to contain obj, and this containment is
-     * represented by the construction of the ObjectName.
+     * represented by the construction of the ObjectName following the AMX
+     * specification for ObjectNames.
      * <p>
-     * The ObjectName is constructed with name/value pairs in the following order:
-     * <ol>
-     * <li>The rest of the parent (that is, everything in the parent except
-     * for the type and name values)
-     * <li>The value "[typevalue]=[namevalue]" where typevalue is the value of
-     * the type pair in the parent, and namevalue is the value of the name
-     * pair of the parent (if any; parent may be null).
-     * <li>"[typeword]=[type]", where typeword is either "type" or "j2eeType",
-     * and type is derived from the @ManagedObject annotation of obj (note that 
-     * the class of obj, or one of its superclasses or superinterfaces, must
-     * be annotated with @ManagedObject or an error results).
-     * <li>"name=[name]", 
+     * The MBeanInfo for the result is actually ModelMBeanInfo, and may contain
+     * extra metadata as defined using annotations defined with the 
+     * @DescriptorKey and @DescriptorField meta-annotations.
+     * <p>
+     * Must be called after a successful createRoot call.
      * </ol>
      * @param parent The parent object that contains obj.
      * @param obj The managed object we are registering.
      * @param name The name to use for registering this object.
-     * 
-     * @return The NotificationEmitter that can be used to register 
-     * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.
+     * @return The MBean constructed from obj.
+     * @exception IllegalStateException if called before a createRoot method is
+     * called successfully.
      */
-    NotificationEmitter register( Object parent, Object obj, String name ) ;
+    GmbalMBean register( Object parent, Object obj, String name ) ;
 
-    /** Same as register( Object, Object, String ), but here the name
-     * is derived from an @ObjectKeyName annotation.
+    /** Same as register( parent, obj, name ), but here the name
+     * is derived from an @NameValue annotation.
      * 
      * @param parent The parent object that contains obj.
      * @param obj The managed object we are registering.
-     * 
-     * @return The NotificationEmitter that can be used to register 
-     * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.
+     * @return The MBean constructed from obj.
+     * @exception IllegalStateException if called before a createRoot method is
+     * called successfully.
      */
-    NotificationEmitter register( Object parent, Object obj ) ;
+    GmbalMBean register( Object parent, Object obj ) ;
     
     /** Registers the MBean for obj at the root MBean for the ObjectManager,
-     * using the given name.
+     * using the given name.  Exactly the same as mom.register( mom.getRoot(),
+     * obj, name ).
+     * <p>
+     * Must be called after a successful createRoot call.
      * @param obj The object for which we construct and register an MBean.
      * @param name The name of the MBean.
-     * @return A NotificationEmitter for this MBean.
+     * @return The MBean constructed from obj.
+     * @exception IllegalStateException if called before a createRoot method is
+     * called successfully.
      */
-    NotificationEmitter registerAtRoot( Object obj, String name ) ;
+    GmbalMBean registerAtRoot( Object obj, String name ) ;
     
     /** Same as registerAtRoot( Object, String ), but here the name
-     * is derived from an @ObjectKeyName annotation.
-     * 
+     * is derived from an @ObjectKeyName annotation.  Exactly the same as
+     * mom.register( mom.getRoot(), obj ).
      * @param obj The managed object we are registering.
-     * @return The NotificationEmitter that can be used to register 
-     * NotificationListeners against the registered MBean.  Only
-     * AttributeChangeNotifications are supported.
+     * @return The MBean constructed from obj.
+     * @exception IllegalStateException if called before a createRoot method is
+     * called successfully.
      */
-    NotificationEmitter registerAtRoot( Object obj ) ;
+    GmbalMBean registerAtRoot( Object obj ) ;
     
 
     /** Unregister the Open MBean corresponding to obj from the
      * mbean server.
+     * <p>
+     * Must be called after a successful createRoot call.
      * @param obj The object originally passed to a register method.
      */
     void unregister( Object obj ) ;
 
     /** Get the ObjectName for the given object (which must have
      * been registered via a register call).
+     * <p>
+     * Must be called after a successful createRoot call.
      * @param obj The object originally passed to a register call.
      * @return The ObjectName used to register the MBean.
      */
@@ -178,20 +206,34 @@ public interface ManagedObjectManager extends Closeable {
 
     /** Get the Object that was registered with the given ObjectName.
      * Note that getObject and getObjectName are inverse operations.
+     * <p>
+     * Must be called after a successful createRoot call.
      * @param oname The ObjectName used to register the object.
      * @return The Object passed to the register call.
      */
     Object getObject( ObjectName oname ) ;
     
     /** Add a type prefix to strip from type names, to shorten the names for
-     * a better presentation to the user.
+     * a better presentation to the user.  This may only be called before a
+     * createRot method is called.
      *
-     * @param str Class package name to strip from type name
+     * @param str Class package name to strip from type name.
+     * @exception IllegalStateException if called after createRoot method.
      */
     void stripPrefix( String... str ) ;
+
+    /** Change the default type name algorithm so that if nothing else 
+     * applies, the entire package prefix is stripped form the Class name.
+     * Otherwise, the full Class name is the type.
+     * 
+     * @exception IllegalStateException if called after a createRoot method.
+     */
+    void stripPackagePrefix() ;
     
     /** Return the domain name that was used when this ManagedObjectManager
      * was created.
+     * <p>
+     * May be called at any time.
      * @return Get the domain name for this ManagedObjectManager.
      */
     String getDomain() ;
@@ -199,12 +241,16 @@ public interface ManagedObjectManager extends Closeable {
     /** Set the MBeanServer to which all MBeans using this interface
      * are published.  The default value is 
      * java.lang.management.ManagementFactory.getPlatformMBeanServer().
+     * <p>
+     * Must be called before a successful createRoot call.
      * @param server The MBeanServer to set as the MBeanServer for this 
      * ManagedObjectManager.
      */
     void setMBeanServer( MBeanServer server ) ;
 
     /** Get the current MBeanServer.
+     * <p>
+     * May be called at any time.
      * @return The current MBeanServer, either the default, or the value passed
      * to setMBeanServer.
      */
@@ -212,11 +258,15 @@ public interface ManagedObjectManager extends Closeable {
 
     /** Set the ResourceBundle to use for getting localized descriptions.
      * If not set, the description is the value in the annotation.
+     * <p>
+     * Must be called before a successful call to a createRoot method.
      * @param rb The resource bundle to use.  May be null.
      */
     void setResourceBundle( ResourceBundle rb ) ;
 
     /** Get the resource bundle (if any) set by setResourceBundle.
+     * <p>
+     * May be called at any time.
      * @return The resource bundle set by setResourceBundle: may be null.
      */
     ResourceBundle getResourceBundle() ;
@@ -232,6 +282,8 @@ public interface ManagedObjectManager extends Closeable {
      * implementation with @InheritedAttributes.
      * @param element The annotated element (class or method for our purposes).
      * @param annotation The annotation we wish to add to the element.
+     * @exception IllegalStateException if called after a call to a createRoot
+     * method.
      */
     void addAnnotation( AnnotatedElement element, Annotation annotation ) ;
         
@@ -241,6 +293,8 @@ public interface ManagedObjectManager extends Closeable {
     public enum RegistrationDebugLevel { NONE, NORMAL, FINE } ;
     
     /** Print debug output to System.out.
+     * <p>
+     * May be called at any time.
      * 
      * @param level NONE is no debugging at all, NORMAL traces high-level
      * construction of skeletons and type converters, and dumps results of new
@@ -252,6 +306,8 @@ public interface ManagedObjectManager extends Closeable {
     
     /** Enable generation of debug log at INFO level for runtime MBean operations
      * to the org.glassfish.gmbal.impl logger.
+     * <p>
+     * May be called at any time.
      * 
      * @param flag true to enable runtime debug, false to disable.
      */
@@ -260,6 +316,8 @@ public interface ManagedObjectManager extends Closeable {
     /** Enabled generation of debug log for type evaluator debugging.  This
      * happens as part of the registration process for the first time a particular
      * class is processed.
+     * <p>
+     * May be called at any time.
      *
      * @param level set to 1 to just see the results of the TypeEvaluator, >1 to
      * see lots of details.  WARNING: values >1 will result in a large amount
@@ -269,6 +327,8 @@ public interface ManagedObjectManager extends Closeable {
 
     /** Dump the skeleton used in the implementation of the MBean for obj.
      * Obj must be currently registered.
+     * <p>
+     * Must be called after a successful call to a createRoot method.
      * 
      * @param obj The registered object whose skeleton should be displayed.
      * @return The string representation of the skeleton.

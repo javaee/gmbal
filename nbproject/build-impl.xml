@@ -159,8 +159,8 @@ is divided into following sections:
             <attribute default="${includes}" name="includes"/>
             <attribute default="${excludes}" name="excludes"/>
             <attribute default="${javac.debug}" name="debug"/>
-            <attribute default="${empty.dir}" name="sourcepath"/>
-            <attribute default="${empty.dir}" name="gensrcdir"/>
+            <attribute default="/does/not/exist" name="sourcepath"/>
+            <attribute default="/does/not/exist" name="gensrcdir"/>
             <element name="customize" optional="true"/>
             <sequential>
                 <property location="${build.dir}/empty" name="empty.dir"/>

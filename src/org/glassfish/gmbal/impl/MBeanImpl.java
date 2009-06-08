@@ -62,9 +62,10 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.util.Map ;
 import java.util.HashMap ;
+import org.glassfish.gmbal.GmbalMBean;
 
 public class MBeanImpl extends NotificationBroadcasterSupport 
-    implements FacetAccessor, DynamicMBean {
+    implements FacetAccessor, GmbalMBean{
     
     private boolean registered ;
     private final MBeanSkeleton skel ;
@@ -118,7 +119,11 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     
     @Override
     public synchronized int hashCode() {
-        return name.hashCode() ^ type.hashCode() ^ parent.hashCode() ;
+        if (parent == null) {
+            return name.hashCode() ^ type.hashCode() ;
+        } else {
+            return name.hashCode() ^ type.hashCode() ^ parent.hashCode() ;
+        }
     }
  
     @Override

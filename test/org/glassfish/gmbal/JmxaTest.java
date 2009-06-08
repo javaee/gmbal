@@ -861,8 +861,8 @@ public class JmxaTest extends TestCase {
             new ObjectName( ROOT_PARENT_NAME ) ) ;
         // mom.setRegistrationDebug(
             // ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
-        mom.createRoot( rootObject, rootName ) ;
         mom.stripPrefix("org.glassfish.gmbal");
+        mom.createRoot( rootObject, rootName ) ;
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
@@ -894,8 +894,8 @@ public class JmxaTest extends TestCase {
             new ObjectName( ROOT_PARENT_NAME ) ) ;
         // mom.setRegistrationDebug(
             // ManagedObjectManager.RegistrationDebugLevel.NORMAL ) ;
-        mom.createRoot( rootObject ) ;
         mom.stripPrefix("org.glassfish.gmbal");
+        mom.createRoot( rootObject ) ;
         
         try {
             ObjectName rootObjectName = mom.getObjectName( rootObject ) ;
@@ -1033,8 +1033,8 @@ public class JmxaTest extends TestCase {
         
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             ROOT_DOMAIN ) ;
-        mom.createRoot() ;
         mom.stripPrefix("org.glassfish.gmbal");
+        mom.createRoot() ;
         
         try {
             mom.registerAtRoot( nmdt ) ;

@@ -25,3 +25,4 @@ make/bnd.properties
 \.chg\..*$
 \.rej$
 \.conflict\~$
+gmbal/**

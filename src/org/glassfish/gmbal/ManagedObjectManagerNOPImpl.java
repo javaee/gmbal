@@ -46,7 +46,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.ResourceBundle;
 import javax.management.MBeanServer;
-import javax.management.NotificationEmitter;
 import javax.management.ObjectName;
 
 /** NOP impl of ManagedObjectManager used when annotations and ManagedObjectManager
@@ -70,15 +69,15 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
         // NOP
     }
 
-    public NotificationEmitter createRoot() {
+    public GmbalMBean createRoot() {
         return null ;
     }
 
-    public NotificationEmitter createRoot(Object root) {
+    public GmbalMBean createRoot(Object root) {
         return null ;
     }
 
-    public NotificationEmitter createRoot(Object root, String name) {
+    public GmbalMBean createRoot(Object root, String name) {
         return null ;
     }
 
@@ -86,19 +85,19 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
         return null ;
     }
 
-    public NotificationEmitter register(Object parent, Object obj, String name) {
+    public GmbalMBean register(Object parent, Object obj, String name) {
         return null ;
     }
 
-    public NotificationEmitter register(Object parent, Object obj) {
+    public GmbalMBean register(Object parent, Object obj) {
         return null ;
     }
 
-    public NotificationEmitter registerAtRoot(Object obj, String name) {
+    public GmbalMBean registerAtRoot(Object obj, String name) {
         return null ;
     }
 
-    public NotificationEmitter registerAtRoot(Object obj) {
+    public GmbalMBean registerAtRoot(Object obj) {
         return null ;
     }
 
@@ -159,6 +158,10 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     }
 
     public void setTypelibDebug(int level) {
+        // NOP
+    }
+
+    public void stripPackagePrefix() {
         // NOP
     }
 }

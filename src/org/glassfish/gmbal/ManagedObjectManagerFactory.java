@@ -48,7 +48,6 @@ import javax.management.ObjectName;
 public final class ManagedObjectManagerFactory {
     private ManagedObjectManagerFactory() {}
   
-    // XXX How do we make this work properly with OSGi?
     private static GenericConstructor<ManagedObjectManager> objectNameCons =
         new GenericConstructor<ManagedObjectManager>( 
             ManagedObjectManager.class, 
