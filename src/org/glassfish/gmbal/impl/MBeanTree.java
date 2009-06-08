@@ -62,8 +62,8 @@ import org.glassfish.gmbal.GmbalMBean;
  */
 public class MBeanTree {
     private boolean rootIsSet = false ;
-    private Object root ;
-    private MBeanImpl rootEntity ;
+    private Object root = null ;
+    private MBeanImpl rootEntity = null ;
     private Map<Object,MBeanImpl> objectMap ;
     private Map<ObjectName,Object> objectNameMap ;
     private String domain ;
@@ -80,7 +80,7 @@ public class MBeanTree {
         for (Object obj : mbean.facets() ) {
             objectMap.put( obj, mbean ) ;
         }
-        objectNameMap.put( oname, mbean ) ;
+        objectNameMap.put( oname, mbean.target() ) ;
     }
     
     private void removeFromObjectMaps( MBeanImpl mbean ) {
@@ -124,11 +124,7 @@ public class MBeanTree {
     }
     
     public synchronized Object getRoot() {
-        if (rootIsSet) {
-            return root ;
-        } else {
-            throw Exceptions.self.rootNotSet() ;
-        }   
+        return root ;
     }
 
     private String parentPath( final ObjectName rootParentName ) {

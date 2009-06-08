@@ -576,7 +576,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized void setResourceBundle( ResourceBundle rb ) {
-        checkRootCreated("setResourceBundle");
+        checkRootNotCreated("setResourceBundle");
         this.resourceBundle = rb ;
     }
 

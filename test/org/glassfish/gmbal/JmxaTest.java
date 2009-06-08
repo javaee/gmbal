@@ -59,6 +59,8 @@ import java.util.Date ;
 import java.math.BigInteger ;
 import java.math.BigDecimal ;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -1105,7 +1107,231 @@ public class JmxaTest extends TestCase {
             }
         }    
     }
-    
+
+    public static class MOMSequenceTester {
+        final ManagedObjectManager mom =
+            ManagedObjectManagerFactory.createStandalone( "test" ) ;
+        final MBeanServer mbs =
+            mom.getMBeanServer() ;
+
+        public abstract static class MethodTest implements Runnable {
+            private final String name ;
+            private final boolean before ;
+            private final boolean after ;
+
+            public MethodTest( String name, boolean before, boolean after ) {
+                this.name = name ;
+                this.before = before ;
+                this.after = after ;
+            }
+
+            public MethodTest( String name ) {
+                this( name, false, false ) ;
+            }
+
+            public String toString() {
+                return name ;
+            }
+
+            public boolean normalBefore() {
+                return before ;
+            }
+
+            public boolean normalAfter() {
+                return after ;
+            }
+        }
+
+        private boolean expectedNormalCompletion( final MethodTest mt ) {
+            if (mom.getRoot() == null)
+                return mt.normalBefore();
+            else
+                return mt.normalAfter() ;
+        }
+
+        private void error( final MethodTest mt, final Throwable thr ) {
+            String location ;
+            if (mom.getRoot() == null) {
+                location = "BEFORE" ;
+            } else {
+                location = "AFTER" ;
+            }
+
+            if (thr == null) {
+                fail( "got unexpected normal completion for " + mt + " "
+                    + location + " mom.createRoot was called." ) ;
+            } else {
+                fail( "got unexpected exception " + thr + " for " + mt + " "
+                    + location + " mom.createRoot was called." ) ;
+            }
+        }
+
+        private void testMethod( final MethodTest mt ) {
+            final boolean shouldComplete = expectedNormalCompletion( mt ) ;
+            try {
+                mt.run() ;
+                if (!shouldComplete) {
+                    error( mt, null ) ;
+                }
+            } catch (IllegalStateException exc) {
+                if (shouldComplete) {
+                    error( mt, exc ) ;
+                }
+            } catch (Throwable thr) {
+                error( mt, thr ) ;
+            }
+        }
+
+        @ManagedObject 
+        public static class Bean {
+            @ManagedAttribute
+            private final int id ;
+
+            public Bean( int id ) {
+                this.id = id ;
+            }
+        }
+
+        private Bean bean1 = new Bean(1) ;
+        private Bean bean2 = new Bean(2) ;
+        private ObjectName oname1 = null ;
+
+        // This contains every MOM method except for some of the overloaded 
+        // forms of the registration methods.
+        private final MethodTest[] methods = new MethodTest[] {
+            new MethodTest( "suspendJMXRegistration", true, true ) {
+                public void run() {
+                    mom.suspendJMXRegistration() ;
+                }
+            },
+            new MethodTest( "resumeJMXRegistration", true, true ) {
+                public void run() {
+                    mom.resumeJMXRegistration() ;
+                }
+            },
+            new MethodTest( "getRoot", true, true ) {
+                public void run() {
+                    mom.getRoot() ;
+                }
+            },
+            new MethodTest( "registetAtRoot", false, true ) {
+                public void run() {
+                    mom.registerAtRoot( bean1, "Bean-1" ) ;
+                }
+            },
+            new MethodTest( "register", false, true ) {
+                public void run() {
+                    mom.register( bean1, bean2, "Bean-1" ) ;
+                }
+            },
+            new MethodTest( "dumpSkeleton", true, true ) {
+                public void run() {
+                    mom.dumpSkeleton( bean1 ) ;
+                }
+            },
+            new MethodTest( "getObjectName", false, true ) {
+                public void run() {
+                    oname1 = mom.getObjectName( bean1 ) ;
+                }
+            },
+            new MethodTest( "getObject", false, true ) {
+                public void run() {
+                    assertEquals( bean1, mom.getObject( oname1 ) ) ;
+                }
+            },
+            new MethodTest( "stripPrefix", true, false ) {
+                public void run() {
+                    mom.stripPrefix( "org.glassfish.gmbal" ) ;
+                }
+            },
+            new MethodTest( "stripPackagePrefix", true, false ) {
+                public void run() {
+                    mom.stripPackagePrefix( ) ;
+                }
+            },
+            new MethodTest( "unregister", false, true ) {
+                public void run() {
+                    mom.unregister( bean2 ) ;
+                    mom.unregister( bean1 ) ;
+                }
+            },
+            new MethodTest( "getMBeanServer", true, true ) {
+                public void run() {
+                    mom.getMBeanServer() ;
+                }
+            },
+            new MethodTest( "setMBeanServer", true, false ) {
+                public void run() {
+                    mom.setMBeanServer( mbs ) ;
+                }
+            },
+            new MethodTest( "getResourceBundle", true, true ) {
+                public void run() {
+                    mom.getResourceBundle() ;
+                }
+            },
+            new MethodTest( "setResourceBundle", true, false ) {
+                public void run() {
+                    mom.setResourceBundle( null ) ;
+                }
+            },
+            new MethodTest( "addAnnotation", true, false ) {
+                public void run() {
+                    mom.addAnnotation( this.getClass(), 
+                        Bean.class.getAnnotation( ManagedObject.class ) ) ;
+                }
+            },
+            new MethodTest( "setRegistrationDebug", true, true ) {
+                public void run() {
+                    mom.setRegistrationDebug(
+                        ManagedObjectManager.RegistrationDebugLevel.NONE);
+                }
+            },
+            new MethodTest( "setRuntimeDebug", true, true ) {
+                public void run() {
+                    mom.setRuntimeDebug( false ) ;
+                }
+            },
+            new MethodTest( "setTypelibDebug", true, true ) {
+                public void run() {
+                    mom.setTypelibDebug( 0 ) ;
+                }
+            },
+
+            // Must be last in the list!
+            new MethodTest( "createRoot", true, false ) {
+                public void run() {
+                    mom.createRoot() ;
+                }
+            }
+        } ;
+
+
+        public void doTest() {
+            try {
+                for (MethodTest mt : methods) {
+                    testMethod( mt ) ;
+                }
+
+                // Call again, because now the root has been created.
+                for (MethodTest mt : methods) {
+                    testMethod( mt ) ;
+                }
+            } finally {
+                try {
+                    mom.close();
+                } catch (IOException ex) {
+                    Logger.getLogger(JmxaTest.class.getName()).log(
+                        Level.SEVERE, null, ex);
+                }
+            }
+        }
+    }
+
+    public void testMethodSequence() {
+        (new MOMSequenceTester()).doTest() ;
+    }
+
     public static Test suite() {
         return new TestSuite( JmxaTest.class ) ;
     }
