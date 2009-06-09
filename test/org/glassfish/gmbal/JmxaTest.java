@@ -610,7 +610,7 @@ public class JmxaTest extends TestCase {
 	@ManagedAttribute( id=MDE_ATTR_ID_DATE )
         @Description( MDE_ATTR_DESC_DATE )
 	public Date date() {
-	    return date ;
+	    return new Date( date.getTime() ) ;
 	}
 
         @ManagedAttribute

@@ -115,8 +115,8 @@ public class FileWrapper implements Closeable {
 	return true ;
     }
 
-    public void delete() {
-	file.delete() ;
+    public boolean delete() {
+	return file.delete() ;
     }
 
     public String getName() {

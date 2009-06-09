@@ -49,7 +49,7 @@ public class DprintUtil {
     private static final boolean USE_LOGGER = false ;
     
     private String sourceClassName ;
-    private String loggerName ;
+    private String loggerName = null ;
     private ThreadLocal<Stack<String>> currentMethod = new ThreadLocal<Stack<String>>() {
         @Override
         public Stack<String> initialValue() {
@@ -59,7 +59,9 @@ public class DprintUtil {
 
     public DprintUtil( Class selfClass ) {
         sourceClassName = compressClassName( selfClass.getName() ) ;  
-        loggerName = selfClass.getPackage().getName() ;
+        if (USE_LOGGER) {
+            loggerName = selfClass.getPackage().getName() ;
+        }
     }        
     
     private static String compressClassName( String name )

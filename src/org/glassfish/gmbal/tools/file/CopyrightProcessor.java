@@ -399,7 +399,10 @@ public class CopyrightProcessor {
 			    trace( "Updating copyright/license header on file " + fw ) ;
 
 			    // Note: this is dangerous: a crash before close will destroy the file!
-			    fw.delete() ; 
+			    boolean res = fw.delete() ;
+                            if (args.verbose() > 1 && !res) {
+                                trace( "Failed to delete file " + fw ) ;
+                            }
 			    fw.open( FileWrapper.OpenMode.WRITE ) ;
 
 			    boolean firstMatch = true ;

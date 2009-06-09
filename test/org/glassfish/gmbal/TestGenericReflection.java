@@ -179,7 +179,7 @@ public class TestGenericReflection {
     }
     
     private static void testClass( Class<?> cls ) {
-        EvaluatedType et = TypeEvaluator.getEvaluatedType( cls ) ;
+        // EvaluatedType et = TypeEvaluator.getEvaluatedType( cls ) ;
         
     }
     

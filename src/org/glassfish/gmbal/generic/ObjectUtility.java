@@ -61,6 +61,8 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.ObjectName;
 import javax.management.openmbean.ArrayType;
 import javax.management.openmbean.CompositeData;
@@ -455,7 +457,9 @@ public final class ObjectUtility {
                             return null ;
                         } } ) ;
 
-                    java.lang.Object value = fld.get( obj ) ;
+                    java.lang.Object value ;
+
+                    value = fld.get(obj);
                     if (fld.isAnnotationPresent(DumpToString.class)) {
                         toStringPrinter.print( printed, result, value ); 
                     } else {
@@ -463,12 +467,15 @@ public final class ObjectUtility {
                     }
 
 		    result.endElement() ;
-		}
-	    }
-	} catch (Exception exc2) {
+                }
+            }
+        } catch (IllegalArgumentException ex) {
             // Just ignore the exception here
 	    result.append( obj.toString() ) ;
-	}
+        } catch (IllegalAccessException ex) {
+            // Just ignore the exception here
+	    result.append( obj.toString() ) ;
+        }
     }
 
     private void handleArray( IdentityHashMap printed, ObjectWriter result,

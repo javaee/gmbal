@@ -160,7 +160,10 @@ public class WorkspaceRename {
 
 	    File result = new File( destination, targetName ) ;
 	    File resultDir = result.getParentFile() ;
-	    resultDir.mkdirs() ;
+	    boolean res = resultDir.mkdirs() ;
+            if (verbose > 1 && !res) {
+                trace( "failed to create directory " + resultDir ) ;
+            }
 	    FileWrapper fwres = new FileWrapper( result ) ;
 	    if (verbose > 1) {
 		trace( "makeTargetFileWrapper: arg = " + arg ) ;
@@ -257,7 +260,11 @@ public class WorkspaceRename {
                                 targetBlock = targetBlock.expandTabs() ;
                             }
 
-			    target.delete() ;
+			    boolean result = target.delete() ;
+                            if (verbose > 1 && !result) {
+                                trace( "renameAction: failed to delete file " 
+                                    + target );
+                            }
 			    target.open( FileWrapper.OpenMode.WRITE ) ;
 			    targetBlock.write( target ) ;
 			} else {

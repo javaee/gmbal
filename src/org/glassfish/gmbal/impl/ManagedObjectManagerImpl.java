@@ -46,6 +46,7 @@ import java.util.ArrayList ;
 
 import java.io.IOException ;
 
+import java.io.Serializable;
 import java.lang.annotation.Annotation ;
 
 import java.lang.management.ManagementFactory ;
@@ -55,6 +56,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -145,7 +148,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         stripPackagePrefix = true ;
     }
     
-    private static final class StringComparator implements Comparator<String> {
+    private static final class StringComparator implements Serializable,
+        Comparator<String> {
+
         public int compare(String o1, String o2) {
             return - o1.compareTo( o2 ) ;
         }
@@ -361,22 +366,28 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private String getAMXTypeFromField( Class<?> cls, String fieldName ) {
         try {
             final Field fld = cls.getDeclaredField(fieldName);
-            if (Modifier.isFinal( fld.getModifiers()) &&
-                Modifier.isStatic(fld.getModifiers()) &&
-                fld.getType().equals( String.class )) {
+            if (Modifier.isFinal(fld.getModifiers()) 
+                && Modifier.isStatic(fld.getModifiers())
+                && fld.getType().equals(String.class)) {
 
-                AccessController.doPrivileged(
-                    new PrivilegedAction<Object>() {
-                        public Object run() {
-                            fld.setAccessible(true);
-                            return null ;
-                        } } ) ;
+                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    public Object run() {
+                        fld.setAccessible(true);
+                        return null;
+                    }
+                });
 
-                return (String)fld.get(null) ;
+                return (String) fld.get(null);
             } else {
-                return "" ;
+                return "";
             }
-        } catch (Exception ex) {
+        } catch (IllegalArgumentException ex) {
+            return "" ;
+        } catch (IllegalAccessException ex) {
+            return "" ;
+        } catch (NoSuchFieldException ex) {
+            return "" ;
+        } catch (SecurityException ex) {
             return "" ;
         }
     }
