@@ -543,8 +543,6 @@ public class TypeEvaluator {
 
                     Type[] bounds = tvar.getBounds() ;
                     if (bounds.length > 0) {
-                        // XXX We need to create a union of the upper bounds.
-                        // For now, only support a single upper bound.
                         if (bounds.length > 1) {
                             throw Exceptions.self
                                 .multipleUpperBoundsNotSupported( tvar ) ;

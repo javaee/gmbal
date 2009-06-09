@@ -55,8 +55,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -64,6 +62,7 @@ import javax.management.ObjectName ;
 import org.glassfish.gmbal.generic.Pair ;
 import org.glassfish.gmbal.generic.Algorithms ;
 
+import org.glassfish.gmbal.AMX ;
 import org.glassfish.gmbal.GmbalMBean ;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.Description ;
@@ -107,10 +106,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ResourceBundle resourceBundle ;
     private MBeanServer server ; 
     private MBeanTree tree ;
+    private MBeanSkeleton amxSkeleton ;
+
     private final Map<EvaluatedClassDeclaration,MBeanSkeleton> skeletonMap ;
     private final Map<EvaluatedType,TypeConverter> typeConverterMap ;
     private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
-    
+
     @DumpIgnore
     private DprintUtil dputil = null ;
     private ManagedObjectManager.RegistrationDebugLevel regDebugLevel = 
@@ -171,6 +172,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         this.typeConverterMap = new WeakHashMap<EvaluatedType,TypeConverter>() ;
         this.addedAnnotations = 
             new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
+
+        final EvaluatedClassDeclaration ecd =
+            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(
+                AMX.class ) ;
+        this.amxSkeleton = getSkeleton( ecd ) ;
     }
     
     public ManagedObjectManagerImpl( final String domain ) {
@@ -263,20 +269,32 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             boolean newSkeleton = false ;
             if (result == null) {
-                newSkeleton = true ;
                 if (registrationDebug()) {
-                    dputil.info( "creating new Skeleton" ) ;
+                    dputil.info( "Skeleton not found" ) ;
                 }
                 
                 Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer> pair = 
                     getClassAnalyzer( cls, ManagedObject.class ) ;
                 EvaluatedClassDeclaration annotatedClass = pair.first() ;
                 EvaluatedClassAnalyzer ca = pair.second() ;
+                if (registrationFineDebug()) {
+                    dputil.info( "Annotated class for skeleton is", 
+                        annotatedClass ) ;
+                }
 
                 result = skeletonMap.get( annotatedClass ) ;
 
                 if (result == null) {
-                    result = new MBeanSkeleton( annotatedClass, ca, this ) ;
+                    newSkeleton = true ;
+                    MBeanSkeleton skel = new MBeanSkeleton( annotatedClass,
+                        ca, this ) ;
+
+                    if (amxSkeleton == null) {
+                        // Can't compose amxSkeleton with itself!
+                        result = skel ;
+                    } else {
+                        result = amxSkeleton.compose( skel ) ;
+                    }
                 }
 
                 skeletonMap.put( cls, result ) ;
@@ -367,7 +385,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return str!=null && str.length()>0 ;
     }
 
-    // XXX Needs Test
+    // XXX Needs Test for the AMX_TYPE case
     public String getTypeName( Class<?> cls, String fieldName,
         String nameFromAnnotation ) {
         // Can be called anytime

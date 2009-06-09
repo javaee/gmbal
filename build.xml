@@ -182,10 +182,15 @@
                     <pathelement location="build/classes"/>
                 </instrpath>
                 <filter includes="org.glassfish.gmbal.*"/>
-                <filter includes="org.glassfish.gmbal.util.*"/>
-                <filter includes="org.glassfish.gmbal.impl.*"/>
                 <filter includes="org.glassfish.gmbal.generic.*"/>
+                <filter includes="org.glassfish.gmbal.impl.*"/>
+                <filter includes="org.glassfish.gmbal.logex.*"/>
                 <filter includes="org.glassfish.gmbal.typelib.*"/>
+                <filter includes="org.glassfish.gmbal.util.*"/>
+                <filter excludes="org.glassfish.gmbal.main.*"/>
+                <filter excludes="org.glassfish.gmbal.tools.argparser.*"/>
+                <filter excludes="org.glassfish.gmbal.tools.file.*"/>
+                <filter excludes="org.glassfish.gmbal.impl.Exceptions"/>
             </instr>
         </emma>
     </target>

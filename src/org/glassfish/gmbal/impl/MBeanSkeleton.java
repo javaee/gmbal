@@ -93,12 +93,11 @@ public class MBeanSkeleton {
     public interface Operation
         extends BinaryFunction<FacetAccessor,List<Object>,Object> {} ;
 
-    private Descriptor descriptor ;
-    private final String type ;
     private AMXMetadata mbeanType ;
+    private final String type ;
+    private Descriptor descriptor ;
     @DumpToString
     private final AtomicLong sequenceNumber ;
-    private final ModelMBeanInfoSupport mbInfo ;
     @DumpToString
     private final ManagedObjectManagerInternal mom ;
     @DumpIgnore
@@ -109,6 +108,7 @@ public class MBeanSkeleton {
     private final Map<String,Map<List<String>,Operation>> operations ;
     private final List<ModelMBeanAttributeInfo> mbeanAttributeInfoList ;
     private final List<ModelMBeanOperationInfo> mbeanOperationInfoList ;
+    private final ModelMBeanInfoSupport mbInfo ;
  
     private <K,L,V> void addToCompoundMap( Map<K,Map<L,V>> source, Map<K,Map<L,V>> dest ) {
         for (Map.Entry<K,Map<L,V>> entry : source.entrySet()) {
@@ -121,37 +121,91 @@ public class MBeanSkeleton {
         }
     }
 
-    private MBeanSkeleton( MBeanSkeleton first, MBeanSkeleton second ) {
-        dputil = new DprintUtil( getClass() ) ;
-        this.mom = first.mom ;
+    @AMXMetadata
+    private static class DefaultMBeanTypeHolder{} 
+    private static AMXMetadata defaultMBeanType =
+        DefaultMBeanTypeHolder.class.getAnnotation( AMXMetadata.class ) ;
 
-        type = first.type ;
+    public MBeanSkeleton( final EvaluatedClassDeclaration annotatedClass,
+        final EvaluatedClassAnalyzer ca,
+        final ManagedObjectManagerInternal mom ) {
+
+        mbeanType = mom.getAnnotation(annotatedClass, AMXMetadata.class ) ;
+        if (mbeanType == null) {
+            mbeanType = defaultMBeanType ;
+        }
+
+        type = mom.getTypeName( annotatedClass.cls(), "AMX_TYPE",
+            mbeanType.type() ) ;
+
+        descriptor = makeValidDescriptor(
+            DescriptorIntrospector.descriptorForElement(
+                annotatedClass.cls() ), DescriptorType.mbean, type ) ;
 
         sequenceNumber = new AtomicLong() ;
+
+        this.mom = mom ;
+
+        dputil = new DprintUtil( getClass() ) ;
+        
         setters = new HashMap<String,AttributeDescriptor>() ;
-            setters.putAll( second.setters ) ;
-            setters.putAll( first.setters ) ;
 
         getters = new HashMap<String,AttributeDescriptor>() ;
-            getters.putAll( second.getters ) ;
-            getters.putAll( first.getters ) ;
 
         operations = new HashMap<String,Map<List<String>,Operation>>() ;
-            addToCompoundMap( second.operations, operations ) ;
-            addToCompoundMap( first.operations, operations ) ;
 
         mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>() ;
-            mbeanAttributeInfoList.addAll( second.mbeanAttributeInfoList ) ;
-            mbeanAttributeInfoList.addAll( first.mbeanAttributeInfoList ) ;
 
         mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
-            mbeanOperationInfoList.addAll( second.mbeanOperationInfoList ) ;
-            mbeanOperationInfoList.addAll( first.mbeanOperationInfoList ) ;
+
+        analyzeAttributes( ca ) ;
+        analyzeFields( ca ) ;
+        analyzeOperations( ca ) ;
+        analyzeObjectNameKeys( ca ) ;
+
+        mbInfo = makeMbInfo( mom.getDescription( annotatedClass ) ) ;
+    }
+
+    // In case of conflicts, always prefer second over first.
+    private MBeanSkeleton( MBeanSkeleton first, MBeanSkeleton second ) {
+        mbeanType = second.mbeanType ;
+
+        type = second.type ;
 
         descriptor = DescriptorUtility.union( first.descriptor,
             second.descriptor ) ;
 
-        mbInfo = makeMbInfo( first.mbInfo.getDescription() ) ;
+        sequenceNumber = new AtomicLong() ;
+
+        mom = second.mom ;
+
+        dputil = new DprintUtil( getClass() ) ;
+
+        setters = new HashMap<String,AttributeDescriptor>() ;
+            setters.putAll( first.setters ) ;
+            setters.putAll( second.setters ) ;
+
+        getters = new HashMap<String,AttributeDescriptor>() ;
+            getters.putAll( first.getters ) ;
+            getters.putAll( second.getters ) ;
+
+        nameAttributeDescriptor = second.nameAttributeDescriptor ;
+
+        operations = new HashMap<String,Map<List<String>,Operation>>() ;
+            addToCompoundMap( first.operations, operations ) ;
+            addToCompoundMap( second.operations, operations ) ;
+
+        mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>() ;
+            mbeanAttributeInfoList.addAll( first.mbeanAttributeInfoList ) ;
+            mbeanAttributeInfoList.addAll( second.mbeanAttributeInfoList ) ;
+
+        mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
+            mbeanOperationInfoList.addAll( first.mbeanOperationInfoList ) ;
+            mbeanOperationInfoList.addAll( second.mbeanOperationInfoList ) ;
+
+        // This must go last, because it depends on some of the
+        // preceding initializations.
+        mbInfo = makeMbInfo( second.mbInfo.getDescription() ) ;
     }
 
     private ModelMBeanInfoSupport makeMbInfo( String description ) {
@@ -170,7 +224,7 @@ public class MBeanSkeleton {
      * the version from skel will appear in the composition.
      */
     public MBeanSkeleton compose( MBeanSkeleton skel ) {
-        return new MBeanSkeleton( skel, this ) ;
+        return new MBeanSkeleton( this, skel ) ;
     }
 
     private enum DescriptorType { mbean, attribute, operation }
@@ -540,44 +594,6 @@ public class MBeanSkeleton {
         }
     }
     
-    @AMXMetadata
-    private static class DefaultMBeanTypeHolder{} 
-    private static AMXMetadata defaultMBeanType =
-        DefaultMBeanTypeHolder.class.getAnnotation( AMXMetadata.class ) ;
-
-    public MBeanSkeleton( final EvaluatedClassDeclaration annotatedClass,
-        final EvaluatedClassAnalyzer ca,
-        final ManagedObjectManagerInternal mom ) {
-
-        dputil = new DprintUtil( getClass() ) ;
-        this.mom = mom ;
-        
-        mbeanType = mom.getAnnotation(annotatedClass, AMXMetadata.class ) ;
-        if (mbeanType == null) {
-            mbeanType = defaultMBeanType ;
-        }
-        
-        type = mom.getTypeName( annotatedClass.cls(), "AMX_TYPE",
-            mbeanType.type() ) ;
-        sequenceNumber = new AtomicLong() ;
-        setters = new HashMap<String,AttributeDescriptor>() ;
-        getters = new HashMap<String,AttributeDescriptor>() ;
-        operations = new HashMap<String,Map<List<String>,Operation>>() ;
-        mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>() ;
-        mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>() ;
-
-        analyzeAttributes( ca ) ;
-        analyzeFields( ca ) ;
-        analyzeOperations( ca ) ;
-        analyzeObjectNameKeys( ca ) ;
-
-        descriptor = makeValidDescriptor(
-            DescriptorIntrospector.descriptorForElement(
-                annotatedClass.cls() ), DescriptorType.mbean, type ) ;
-
-        mbInfo = makeMbInfo( mom.getDescription( annotatedClass ) ) ;
-    }
-
     // The rest of the methods are used in the DynamicMBeanImpl code.
     
     public String getType() {
@@ -655,9 +671,6 @@ public class MBeanSkeleton {
 
             setter.set( fa, value, mom.runtimeDebug() ) ;
 
-            // XXX Can we check if a notification is needed before constructing this?
-            // Note that this code assumes that emitter is also the MBean,
-            // because the MBean extends NotificationBroadcasterSupport!
             AttributeChangeNotification notification =
                 new AttributeChangeNotification( emitter,
                     sequenceNumber.incrementAndGet(),

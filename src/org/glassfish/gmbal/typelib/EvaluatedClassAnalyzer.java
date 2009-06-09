@@ -242,9 +242,6 @@ public class EvaluatedClassAnalyzer {
         final List<EvaluatedFieldDeclaration> result =
             new ArrayList<EvaluatedFieldDeclaration>() ;
 	
-        // XXX Should we optimize this?  We only need to scan 
-        // classes, and we could keep a direct list of classes,
-        // rather than scanning the full list of classes and interfaces.
         for (EvaluatedClassDeclaration c : classInheritance) {
             for (EvaluatedFieldDeclaration f : c.fields()) {
                 if (pred.evaluate( f )) {

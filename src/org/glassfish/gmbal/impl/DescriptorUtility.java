@@ -74,29 +74,8 @@ public class DescriptorUtility {
         return new DescriptorSupport( names, values ) ;
     }
 
-    private static SortedMap<String, ?> makeMap(String[] fieldNames,
-                                                Object[] fieldValues) {
-        if (fieldNames == null || fieldValues == null) {
-            throw Exceptions.self.nullArrayParameter() ;
-        }
-        if (fieldNames.length != fieldValues.length) {
-            throw Exceptions.self.differentSizeArrays() ;
-        }
-        SortedMap<String, Object> map =
-                new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
-        for (int i = 0; i < fieldNames.length; i++) {
-            String name = fieldNames[i];
-            if (name == null || name.equals("")) {
-                throw Exceptions.self.badFieldName() ;
-            }
-            Object old = map.put(name, fieldValues[i]);
-            if (old != null) {
-                throw Exceptions.self.duplicateFieldName( name ) ;
-            }
-        }
-        return map;
-    }
-
+    // If descriptors contain the same names, later descriptors in the
+    // sequence override the earlier ones.
     public static Descriptor union(Descriptor... descriptors) {
         Map<String, Object> map =
             new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
@@ -105,29 +84,11 @@ public class DescriptorUtility {
                 String[] names = d.getFieldNames();
                 for (String n : names) {
                     Object v = d.getFieldValue(n);
-                    Object old = map.put(n, v);
-                    if (old != null) {
-                        boolean equal;
-                        if (old.getClass().isArray()) {
-                            equal = Arrays.deepEquals(new Object[] {old},
-                                                      new Object[] {v});
-                        } else {
-                            equal = old.equals(v);
-                        }
-                        if (!equal) {
-                            throw Exceptions.self.excForUnion( n, old, v ) ;
-                        }
-                    }
+                    map.put(n, v);
                 }
             }
         }
 
         return makeDescriptor(map);
-    }
-
-    public static Map<String,?> getMap( Descriptor desc ) {
-        String[] names = desc.getFieldNames() ;
-        Object[] values = desc.getFieldValues(names);
-	return makeMap(names, values);
     }
 }

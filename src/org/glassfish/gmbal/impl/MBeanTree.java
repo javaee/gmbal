@@ -220,6 +220,12 @@ public class MBeanTree {
                     buf.append('\\');
                     needsQuotes = true ;
                     break;
+
+                case ':' :
+                case '=' :
+                case ',' :
+                    needsQuotes = true ;
+                    break ;
             }
             buf.append(c);
         }
