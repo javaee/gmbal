@@ -131,7 +131,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
 
         return "MBeanImpl[skel=" + skel
             + ",type=" + type + ",name=" + name
-            + ",oname=" + oname ;
+            + ",oname=" + oname + "]" ;
     }
     
     public MBeanSkeleton skeleton() {
@@ -217,9 +217,9 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         } 
 
         sb.append( mb.type() ) ;
-	if (!name.equals("")) {
+	if (!mb.name.equals("")) {
             sb.append( '[' ) ;
-	    sb.append( name ) ;
+	    sb.append( mb.name ) ;
             sb.append( ']' ) ;
 	}
     }

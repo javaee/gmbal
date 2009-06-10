@@ -1362,12 +1362,22 @@ public class JmxaTest extends TestCase {
     public void testQuotedName() throws IOException {
 	final ManagedObjectManager mom =
            ManagedObjectManagerFactory.createStandalone( "test" ) ;
+        mom.stripPackagePrefix() ;
         mom.createRoot() ;
 
         try {
             tryName( mom, "This:Contains-Some,Inter\"esting=Characters*?" );
             tryName( mom, "A:Simple case" ) ;
             tryName( mom, "{http://example.org}AddNumbersService{http://example.org}AddNumbersPort-2" ) ;
+
+            mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NORMAL) ;
+            Object parent = new TestClass( "This:String=Needs?Quotes" ) ;
+            mom.registerAtRoot( parent ) ;
+            Object child = new TestClass( "Another[Annoying:String]") ;
+            mom.register( parent, child ) ;
+            ObjectName oname = mom.getObjectName(child) ;
+            System.out.println( "ObjectName is " + oname);
+            mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
         } finally {
             mom.close() ;
         }

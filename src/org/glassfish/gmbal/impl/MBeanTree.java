@@ -242,8 +242,8 @@ public class MBeanTree {
         String type, String name ) 
         throws MalformedObjectNameException {
         if (mom.registrationDebug()) {
-            dputil.enter( "objectName", "parent=", parent, 
-                "type=", type, "name=", name ) ;
+            dputil.enter( "objectName", "parent", parent, 
+                "type", type, "name", name ) ;
         }
 
         ObjectName oname = null ;
@@ -279,8 +279,7 @@ public class MBeanTree {
                 }
 
                 if (parent != null) {
-                    result.append( '/' ) ;
-                    result.append( getQuotedName( parent.restName() ) ) ;
+                    result.append( getQuotedName( '/' + parent.restName() ) ) ;
                 }
             }
 
@@ -301,7 +300,7 @@ public class MBeanTree {
 
             String on = result.toString() ;
             try {
-                return new ObjectName( on ) ;
+                oname = new ObjectName( on ) ;
             } catch (MalformedObjectNameException exc) {
                 throw Exceptions.self.malformedObjectName(exc, on) ;
             }
@@ -310,6 +309,8 @@ public class MBeanTree {
                 dputil.exit( oname ) ;
             }
         }
+
+        return oname ;
     }
     
     public synchronized GmbalMBean register(
