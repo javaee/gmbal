@@ -37,8 +37,6 @@
 
 package org.glassfish.gmbal.impl ;
 
-// import com.sun.jmx.mbeanserver.Util;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;

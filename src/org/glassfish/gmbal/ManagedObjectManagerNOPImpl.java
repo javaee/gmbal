@@ -58,6 +58,8 @@ import javax.management.ObjectName;
 class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     static final ManagedObjectManager self =
         new ManagedObjectManagerNOPImpl() ;
+    private static final GmbalMBean gmb = 
+        new GmbalMBeanNOPImpl() ;
 
     private ManagedObjectManagerNOPImpl() {}
 
@@ -70,15 +72,15 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     }
 
     public GmbalMBean createRoot() {
-        return null ;
+        return gmb ;
     }
 
     public GmbalMBean createRoot(Object root) {
-        return null ;
+        return gmb ;
     }
 
     public GmbalMBean createRoot(Object root, String name) {
-        return null ;
+        return gmb ;
     }
 
     public Object getRoot() {
@@ -86,19 +88,19 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     }
 
     public GmbalMBean register(Object parent, Object obj, String name) {
-        return null ;
+        return gmb ;
     }
 
     public GmbalMBean register(Object parent, Object obj) {
-        return null ;
+        return gmb ;
     }
 
     public GmbalMBean registerAtRoot(Object obj, String name) {
-        return null ;
+        return gmb ;
     }
 
     public GmbalMBean registerAtRoot(Object obj) {
-        return null ;
+        return gmb ;
     }
 
     public void unregister(Object obj) {

@@ -119,5 +119,14 @@ public final class ManagedObjectManagerFactory {
 	    return result ;
 	}
     }
+
+    /** Return a ManagedObjectManager that performs no operations.  Useful to
+     * allow the same code to run with or without creating MBeans through 
+     * gmbal.
+     * @return ManagedObjectManager that performs no operations.
+     */
+    public static ManagedObjectManager createNOOP() {
+        return ManagedObjectManagerNOPImpl.self ;
+    }
 }
 
