@@ -37,6 +37,9 @@
 
 package org.glassfish.gmbal.impl ;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.management.MalformedObjectNameException;
 import org.glassfish.gmbal.generic.DumpToString ;
 
 import java.lang.reflect.Array ;
@@ -324,6 +327,20 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} ;
     }
 
+    private static ObjectName makeObjectName( String str ) {
+        try {
+            return new ObjectName(str);
+        } catch (MalformedObjectNameException ex) {
+            return null ;
+        }
+    }
+
+    // Special object name used to represent a NULL objectName result.
+    // XXX Is this the best way to handle this?  Should it be handled
+    // in getParent instead?
+    static final ObjectName NULL_OBJECTNAME = makeObjectName(
+        "NULL:type=Null,name=Null" ) ;
+
     private static TypeConverter handleManagedObject(
         final EvaluatedClassDeclaration type,
 	final ManagedObjectManagerInternal mom, final ManagedObject mo ) {
@@ -337,7 +354,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
         try {
             result = new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
                 public Object toManagedEntity( Object obj ) {
-                    return mom.getObjectName( obj ) ;
+                    if (obj == null) {
+                        return NULL_OBJECTNAME ;
+                    } else {
+                        return mom.getObjectName( obj ) ;
+                    }
                 }
 
                 @Override
@@ -347,7 +368,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     }
 
                     final ObjectName oname = (ObjectName)entity ;
-                    return mom.getObject( oname ) ;
+                    if (oname.equals( NULL_OBJECTNAME )) {
+                        return null ;
+                    } else {
+                        return mom.getObject( oname ) ;
+                    }
                 }
             } ;
         } catch (RuntimeException exc) {

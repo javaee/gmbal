@@ -291,6 +291,11 @@ public interface Exceptions {
     @Log( id=MBEAN_TREE_START + 12 )
     IllegalArgumentException typeNullInRootParent() ;
 
+    @Message( "A MalformedObjectNameException occured on {0}" )
+    @Log( id=MBEAN_TREE_START + 12 )
+    IllegalArgumentException malformedObjectName( @Chain Exception exc,
+        String str ) ;
+
 // ManagedObjectManagerImpl
     static final int MANAGED_OBJECT_MANAGER_IMPL_START =
         MBEAN_TREE_START + EXCEPTIONS_PER_CLASS ;

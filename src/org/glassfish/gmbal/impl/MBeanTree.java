@@ -299,14 +299,17 @@ public class MBeanTree {
                 result.append( getQuotedName( name ) ) ;
             }
 
-            oname =  new ObjectName( result.toString() ) ;
+            String on = result.toString() ;
+            try {
+                return new ObjectName( on ) ;
+            } catch (MalformedObjectNameException exc) {
+                throw Exceptions.self.malformedObjectName(exc, on) ;
+            }
         } finally {
             if (mom.registrationDebug()) {
                 dputil.exit( oname ) ;
             }
         }
-
-        return oname ;
     }
     
     public synchronized GmbalMBean register(

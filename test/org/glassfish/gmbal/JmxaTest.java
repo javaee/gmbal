@@ -1332,6 +1332,47 @@ public class JmxaTest extends TestCase {
         (new MOMSequenceTester()).doTest() ;
     }
 
+    @ManagedObject
+    @Description( "" )
+    private static class TestClass {
+        private final String name ;
+        public TestClass( String name ) {
+            this.name = name ;
+        }
+
+        @ManagedAttribute
+        @Description( "" )
+        public int id() {
+            return 42 ;
+        }
+
+        @NameValue
+        String name() {
+            return name ;
+        }
+    }
+
+    private void tryName( ManagedObjectManager mom, String str ) {
+        Object obj = new TestClass( str ) ;
+        mom.registerAtRoot(obj) ;
+        ObjectName oname = mom.getObjectName(obj) ;
+        System.out.println( "ObjectName is " + oname ) ;
+    }
+
+    public void testQuotedName() throws IOException {
+	final ManagedObjectManager mom =
+           ManagedObjectManagerFactory.createStandalone( "test" ) ;
+        mom.createRoot() ;
+
+        try {
+            tryName( mom, "This:Contains-Some,Inter\"esting=Characters*?" );
+            tryName( mom, "A:Simple case" ) ;
+            tryName( mom, "{http://example.org}AddNumbersService{http://example.org}AddNumbersPort-2" ) ;
+        } finally {
+            mom.close() ;
+        }
+    }
+
     public static Test suite() {
         return new TestSuite( JmxaTest.class ) ;
     }

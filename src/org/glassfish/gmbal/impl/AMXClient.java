@@ -46,7 +46,6 @@ import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.AttributeNotFoundException;
 import javax.management.Descriptor;
-import javax.management.DynamicMBean;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.InvalidAttributeValueException;
@@ -74,9 +73,36 @@ public class AMXClient implements AMX {
     private MBeanServerConnection server ;
     private ObjectName oname ;
 
+    @Override
+    public boolean equals( Object obj ) {
+        if (this == obj) {
+            return true ;
+        }
+
+        if (!(obj instanceof AMXClient)) {
+            return false ;
+        }
+
+        AMXClient other = (AMXClient)obj ;
+
+        return oname.equals( other.oname ) ;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 47 * hash + (this.oname != null ? this.oname.hashCode() : 0);
+        return hash;
+    }
+
     private <T> T fetchAttribute( String name, Class<T> type ) {
         try {
-            return type.cast( server.getAttribute( oname, name ) ) ;
+            Object obj = server.getAttribute( oname, name ) ;
+            if (TypeConverterImpl.NULL_OBJECTNAME.equals( obj )) {
+                return null ;
+            } else {
+                return type.cast( obj ) ;
+            }
         } catch (JMException exc) {
             throw new GmbalException( "Exception in fetchAttribute", exc ) ;
         } catch (IOException exc) {
@@ -91,11 +117,14 @@ public class AMXClient implements AMX {
     }
 
     private AMXClient makeAMX( ObjectName on ) {
+        if (on == null) {
+            return null ;
+        }
         return new AMXClient( this.server, on ) ;
     }
 
     public String getName() {
-        return fetchAttribute( "getName", String.class )  ;
+        return fetchAttribute( "Name", String.class )  ;
     }
 
     public Map<String,?> getMeta() {
@@ -123,12 +152,12 @@ public class AMXClient implements AMX {
     }
 
     public AMX getParent() {
-        ObjectName res  = fetchAttribute( "getContainer", ObjectName.class ) ;
+        ObjectName res  = fetchAttribute( "Parent", ObjectName.class ) ;
         return makeAMX( res ) ;
     }
 
     public AMX[] getChildren() {
-        ObjectName[] onames = fetchAttribute( "getContained", 
+        ObjectName[] onames = fetchAttribute( "Children",
             ObjectName[].class ) ;
         return makeAMXArray( onames ) ;
     }
