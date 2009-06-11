@@ -1386,4 +1386,48 @@ public class JmxaTest extends TestCase {
     public static Test suite() {
         return new TestSuite( JmxaTest.class ) ;
     }
+
+    private static final String[][] DATA1 = new String[][] {
+        { "red", "green", "blue", "yellow" },
+        { "spring", "fall" }
+    } ;
+
+    private static final List<List<String>> DATA2 = 
+        new ArrayList<List<String>>() ;
+
+    static {
+        for (String[] sa : DATA1) {
+            DATA2.add( Arrays.asList( sa )) ;
+        }
+    }
+
+    @ManagedObject
+    @Description( "" ) 
+    public static class TestDataTypes {
+        @ManagedAttribute
+        @Description( "" )
+        String[][] foo() {
+            return DATA1 ;
+        }
+
+        @ManagedAttribute
+        @Description( "" )
+        List<List<String>> bar() {
+            return DATA2 ;
+        }
+    }
+
+    public void testDataTypes() throws IOException {
+        ManagedObjectManager mom =
+            ManagedObjectManagerFactory.createStandalone( "test" ) ;
+        mom.stripPackagePrefix() ;
+        mom.createRoot() ;
+
+        try {
+            Object obj = new TestDataTypes() ;
+            mom.registerAtRoot( obj, "simple" ) ;
+        } finally {
+            mom.close() ;
+        }
+    }
 }

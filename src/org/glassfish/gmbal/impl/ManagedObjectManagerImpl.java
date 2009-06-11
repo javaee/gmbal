@@ -617,17 +617,19 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized String getDescription( EvaluatedDeclaration element ) {
         // Can be called anytime
         Description desc = element.annotation( Description.class ) ;
-        String result ;
-        if (desc == null) {
-            result = Exceptions.self.noDescriptionAvailable() ;
-        } else {
+        String result = "" ;
+        if (desc != null) {
             result = desc.value() ;
         }
-        
-        if (resourceBundle != null) {
-            result = resourceBundle.getString( result ) ;
+
+        if (result.length() == 0) {
+            result = Exceptions.self.noDescriptionAvailable() ;
+        } else {
+            if (resourceBundle != null) {
+                result = resourceBundle.getString( result ) ;
+            }
         }
-        
+
         return result ;
     }
     

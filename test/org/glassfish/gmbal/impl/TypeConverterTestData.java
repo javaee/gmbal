@@ -41,6 +41,7 @@
 
 package org.glassfish.gmbal.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.management.openmbean.CompositeData;
@@ -169,4 +170,24 @@ public class TypeConverterTestData {
     public static final TestData Data1TestData = new TestData( data1,
         DATA1_OTYPE, data1Open ) ;
 
+    @ManagedData( )
+    @Description( "" )
+    public static class DoubleIndexData {
+        String[][] data = {
+            { "R", "G", "B" },
+            { "1", "2", "3", "4", "5" }
+        } ;
+
+        @ManagedAttribute
+        List<List<String>> get1() {
+            List<List<String>> result = new ArrayList<List<String>>() ;
+            for (String[] sa : data) {
+                result.add( Arrays.asList(sa) ) ;
+            }
+            return result ;
+        }
+
+        @ManagedAttribute
+        String[][] get2() { return data ; }
+    }
 }

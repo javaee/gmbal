@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Map;
 
 public class TestTypelibDecls {
-    public static class Prototypes {
+    public static class Prototypes<T extends List<T>> {
         private Prototypes() {}
 
         List<Integer> getListInteger() { return null ; }
@@ -80,6 +80,21 @@ public class TestTypelibDecls {
         public static final EvaluatedType MAP_STRING_INTEGER =
             getMethod( "getMapStringInteger" ).returnType() ;
 
+        List<Map<String,List<String>>> getListMapStringListString() {
+            return null ;
+        }
+        public static final EvaluatedType LIST_MAP_STRING_LIST_STRING =
+            getMethod( "getListMapStringListString" ).returnType() ;
+
+        enum Color { RED, GREEN, BLUE } 
+
+        Color getColor() { return Color.RED ; }
+        public static final EvaluatedType COLOR =
+            getMethod( "getColor" ).returnType() ;
+
+        List<T> getRecursiveType()  { return null ; }
+        public static final EvaluatedType RECURSIVE_TYPE =
+            getMethod( "getRecursiveType" ).returnType() ;
     }
 
     public static EvaluatedMethodDeclaration getMethod(

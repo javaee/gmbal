@@ -41,6 +41,8 @@
 
 package org.glassfish.gmbal.impl;
 
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.OpenType;
 import junit.framework.TestCase;
 import org.glassfish.gmbal.ManagedObjectManagerFactory;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
@@ -117,5 +119,14 @@ public class TypeConverterImplTest extends TestCase {
 
     public void testData1() {
         doTest( TypeConverterTestData.Data1TestData ) ;
+    }
+
+    public void testDoubleIndexData() {
+        TypeConverterTestData.DoubleIndexData did = 
+            new TypeConverterTestData.DoubleIndexData() ;
+        TypeConverter tc = getTypeConverter( did ) ;
+        Object obj = tc.toManagedEntity(did) ;
+        assertTrue( obj instanceof CompositeData ) ;
+        System.out.println( obj ) ;
     }
 }

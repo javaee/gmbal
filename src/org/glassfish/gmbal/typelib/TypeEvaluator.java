@@ -237,17 +237,85 @@ public class TypeEvaluator {
         EvaluatedType etype = visitor.evaluateType( cls ) ;
         return etype ;
     }
-    
+
+    // Getting PartialDefinitions right is a bit tricky.
+    // We need both the Class and the List<Type> in the key, because otherwise
+    // we cannot tell the difference between List<List<String>> and
+    // Enum<E extends Enum<E>>: the first case is not recursive (so each
+    // instance of List evaluated to a different ECD) while the second is
+    // (and each instance of Enum MUST evaluate to the same ECD, or we get
+    // infinite recursion).
+    private static class PartialDefinitions {
+        private Map<Pair<Class<?>,List<Type>>,EvaluatedType> table =
+            new HashMap<Pair<Class<?>,List<Type>>,EvaluatedType>() ;
+
+        Pair<Class<?>,List<Type>> getKey( Class cls ) {
+            List<Type> list = new ArrayList<Type>() ;
+            for (TypeVariable tv : cls.getTypeParameters()) {
+                Type type = null ;
+                Type[] bounds = tv.getBounds() ;
+                if (bounds.length > 0) {
+                    if (bounds.length > 1) {
+                        throw Exceptions.self
+                            .multipleUpperBoundsNotSupported( tv ) ;
+                    } else {
+                        type = bounds[0] ;
+                    }
+                } else {
+                    type = Object.class ;
+                }
+
+                list.add(type) ;
+            }
+
+            return new Pair<Class<?>,List<Type>>( cls, list ) ;
+        }
+
+        Pair<Class<?>,List<Type>> getKey( ParameterizedType pt ) {
+            List<Type> list = new ArrayList<Type>() ;
+            for (Type type : pt.getActualTypeArguments()) {
+                list.add(type) ;
+            }
+
+            return new Pair<Class<?>,List<Type>>( (Class<?>)pt.getRawType(),
+                list ) ;
+        }
+
+        public EvaluatedType get( Class cls ) {
+            return table.get( getKey( cls ) ) ;
+        }
+
+        public EvaluatedType get( ParameterizedType pt ) {
+            return table.get( getKey( pt ) ) ;
+        }
+
+        public void put( Class cls, EvaluatedType et ) {
+            table.put( getKey( cls ), et ) ;
+        }
+
+        public void put( ParameterizedType pt, EvaluatedType et ) {
+            table.put( getKey( pt ), et ) ;
+        }
+
+        public void remove( Class cls ) {
+            table.remove( getKey( cls ) ) ;
+        }
+
+        public void remove( ParameterizedType pt ) {
+            table.remove( getKey( pt ) ) ;
+        }
+    }
+
     // Visits the various java.lang.reflect Types to generate an EvaluatedType
     private static class TypeEvaluationVisitor  {
         private final Display<String,EvaluatedType> display ;
-        private final Map<Class<?>,EvaluatedClassDeclaration> partialDefinitions ;
+
+        private final PartialDefinitions partialDefinitions ;
         
         public TypeEvaluationVisitor( ) {
             display = new Display<String,EvaluatedType>() ;
 
-            partialDefinitions = 
-                new HashMap<Class<?>,EvaluatedClassDeclaration>() ;
+            partialDefinitions = new PartialDefinitions() ;
         }
 
         // External entry point into the Visitor.
@@ -349,14 +417,14 @@ public class TypeEvaluator {
 
             EvaluatedType result = null ;
             try {
-                result = partialDefinitions.get( decl ) ;
+                result = partialDefinitions.get( pt ) ;
                 if (result == null) {
                     // Create the classdecl as early as possible, because it
                     // may be needed on methods or type bounds.
                     EvaluatedClassDeclaration newDecl = DeclarationFactory.ecdecl(
                         decl.getModifiers(), decl.getName(), decl ) ;
 
-                    partialDefinitions.put( decl, newDecl ) ;
+                    partialDefinitions.put( pt, newDecl ) ;
 
                     try {
                         OrderedResult<String,EvaluatedType> bindings =
@@ -364,7 +432,7 @@ public class TypeEvaluator {
 
                         result = getCorrectDeclaration( bindings, decl, newDecl ) ;
                     } finally {
-                        partialDefinitions.remove( decl ) ;
+                        partialDefinitions.remove( pt ) ;
                     }
                 }
             } finally {
