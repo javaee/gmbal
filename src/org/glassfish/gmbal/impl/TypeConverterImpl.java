@@ -298,6 +298,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 dputil.exception( "Error", exc ) ;
             }
             throw exc ;
+        } catch (OpenDataException exc) {
+            if (mom.registrationDebug()) {
+                dputil.exception( "Error", exc ) ;
+            }
+            throw new RuntimeException( exc ) ;
         } finally {
             if (mom.registrationDebug()) {
                 dputil.exit( result ) ;
@@ -584,9 +589,25 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} ;
     }
 
+    // Note: this is only needed on JDK 5, but should work fine on JDK 6 as well.
+    private static ArrayType getArrayType( OpenType ot ) throws OpenDataException {
+        ArrayType result ;
+
+        if (ot instanceof ArrayType) {
+            ArrayType atype = (ArrayType)ot ;
+            int dim = atype.getDimension() ;
+            OpenType lowestComponentType = atype.getElementOpenType() ;
+            result = new ArrayType( dim + 1, lowestComponentType ) ;
+        } else {
+            result = new ArrayType( 1, ot ) ;
+        }
+
+        return result ;
+    }
+
     @SuppressWarnings("unchecked")
     private static TypeConverter handleArrayType( final EvaluatedArrayType type,
-	final ManagedObjectManagerInternal mom ) {
+	final ManagedObjectManagerInternal mom ) throws OpenDataException {
 
         if (mom.registrationDebug()) {
             dputil.enter( "handleArrayType" ) ;
@@ -597,22 +618,14 @@ public abstract class TypeConverterImpl implements TypeConverter {
             final EvaluatedType ctype = type.componentType() ;
             final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
             final OpenType cotype = ctypeTc.getManagedType() ;
-            final OpenType ot ;
-
-            try {
-                ot = new ArrayType( 1, cotype ) ;
-            } catch (OpenDataException exc) {
-                throw Exceptions.self.noArrayOfArray( exc ) ;
-            }
-
-            final OpenType myManagedType = ot ;
+            final OpenType ot = getArrayType( cotype ) ;
 
             if (mom.registrationDebug()) {
                 dputil.info( "ctype=", ctype, "ctypeTc=", ctypeTc,
                     "cotype=", cotype, "ot=", ot ) ;
             }
 
-            result = new TypeConverterImpl( type, myManagedType ) {
+            result = new TypeConverterImpl( type, ot ) {
                 public Object toManagedEntity( final Object obj ) {
                     if (isIdentity()) {
                         return obj ;
@@ -916,7 +929,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         @SuppressWarnings("unchecked")
         private static ArrayType makeArrayType( final OpenType ot ) {
             try {
-                return new ArrayType( 1, ot ) ;
+                return getArrayType( ot ) ;
             } catch (OpenDataException exc) {
                 throw Exceptions.self.openTypeInArrayTypeException( ot, exc) ;
             }
