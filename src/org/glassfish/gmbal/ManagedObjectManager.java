@@ -142,6 +142,8 @@ public interface ManagedObjectManager extends Closeable {
      * @DescriptorKey and @DescriptorField meta-annotations.
      * <p>
      * Must be called after a successful createRoot call.
+     * <p>
+     * This version of register should not be used to register singletons.
      * </ol>
      * @param parent The parent object that contains obj.
      * @param obj The managed object we are registering.
@@ -154,6 +156,8 @@ public interface ManagedObjectManager extends Closeable {
 
     /** Same as register( parent, obj, name ), but here the name
      * is derived from an @NameValue annotation.
+     * <p>
+     * This version of register should also be used to register singletons.
      * 
      * @param parent The parent object that contains obj.
      * @param obj The managed object we are registering.
@@ -168,6 +172,8 @@ public interface ManagedObjectManager extends Closeable {
      * obj, name ).
      * <p>
      * Must be called after a successful createRoot call.
+     * <p>
+     * This version of register should not be used to register singletons.
      * @param obj The object for which we construct and register an MBean.
      * @param name The name of the MBean.
      * @return The MBean constructed from obj.
@@ -179,6 +185,8 @@ public interface ManagedObjectManager extends Closeable {
     /** Same as registerAtRoot( Object, String ), but here the name
      * is derived from an @ObjectKeyName annotation.  Exactly the same as
      * mom.register( mom.getRoot(), obj ).
+     * <p>
+     * This version of register should also be used to register singletons.
      * @param obj The managed object we are registering.
      * @return The MBean constructed from obj.
      * @exception IllegalStateException if called before a createRoot method is
@@ -231,7 +239,8 @@ public interface ManagedObjectManager extends Closeable {
     void stripPackagePrefix() ;
     
     /** Return the domain name that was used when this ManagedObjectManager
-     * was created.
+     * was created.  This is the JMX domain that will be used in all ObjectNames
+     * created by this ManagedObjectManager.
      * <p>
      * May be called at any time.
      * @return Get the domain name for this ManagedObjectManager.

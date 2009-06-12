@@ -1370,14 +1370,14 @@ public class JmxaTest extends TestCase {
             tryName( mom, "A:Simple case" ) ;
             tryName( mom, "{http://example.org}AddNumbersService{http://example.org}AddNumbersPort-2" ) ;
 
-            mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NORMAL) ;
+            // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NORMAL) ;
             Object parent = new TestClass( "This:String=Needs?Quotes" ) ;
             mom.registerAtRoot( parent ) ;
             Object child = new TestClass( "Another[Annoying:String]") ;
             mom.register( parent, child ) ;
             ObjectName oname = mom.getObjectName(child) ;
             System.out.println( "ObjectName is " + oname);
-            mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
+            // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
         } finally {
             mom.close() ;
         }
@@ -1426,6 +1426,95 @@ public class JmxaTest extends TestCase {
         try {
             Object obj = new TestDataTypes() ;
             mom.registerAtRoot( obj, "simple" ) ;
+        } finally {
+            mom.close() ;
+        }
+    }
+
+    // From the metro project
+    @ManagedData
+    public static class WebServiceFeature {
+        private String id ;
+        private boolean enabled = false;
+
+        public WebServiceFeature( String id, boolean enabled ) {
+            this.id = id ;
+            this.enabled = enabled ;
+        }
+
+        @ManagedAttribute
+        public String getID() { return id ; }
+
+        @ManagedAttribute
+        public boolean isEnabled() {
+            return enabled;
+        }
+    }
+
+    @ManagedData
+    public interface WSFeatureList extends Iterable<WebServiceFeature> {
+        boolean isEnabled(Class<? extends WebServiceFeature> feature);
+
+        @ManagedAttribute
+        WebServiceFeature[] toArray();
+    }
+
+    public static class WSFeatureListImpl implements WSFeatureList {
+        private final List<WebServiceFeature> features ;
+
+        public WSFeatureListImpl( String... ids ) {
+            features = new ArrayList<WebServiceFeature>() ;
+            for (String str : ids) {
+                features.add( new WebServiceFeature( str, true ) ) ;
+            }
+        }
+
+        public boolean isEnabled(Class<? extends WebServiceFeature> feature) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        public WebServiceFeature[] toArray() {
+            WebServiceFeature[] result =
+                new WebServiceFeature[ features.size() ] ;
+            for (int ctr=0; ctr<features.size(); ctr++) {
+                result[ctr] = features.get(ctr) ;
+            }
+
+            return result ;
+        }
+
+        public Iterator<WebServiceFeature> iterator() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+
+    private static String[] features = { "First", "Second", "Third" } ;
+    private static WSFeatureList wsf = new WSFeatureListImpl( features ) ;
+
+    @ManagedObject
+    public static class WSTest {
+        @ManagedAttribute
+        WSFeatureList features() {
+            return wsf ;
+        }
+    }
+
+    public void testWSTest() throws IOException, AttributeNotFoundException,
+        MBeanException, ReflectionException {
+
+        System.out.println( "testWSTest" ) ;
+        ManagedObjectManager mom =
+            ManagedObjectManagerFactory.createStandalone( "test" ) ;
+        mom.stripPackagePrefix() ;
+        mom.createRoot() ;
+
+        GmbalMBean mb ;
+
+        try {
+            Object obj = new WSTest() ;
+            mb = mom.registerAtRoot( obj, "simple" ) ;
+            Object result = mb.getAttribute("features") ;
+            System.out.println( "result = " + result ) ;
         } finally {
             mom.close() ;
         }
