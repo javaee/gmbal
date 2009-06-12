@@ -72,10 +72,12 @@ import javax.management.openmbean.TabularDataSupport ;
 
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.ManagedData ;
+import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.DprintUtil;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Pair;
 
+import org.glassfish.gmbal.generic.Predicate;
 import org.glassfish.gmbal.typelib.EvaluatedArrayType;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
@@ -683,23 +685,22 @@ public abstract class TypeConverterImpl implements TypeConverter {
     }
 
     private static EvaluatedMethodDeclaration findMethod(
-        final EvaluatedClassDeclaration cdecl, final String mname ) {
+        final EvaluatedClassAnalyzer eca, final String mname ) {
 
-        EvaluatedMethodDeclaration meth = null ;
-        for (EvaluatedMethodDeclaration m : cdecl.methods()) {
-            if (m.name().equals( mname )) {
-                meth = m ;
-                break ;
-            }
-        }
-
-        return meth ;
+        return Algorithms.getFirst( eca.findMethods(
+            new Predicate<EvaluatedMethodDeclaration>() {
+                public boolean evaluate( EvaluatedMethodDeclaration m ) {
+                    return m.name().equals( mname ) ;
+                } 
+            } 
+        ), "" ) ;
     }
 
     private static EvaluatedType getReturnType( EvaluatedClassDeclaration decl,
         String mname ) {
 
-        EvaluatedMethodDeclaration meth = findMethod( decl, mname ) ;
+        EvaluatedClassAnalyzer eca = new EvaluatedClassAnalyzer( decl ) ;
+        EvaluatedMethodDeclaration meth = findMethod( eca, mname ) ;
 
         if (meth == null) {
             return null ;
@@ -708,10 +709,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
         }
     }
 
-    private static EvaluatedType getParameterType( EvaluatedClassDeclaration decl,
-        String mname, int pindex ) {
+    private static EvaluatedType getParameterType( 
+        EvaluatedClassDeclaration decl, String mname, int pindex ) {
 
-        EvaluatedMethodDeclaration meth = findMethod( decl, mname ) ;
+        EvaluatedClassAnalyzer eca = new EvaluatedClassAnalyzer( decl ) ;
+        EvaluatedMethodDeclaration meth = findMethod( eca, mname ) ;
 
         if (meth == null) {
             return null ;
@@ -728,7 +730,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static TypeConverter handleClass( 
         final EvaluatedClassDeclaration type,
         final ManagedObjectManagerInternal mom ) {
-        
+
         if (mom.registrationDebug()) {
             dputil.enter( "handleClass" ) ;
         }
@@ -741,12 +743,12 @@ public abstract class TypeConverterImpl implements TypeConverter {
             EvaluatedClassDeclaration type2 =
                 (EvaluatedClassDeclaration)getReturnType( type, "iterator") ;
             if (type2 == null) {
-                Exceptions.self.iteratorNotFound(type) ;
+                throw Exceptions.self.iteratorNotFound(type) ;
             }
 
             EvaluatedType tcType = getReturnType( type2, "next" ) ;
             if (tcType == null) {
-                Exceptions.self.nextNotFound(type) ;
+                throw Exceptions.self.nextNotFound(type) ;
             }
 
             TypeConverter tc = mom.getTypeConverter( tcType ) ;

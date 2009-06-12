@@ -1459,11 +1459,32 @@ public class JmxaTest extends TestCase {
         WebServiceFeature[] toArray();
     }
 
-    public static class WSFeatureListImpl implements WSFeatureList {
-        private final List<WebServiceFeature> features ;
+    public static class ListIteratorBase<T> implements Iterable<T> {
+        private List<T> contents ;
+
+        public ListIteratorBase( List<T> contents ) {
+            this.contents = contents ;
+        }
+
+        public Iterator<T> iterator() {
+            return contents.iterator() ;
+        }
+    }
+
+    public static class WSFeatureListImpl 
+        extends ListIteratorBase<WebServiceFeature>
+        implements WSFeatureList {
 
         public WSFeatureListImpl( String... ids ) {
-            features = new ArrayList<WebServiceFeature>() ;
+            super( Algorithms.map( Arrays.asList(ids),
+                new UnaryFunction<String,WebServiceFeature>() {
+                    public WebServiceFeature evaluate( String str ) {
+                        return new WebServiceFeature( str, true ) ;
+                    } } ) ) ;
+
+
+            ArrayList<WebServiceFeature> features =
+                new ArrayList<WebServiceFeature>() ;
             for (String str : ids) {
                 features.add( new WebServiceFeature( str, true ) ) ;
             }
@@ -1474,27 +1495,29 @@ public class JmxaTest extends TestCase {
         }
 
         public WebServiceFeature[] toArray() {
-            WebServiceFeature[] result =
-                new WebServiceFeature[ features.size() ] ;
-            for (int ctr=0; ctr<features.size(); ctr++) {
-                result[ctr] = features.get(ctr) ;
+            int size = 0 ;
+            for (WebServiceFeature wsf : this ) {
+                size++ ;
+            }
+
+            WebServiceFeature[] result = new WebServiceFeature[ size ] ;
+
+            int ctr = 0 ;
+            for (WebServiceFeature wsf : this ) {
+                result[ ctr++ ] = wsf ;
             }
 
             return result ;
         }
-
-        public Iterator<WebServiceFeature> iterator() {
-            throw new UnsupportedOperationException("Not supported yet.");
-        }
     }
 
     private static String[] features = { "First", "Second", "Third" } ;
-    private static WSFeatureList wsf = new WSFeatureListImpl( features ) ;
+    private static WSFeatureListImpl wsf = new WSFeatureListImpl( features ) ;
 
     @ManagedObject
     public static class WSTest {
         @ManagedAttribute
-        WSFeatureList features() {
+        WSFeatureListImpl features() {
             return wsf ;
         }
     }
@@ -1521,19 +1544,17 @@ public class JmxaTest extends TestCase {
             // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
             // mom.setRuntimeDebug( false ) ;
 
-            assertTrue( result instanceof CompositeData ) ;
-            CompositeData cd = (CompositeData) result ;
-            assertTrue( cd.containsKey( "toArray" ));
-            Object fts = cd.get( "toArray" ) ;
-            assertTrue( fts instanceof CompositeData[] );
-            CompositeData[] xx = (CompositeData[])fts ;
+            assertTrue( result instanceof CompositeData[] ) ;
+            CompositeData[] cds = (CompositeData[]) result ;
+            assertEquals( features.length, cds.length ) ;
+
             Set<String> strresults = new HashSet<String>() ;
-            for ( CompositeData cd2 : xx) {
-                Object bres = cd2.get( "enabled" ) ;
+            for (CompositeData cd : cds ) {
+                Object bres = cd.get( "enabled" ) ;
                 assertTrue( bres instanceof Boolean ) ;
                 assertTrue( (Boolean)bres ) ;
 
-                Object sres = cd2.get( "iD" ) ;
+                Object sres = cd.get( "iD" ) ;
                 assertTrue( sres instanceof String ) ;
                 strresults.add( (String)sres ) ;
             }
