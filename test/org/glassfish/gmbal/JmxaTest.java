@@ -1511,10 +1511,35 @@ public class JmxaTest extends TestCase {
         GmbalMBean mb ;
 
         try {
+            // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NORMAL) ;
+            // mom.setRuntimeDebug( true ) ;
+
             Object obj = new WSTest() ;
             mb = mom.registerAtRoot( obj, "simple" ) ;
             Object result = mb.getAttribute("features") ;
-            System.out.println( "result = " + result ) ;
+
+            // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
+            // mom.setRuntimeDebug( false ) ;
+
+            assertTrue( result instanceof CompositeData ) ;
+            CompositeData cd = (CompositeData) result ;
+            assertTrue( cd.containsKey( "toArray" ));
+            Object fts = cd.get( "toArray" ) ;
+            assertTrue( fts instanceof CompositeData[] );
+            CompositeData[] xx = (CompositeData[])fts ;
+            Set<String> strresults = new HashSet<String>() ;
+            for ( CompositeData cd2 : xx) {
+                Object bres = cd2.get( "enabled" ) ;
+                assertTrue( bres instanceof Boolean ) ;
+                assertTrue( (Boolean)bres ) ;
+
+                Object sres = cd2.get( "iD" ) ;
+                assertTrue( sres instanceof String ) ;
+                strresults.add( (String)sres ) ;
+            }
+
+            Set<String> exp = new HashSet<String>( Arrays.asList( features ) ) ;
+            assertEquals( exp, strresults ) ;
         } finally {
             mom.close() ;
         }

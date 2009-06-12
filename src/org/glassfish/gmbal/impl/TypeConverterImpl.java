@@ -630,7 +630,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     if (isIdentity()) {
                         return obj ;
                     } else {
-                        final Class cclass = getJavaClass( ctype ) ;
+                        final Class cclass = getJavaClass( cotype ) ;
                         final int length = Array.getLength( obj ) ;
                         final Object result = Array.newInstance( cclass, length ) ;
                         for (int ctr=0; ctr<length; ctr++) {
@@ -648,7 +648,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     if (isIdentity()) {
                         return entity ;
                     } else {
-                        final Class cclass = getJavaClass( cotype ) ;
+                        final Class cclass = getJavaClass( ctype ) ;
 
                         final int length = Array.getLength( entity ) ;
                         final Object result = Array.newInstance( cclass, length ) ;
