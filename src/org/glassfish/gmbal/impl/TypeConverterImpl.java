@@ -740,7 +740,15 @@ public abstract class TypeConverterImpl implements TypeConverter {
         if (Iterable.class.isAssignableFrom(type.cls())) {
             EvaluatedClassDeclaration type2 =
                 (EvaluatedClassDeclaration)getReturnType( type, "iterator") ;
+            if (type2 == null) {
+                Exceptions.self.iteratorNotFound(type) ;
+            }
+
             EvaluatedType tcType = getReturnType( type2, "next" ) ;
+            if (tcType == null) {
+                Exceptions.self.nextNotFound(type) ;
+            }
+
             TypeConverter tc = mom.getTypeConverter( tcType ) ;
 
             result = new TypeConverterListBase( type, tc ) {

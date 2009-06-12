@@ -170,36 +170,9 @@ public class EvaluatedClassAnalyzer {
 	this( new Graph<EvaluatedClassDeclaration>( 
             cls, finder ) ) ;
     }
-    /*
-    public ClassAnalyzer( final List<Class<?>> classes ) {
-        this( new Graph<ClassDeclaration>( 
-            Algorithms.map( classes, 
-                new UnaryFunction<Class<?>,ClassDeclaration>() {
-                    public ClassDeclaration evaluate( Class<?> cls ) {
-                        return DeclarationFactory.getClassDeclaration( cls ) ;
-                    }
-                } ), 
-            finder ) ) ; 
-    }
-    */
+
     public EvaluatedClassAnalyzer( final List<EvaluatedClassDeclaration> decls ) {
         this( new Graph<EvaluatedClassDeclaration>( decls, finder ) ) ;
-    }
-
-    public <T extends EvaluatedDeclaration> Predicate<T> forAnnotation( 
-        final ManagedObjectManagerInternal mom,
-        final Class<? extends Annotation> annotation,
-        Class<T> type ) {
-        
-        return new Predicate<T>() {
-            public boolean evaluate( T elem ) {
-                if (mom == null) {
-                    return elem.annotation(annotation) != null ; 
-                } else {
-                    return mom.getAnnotation( elem, annotation ) != null ;
-                }
-            }
-        } ;
     }
 
     public List<EvaluatedClassDeclaration> findClasses(

@@ -431,6 +431,14 @@ public interface Exceptions {
     UnsupportedOperationException openToJavaNotSupported( OpenType otype, 
         EvaluatedType javaType ) ;
 
+    @Message( "iterator() method not found in subclass of Iterable {0}") 
+    @Log( id=TYPE_CONVERTER_IMPL_START + 16 ) 
+    IllegalStateException iteratorNotFound( EvaluatedClassDeclaration cls ) ;
+
+    @Message( "next() method not found in type {0}") 
+    @Log( id=TYPE_CONVERTER_IMPL_START + 16 ) 
+    IllegalStateException nextNotFound( EvaluatedClassDeclaration cls ) ;
+ ;
 // JMXRegistrationManager start
     static final int JMX_REGISTRATION_MANAGER_START =
         TYPE_CONVERTER_IMPL_START + EXCEPTIONS_PER_CLASS ;
