@@ -22,11 +22,11 @@ public enum PluginPoint {
         path = lpath;
     }
 
-    String getName() {
+    public String getName() {
         return name;
     }
     
-    String getPath() {
+    public String getPath() {
         return path;
     }
 }
