@@ -10,5 +10,23 @@ package org.glassfish.probe.provider;
  * @author abbagani
  */
 public enum PluginPoint {
-    SERVER, APPLICATIONS
+
+    SERVER ("server", "server"),
+    APPLICATIONS ("applications", "server/applications");
+
+    String name;
+    String path;
+
+    PluginPoint(String lname, String lpath) {
+        name = lname;
+        path = lpath;
+    }
+
+    String getName() {
+        return name;
+    }
+    
+    String getPath() {
+        return path;
+    }
 }
