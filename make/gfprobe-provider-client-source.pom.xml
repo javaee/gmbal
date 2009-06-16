@@ -39,7 +39,7 @@
     <groupId>org.glassfish.provider</groupId>
     <artifactId>gfprobe-provider-client-source</artifactId>
     <packaging>jar</packaging>
-    <version>3.0.0-b005</version>
+    <version>3.0.0-b006</version>
     <name>GlassFish Probe Provider Client</name>
 
     <organization>
