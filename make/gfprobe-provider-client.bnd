@@ -1,2 +1,2 @@
-Bundle-Version: 3.0.0-b006
+Bundle-Version: 3.0.0-b007
 Export-Package: org.glassfish.probe.provider.annotations,org.glassfish.probe.provider

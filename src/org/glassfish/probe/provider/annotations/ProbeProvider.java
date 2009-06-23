@@ -52,6 +52,8 @@ import java.lang.annotation.ElementType;
 public @interface ProbeProvider {
 
     public String providerName() default "";
+    public String moduleProviderName() default "";
     public String moduleName() default "";
+    public String probeProviderName() default "";
 
 }
