@@ -156,7 +156,7 @@ public class EvaluatedClassAnalyzer {
 	}
     } ;
 
-    private List<EvaluatedClassDeclaration> classInheritance ;
+    private final List<EvaluatedClassDeclaration> classInheritance ;
     private String contents = null ;
 
     private EvaluatedClassAnalyzer( Graph<EvaluatedClassDeclaration> gr ) {

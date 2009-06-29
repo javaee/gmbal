@@ -210,23 +210,23 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         }
     }
  
-    private void restNameHelper( StringBuilder sb, MBeanImpl mb ) {
-        if (mb.parent() != null) {
-            restNameHelper( sb, mb.parent() ) ;
+    private void restNameHelper( StringBuilder sb ) {
+        if (parent() != null) {
+            parent().restNameHelper( sb ) ;
             sb.append( '/' ) ;
         } 
 
-        sb.append( mb.type() ) ;
-	if (!mb.name.equals("")) {
+        sb.append( type() ) ;
+	if (!name.equals("")) {
             sb.append( '[' ) ;
-	    sb.append( mb.name ) ;
+	    sb.append( name ) ;
             sb.append( ']' ) ;
 	}
     }
 
     public synchronized String restName() {
         StringBuilder sb = new StringBuilder( 60 ) ;
-        restNameHelper( sb, this ) ;
+        restNameHelper( sb ) ;
         return sb.toString() ;
     }
  

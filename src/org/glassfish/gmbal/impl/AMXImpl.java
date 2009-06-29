@@ -52,7 +52,6 @@ import javax.management.Descriptor;
 import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
-import org.glassfish.gmbal.GmbalException;
 
 /**
  *

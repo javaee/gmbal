@@ -81,6 +81,8 @@ import javax.management.JMException;
 import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
+import javax.management.openmbean.OpenDataException;
+import javax.management.openmbean.OpenMBeanParameterInfoSupport;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
@@ -110,14 +112,16 @@ public class MBeanSkeleton {
     private final List<ModelMBeanOperationInfo> mbeanOperationInfoList ;
     private final ModelMBeanInfoSupport mbInfo ;
  
-    private <K,L,V> void addToCompoundMap( Map<K,Map<L,V>> source, Map<K,Map<L,V>> dest ) {
+    private <K,L,V> void addToCompoundMap(
+        Map<K,Map<L,V>> source, Map<K,Map<L,V>> dest ) {
+
         for (Map.Entry<K,Map<L,V>> entry : source.entrySet()) {
-            Map<L,V> map = entry.getValue() ;
-            if (map == null) {
-                map = new HashMap<L,V>() ;
-                dest.put( entry.getKey(), map ) ;
+            Map<L,V> dmap = dest.get( entry.getKey() );
+            if (dmap == null) {
+                dmap = new HashMap<L,V>() ;
+                dest.put( entry.getKey(), dmap ) ;
             }
-            map.putAll( source.get( entry.getKey() ) ) ;
+            dmap.putAll( entry.getValue() ) ;
         }
     }
 
@@ -528,13 +532,19 @@ public class MBeanSkeleton {
             }
 
             final MBeanParameterInfo[] paramInfo = 
-                new MBeanParameterInfo[ atcs.size() ] ;
+                new OpenMBeanParameterInfoSupport[ atcs.size() ] ;
             int ctr = 0 ;
             for (TypeConverter tc : atcs) {
-                paramInfo[ctr] = new MBeanParameterInfo(
-                    (pna == null) ? "arg" + ctr : pna.value()[ctr], 
-                    tc.getManagedType().toString(), desc ) ;
-                ctr++ ;
+                String name = "" ;
+                try {
+                    name = (pna == null) ? "arg" + ctr : pna.value()[ctr]  ;
+                    paramInfo[ctr] = new OpenMBeanParameterInfoSupport (
+                        name, Exceptions.self.noDescriptionAvailable(),
+                        tc.getManagedType() ) ;
+                    ctr++ ;
+                } catch  (IllegalArgumentException ex) {
+                    Exceptions.self.excInOpenParameterInfo( ex, name, m ) ;
+                }
             }
 
             final ModelMBeanOperationInfo operInfo =

@@ -56,8 +56,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -548,7 +546,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         if (registrationDebug()) {
             dputil.enter( "getObjectName", obj ) ;
         }
-        
+
+        if (obj instanceof ObjectName) {
+            return (ObjectName)obj ;
+        }
+
+        if (obj instanceof AMXClient) {
+            return ((AMXClient)obj).objectName() ;
+        }
+
         ObjectName result = null;
         try {
             result = tree.getObjectName( obj ) ;

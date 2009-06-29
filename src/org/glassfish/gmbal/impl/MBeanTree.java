@@ -47,7 +47,6 @@ import javax.management.JMException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
-import javax.management.NotificationEmitter;
 import javax.management.ObjectName;
 import org.glassfish.gmbal.GmbalMBean;
 
@@ -140,10 +139,21 @@ public class MBeanTree {
             Exceptions.self.typeNullInRootParent() ;
         }
 
-        if (name == null) {
-            return pp + '/' + type ;
+        String prefix = null ;
+        if (pp.equals( "/" )) {
+            prefix = pp ;
         } else {
-            return pp + '/' + type + '[' + name + ']' ;
+            if (pp.endsWith("/" )) {
+                prefix = pp ;
+            } else {
+                prefix = pp + "/" ;
+            }
+        }
+
+        if (name == null) {
+            return prefix + type ;
+        } else {
+            return prefix + type + '[' + name + ']' ;
         }
     }
 
@@ -400,8 +410,21 @@ public class MBeanTree {
     }
     
     public synchronized ObjectName getObjectName( Object obj ) {
+        // A user may be looking for the ObjectName of a GmbalMBean that
+        // was returned from a register call.  If that is the case,
+        // obj should be an instance of MBeanImpl, and we can go directly to
+        // the ObjectName.
+        if (obj instanceof MBeanImpl) {
+            return ((MBeanImpl)obj).objectName() ;
+        }
+
+        // obj might be a POJO that was used to create an MBean: the normal case.
         MBeanImpl result = objectMap.get(obj);
-        return result.objectName() ;
+        if (result != null) {
+            return result.objectName() ;
+        } else {
+            return null ;
+        }
     }
     
     public synchronized Object getObject( ObjectName oname ) {

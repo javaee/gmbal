@@ -86,6 +86,7 @@ import javax.management.MBeanInfo;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.glassfish.gmbal.impl.AMXClient;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
@@ -1564,5 +1565,81 @@ public class JmxaTest extends TestCase {
         } finally {
             mom.close() ;
         }
+    }
+    
+// Lloyd's example
+    @ManagedObject
+    @Description( "A test MBean for Gmbal" )
+    public final class GmbalMOM {
+        private final ManagedObjectManager mMOM;
+        private ObjectName childName ;
+
+        public GmbalMOM( /*final MBeanServer server,*/ final ObjectName parent) {
+            mMOM = ManagedObjectManagerFactory.createFederated( parent );
+            // mMOM.setMBeanServer(server);
+            mMOM.stripPackagePrefix();
+            final GmbalMBean root = mMOM.createRoot();
+        }
+
+        public void registerChildren() {
+            final Gmbal1 test = new Gmbal1();
+            final GmbalMBean test1 = mMOM.registerAtRoot( test );
+            childName = mMOM.getObjectName(test);
+        }
+
+        public ManagedObjectManager getMOM() {
+            return mMOM;
+        }
+
+        public ObjectName getChildName() {
+            return childName ;
+        }
+    }
+
+    @ManagedObject
+    @Description( "A test MBean for Gmbal" )
+    public final static class Gmbal1
+    {
+        private volatile String mTest;
+        private volatile int    mCount;
+
+        public Gmbal1() {
+            mTest = "hello world";
+        }
+
+        @ManagedAttribute
+        @Description( "test field" )
+        public String getTest() {
+            return mTest;
+        }
+
+        public void setTest(final String test) {
+            mTest = test;
+        }
+
+        @ManagedAttribute
+        @Description( "test field" )
+        public int getCount() {
+            return mCount;
+        }
+
+        public void setCount(final int count) {
+            mCount = count;
+        }
+    }
+
+    public void testLloydExample() throws MalformedObjectNameException {
+        ObjectName pname = new ObjectName( "test:pp=/,type=Foo") ;
+        GmbalMOM mom = new GmbalMOM(pname) ;
+        mom.registerChildren() ;
+        ObjectName childName = mom.getChildName() ;
+        System.out.println( "childName = " + childName ) ;
+        AMXClient client = new AMXClient( mom.getMOM().getMBeanServer(),
+            childName ) ;
+        System.out.println( "client = " + client ) ;
+        AMX parent = client.getParent() ;
+        System.out.println( "parent = " + parent ) ;
+        AMX[] children = parent.getChildren() ;
+        System.out.println( "children = " + Arrays.asList( children )) ;
     }
 }

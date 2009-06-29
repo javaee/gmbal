@@ -44,15 +44,22 @@ package org.glassfish.gmbal.impl;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.CompositeDataSupport;
 import javax.management.openmbean.CompositeType;
+import javax.management.openmbean.OpenDataException;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.SimpleType;
 import org.glassfish.gmbal.Description;
 import org.glassfish.gmbal.ManagedAttribute;
-
 import org.glassfish.gmbal.ManagedData;
+import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.gmbal.typelib.TypeEvaluator;
+
 import static org.glassfish.gmbal.OpenMBeanTools.* ;
+import static junit.framework.Assert.* ;
 
 /**
  *
@@ -90,15 +97,16 @@ public class TypeConverterTestData {
                 3. J is a class with public no-arg constructor, and every getter
                    has a setter
                 4. J is an interface with only getters
-        Need to fix the name of ManagedData attributes! (lower initial case)
 
      */
 
+// Data used for any TypeConverter test
+
     public static class TestData {
-        private Object data ;
-        private OpenType otype ;
-        private Object ovalue ;
-        private boolean isIdentity ;
+        private Object data ;           // The test data
+        private OpenType otype ;        // The expected open type
+        private Object ovalue ;         // The expected result of toManagedData
+        private boolean isIdentity ;    // The expected value of tc.isIdentity()
 
         public TestData( final Object data, final OpenType otype,
             final Object ovalue, final boolean isIdentity ) {
@@ -117,7 +125,31 @@ public class TypeConverterTestData {
         OpenType otype() { return otype ; }
         Object ovalue() { return ovalue ; }
         boolean isIdentity() { return isIdentity ; }
+
+        void test( ManagedObjectManagerInternal mom ) {
+            EvaluatedType et = TypeEvaluator.getEvaluatedType(data.getClass()) ;
+            TypeConverter tc = mom.getTypeConverter(et) ;
+
+            assertTrue( equalTypes( otype, tc.getManagedType() ) ) ;
+
+            assertEquals( et, tc.getDataType() ) ;
+
+            assertEquals( isIdentity, tc.isIdentity()) ;
+           
+            Object mobj = tc.toManagedEntity(data) ;
+            assertTrue( equalValues( ovalue, mobj ) );
+
+            try {
+                Object res = tc.fromManagedEntity(mobj) ;
+                assertEquals( data, res ) ;
+            } catch (UnsupportedOperationException exc) {
+                System.out.println( "Conversion to Java type not currently supported for "
+                    + tc.getManagedType() ) ;
+            }
+        }
     }
+
+// DATA1: Composite data test
 
     private static final String LIST_DESC = "Description of the list attribute" ;
 
@@ -170,15 +202,30 @@ public class TypeConverterTestData {
     public static final TestData Data1TestData = new TestData( data1,
         DATA1_OTYPE, data1Open ) ;
 
-    @ManagedData( )
-    @Description( "" )
+// DATA2: enum test
+
+    enum Color { RED, GREEN, BLUE }
+
+    public static final TestData Data2TestData = new TestData( Color.RED,
+        SimpleType.STRING, "RED" ) ;
+
+// DATA3:
+
+    private static final String DOUBLE_INDEX_NAME = "DoubleIndex" ;
+    private static final String DOUBLE_INDEX_DESC = "DoubleIndex data test" ;
+    private static final String DOUBLE_INDEX_ATTR_DESC_1 = "Attribute 1" ;
+    private static final String DOUBLE_INDEX_ATTR_DESC_2 = "Attribute 2" ;
+
+    @ManagedData( name=DOUBLE_INDEX_NAME )
+    @Description( DOUBLE_INDEX_DESC )
     public static class DoubleIndexData {
-        String[][] data = {
+        public static String[][] data = {
             { "R", "G", "B" },
             { "1", "2", "3", "4", "5" }
         } ;
 
         @ManagedAttribute
+        @Description( DOUBLE_INDEX_ATTR_DESC_1 )
         List<List<String>> get1() {
             List<List<String>> result = new ArrayList<List<String>>() ;
             for (String[] sa : data) {
@@ -188,6 +235,23 @@ public class TypeConverterTestData {
         }
 
         @ManagedAttribute
+        @Description( DOUBLE_INDEX_ATTR_DESC_2 )
         String[][] get2() { return data ; }
     }
+
+    private static CompositeType doubleIndexOpenType =
+        comp( DOUBLE_INDEX_NAME, DOUBLE_INDEX_DESC,
+            item( "1", DOUBLE_INDEX_ATTR_DESC_1, array( 2, SimpleType.STRING )),
+            item( "2", DOUBLE_INDEX_ATTR_DESC_2, array( 2, SimpleType.STRING ))
+        ) ;
+
+    private static CompositeData doubleIndexOpenData = compV( doubleIndexOpenType,
+        mkmap( list( "1", "2" ),
+               list( (Object)DoubleIndexData.data,
+                   (Object)DoubleIndexData.data )));
+
+    public static final TestData Data3TestData = new TestData(
+        new DoubleIndexData(),
+            doubleIndexOpenType, doubleIndexOpenData ) ;
+
 }

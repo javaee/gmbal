@@ -51,16 +51,20 @@ import org.glassfish.gmbal.generic.Triple ;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeDataSupport;
 import javax.management.openmbean.SimpleType;
 import javax.management.openmbean.TabularData;
 import javax.management.openmbean.TabularDataSupport;
+import org.glassfish.gmbal.generic.Algorithms;
+import org.glassfish.gmbal.generic.UnaryFunction;
 import static javax.management.openmbean.SimpleType.* ;
 
-/**
+/** Tools for constructing open MBean types and values, and comparing them.
  *
  * @author ken
  */
@@ -276,7 +280,249 @@ public class OpenMBeanTools {
             throw new IllegalArgumentException(ex) ;
         }
     }
-    
+
+    private static boolean compare( boolean res, String info, Object first, Object second ) {
+        if (!res) {
+            System.out.println( "Comparison failed on " + info + ":\n"
+                + "first arg:\n\t" + first
+                + "\nsecond arg:\n\t" + second ) ;
+        }
+
+        return res ;
+    }
+
+    // Do we need this?  Looks like OpenType may have a well-defined equals
+    // method.  But equals/toString is terrible for diagnostics: we end
+    // up with extremely long (hundreds of chars!) strings that NB does not display
+    // properly.  We really need a comparison that says WHY the types are not the
+    // same.
+    public static boolean equalTypes( OpenType ot1, OpenType ot2 )  {
+        String tname1 = ot1.getTypeName() ;
+        String tname2 = ot2.getTypeName() ;
+        if (compare( tname1.equals( tname2 ), "type names", ot1, ot2 )) {
+            if (ot1 instanceof SimpleType) {
+                SimpleType st1 = (SimpleType)ot1 ;
+                if (!(ot2 instanceof SimpleType)) {
+                    return false ;
+                }
+                SimpleType st2 = (SimpleType)ot2 ;
+
+                return compare( st1.equals( st2 ), "simple types", st1, st2 ) ;
+            } else if (ot1 instanceof ArrayType) {
+                ArrayType at1 = (ArrayType)ot1 ;
+                if (!(ot2 instanceof ArrayType)) {
+                    return false ;
+                }
+                ArrayType at2 = (ArrayType)ot2 ;
+
+                int dim1 = at1.getDimension() ;
+                int dim2 = at2.getDimension() ;
+                if (compare( dim1==dim2, "array dimensions", dim1, dim2 ))  {
+                    OpenType c1 = at1.getElementOpenType() ;
+                    OpenType c2 = at2.getElementOpenType() ;
+                    return compare( equalTypes( c1, c2 ), "array component types", c1, c2 ) ;
+                }
+            } else if (ot1 instanceof CompositeType) {
+                CompositeType ct1 = (CompositeType)ot1 ;
+                if (!(ot2 instanceof CompositeType)) {
+                    return false ;
+                }
+                CompositeType ct2 = (CompositeType)ot2 ;
+                String desc1 = ct1.getDescription() ;
+                String desc2 = ct2.getDescription() ;
+                if (compare( desc1.equals( desc2 ), 
+                    "CompositeType descriptions", desc1, desc2 )) {
+
+                    Set<String> keys1 = (Set<String>)ct1.keySet() ;
+                    Set<String> keys2 = (Set<String>)ct2.keySet() ;
+                    int size1 = keys1.size() ;
+                    int size2 = keys2.size() ;
+
+                    if (compare( size1==size2,
+                        "size of CompositeType keySets", keys1, keys2 )) {
+                        Iterator<String> iter1 = keys1.iterator() ;
+                        while(iter1.hasNext()) {
+                            String key1 = iter1.next() ;
+                            if (compare( keys2.contains( key1 ),
+                                "key not found", key1, keys2 )) {
+
+                                OpenType cot1 = ct1.getType( key1 ) ;
+                                OpenType cot2 = ct2.getType( key1 ) ;
+                                if (!compare( equalTypes( cot1, cot2 ),
+                                    "CompositeType field " + key1, cot1, cot2 )) {
+                                    return false ;
+                                }
+                            } else {
+                                return false ;
+                            }
+                        }
+                        return true ;
+                    }
+                }
+            } else if (ot1 instanceof TabularType) {
+                TabularType tt1 = (TabularType)ot1 ;
+                if (!(ot2 instanceof TabularType)) {
+                    return false ;
+                }
+                TabularType tt2 = (TabularType)ot2 ;
+
+                String desc1 = tt1.getDescription() ;
+                String desc2 = tt2.getDescription() ;
+                if (compare( desc1.equals(desc2), "TabularType descriptions",
+                    desc1, desc2 )) {
+
+                    CompositeType tct1 = tt1.getRowType() ;
+                    CompositeType tct2 = tt2.getRowType() ;
+                    if (compare( equalTypes( tct1, tct2 ), "TabularType row types",
+                        tct1, tct2 )) {
+
+                        List<String> indices1 = (List<String>)tt1.getIndexNames() ;
+                        List<String> indices2 = (List<String>)tt2.getIndexNames() ;
+                        return compare( indices1.equals(indices2), "TabularType index names",
+                            indices1, indices2 ) ;
+                    }
+                }
+            }
+        }
+
+        return false ;
+    }
+
+    private static Set<TabularDataKey> getKeys( TabularData td ) {
+        Set<TabularDataKey> result = new HashSet<TabularDataKey>() ;
+
+        Algorithms.map( (Set<Object[]>)td.keySet(), result,
+            new UnaryFunction<Object[],TabularDataKey>() {
+                public TabularDataKey evaluate( Object[] arg ) {
+                    return new TabularDataKey( arg ) ;
+                } } );
+
+        return result ;
+    }
+
+    private static class TabularDataKey {
+        private Object[] key ;
+
+        public TabularDataKey( Object[] key ) {
+            this.key = key ;
+        }
+
+        @Override
+        public boolean equals( Object obj ) {
+            if (this == obj) {
+                return true ;
+            }
+
+            if (!(obj instanceof TabularDataKey)) {
+                return false ;
+            }
+
+            TabularDataKey other = (TabularDataKey)obj ;
+
+            return Arrays.equals(key, other.key);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(key);
+        }
+
+        @Override
+        public String toString() {
+            return Arrays.toString(key) ;
+        }
+
+        CompositeData get( TabularData td ) {
+            return td.get( key ) ;
+        }
+    }
+
+    // Need this, because the equals methods give us no useful information
+    // about WHY there is a difference.
+    public static boolean equalValues( Object v1, Object v2 )  {
+        Class cls1 = v1.getClass() ;
+        if (v1 instanceof CompositeData) {
+            CompositeData cd1 = (CompositeData)v1 ;
+            if (compare( v2 instanceof CompositeData, 
+                "v1 is CompositeData, v2 is not", v1, v2 )) {
+
+                CompositeData cd2 = (CompositeData)v2 ;
+
+                CompositeType ct1 = cd1.getCompositeType() ;
+                CompositeType ct2 = cd2.getCompositeType() ;
+
+                if (compare( equalTypes( ct1, ct2 ), 
+                    "CompositeTypes are not the same", ct1, ct2 )) {
+
+                    Set<String> keys = (Set<String>)ct1.keySet() ;
+                    for (String key : keys) {
+                        Object elem1 = cd1.get(key) ;
+                        Object elem2 = cd2.get(key) ;
+                        if (!compare( equalValues( elem1, elem2), 
+                            "Elements for key " + key + " are not the same",
+                            elem1, elem2 )) {
+                            return false ;
+                        }
+                    }
+                    return true ;
+                }
+            }
+        } else if (v1 instanceof TabularData) {
+            TabularData td1 = (TabularData)v1 ;
+            if (compare( v2 instanceof TabularData,
+                "v1 is TabularData, v2 is not", v1, v2 )) {
+
+                TabularData td2 = (TabularData)v2 ;
+
+                TabularType tt1 = td1.getTabularType() ;
+                TabularType tt2 = td2.getTabularType() ;
+
+                if (compare( equalTypes( tt1, tt2 ),
+                    "CompositeTypes are not the same", tt1, tt2 )) {
+                    Set<TabularDataKey> keys1 = getKeys( td1 ) ;
+                    Set<TabularDataKey> keys2 = getKeys( td2 ) ;
+                    if (compare( keys1.equals( keys2 ), "TabularData key sets",
+                        keys1, keys2 )) {
+                        for (TabularDataKey key : keys1) {
+                            CompositeData cd1 = key.get( td1 ) ;
+                            CompositeData cd2 = key.get( td2 ) ;
+                            if (!compare( equalValues(cd1, cd2), 
+                                "TabularData at key " + key, cd1, cd2 )) {
+
+                                return false ;
+                            }
+                        }
+                        return true ;
+                    }
+                }
+            }
+        } else if (cls1.isArray()) {
+            Class cls2 = v2.getClass() ;
+            if (compare( cls2.isArray(), "v1 is an array, but v2 is not", 
+                v1, v2 )) {
+
+                int len1 = Array.getLength(v1) ;
+                int len2 = Array.getLength(v2) ;
+                if (compare( len1==len2, "array lengths", v1, v2 )) {
+                    for (int ctr=0; ctr<len1; ctr++) {
+                        Object elem1 = Array.get( v1, ctr ) ;
+                        Object elem2 = Array.get( v2, ctr ) ;
+                        if (!compare( equalValues( elem1, elem2 ), 
+                            "array element at index " + ctr, elem1, elem2 )) {
+                            return false ;
+                        }
+                    }
+                    return true ;
+                }
+            }
+        } else {
+            // Must be a simple type, or invalid.  We'll just use equals here.
+            return compare( v1.equals(v2), "simple values", v1, v2 ) ;
+        }
+
+        return false ;
+    }
+
     public static void main( String[] args ) {
         // List<Object> x = list( 0, "string", list( 3, 4 ) ) ;
 

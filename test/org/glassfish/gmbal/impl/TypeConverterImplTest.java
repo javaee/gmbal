@@ -92,41 +92,15 @@ public class TypeConverterImplTest extends TestCase {
     }
      */
 
-    private TypeConverter getTypeConverter( Object obj ) {
-        Class<?> cls = obj.getClass() ;
-        EvaluatedClassDeclaration ecd = 
-            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(cls) ;
-        TypeConverter tc = mom.getTypeConverter(ecd) ;
-        return tc ; 
-    }
-
-    private void doTest( TypeConverterTestData.TestData td ) {
-        TypeConverter tc = getTypeConverter( td.data() ) ;
-        System.out.println( "tc.getManagedType() = " + tc.getManagedType() ) ;
-        System.out.println( "td.otype()          = " + td.otype() ) ;
-        assertEquals( td.otype().toString(), tc.getManagedType().toString() ) ;
-        Object mvalue = tc.toManagedEntity(td.data()) ;
-        // XXX Need to handle String[]: bring back deep Equals code? assertEquals( td.ovalue(), mvalue ) ;
-        assertEquals( td.isIdentity(), tc.isIdentity() ) ;
-        try {
-            Object jvalue = tc.fromManagedEntity( mvalue ) ;
-            assertEquals( td.data(), jvalue ) ;
-        } catch (UnsupportedOperationException exc) {
-            System.out.println( "Conversion to Java type not currently supported for " 
-                + tc.getManagedType() ) ;
-        }
-    }
-
     public void testData1() {
-        doTest( TypeConverterTestData.Data1TestData ) ;
+        TypeConverterTestData.Data1TestData.test( mom ) ;
+    }
+
+    public void testData2() {
+        TypeConverterTestData.Data2TestData.test( mom ) ;
     }
 
     public void testDoubleIndexData() {
-        TypeConverterTestData.DoubleIndexData did = 
-            new TypeConverterTestData.DoubleIndexData() ;
-        TypeConverter tc = getTypeConverter( did ) ;
-        Object obj = tc.toManagedEntity(did) ;
-        assertTrue( obj instanceof CompositeData ) ;
-        System.out.println( obj ) ;
+        TypeConverterTestData.Data3TestData.test( mom ) ;
     }
 }

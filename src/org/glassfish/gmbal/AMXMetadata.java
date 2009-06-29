@@ -80,6 +80,7 @@ public @interface AMXMetadata {
     String[] subTypes() default {} ;
 
     /** Return the generic AMX interface to be used.
+     * @return name of interface to use.
      */
     @DescriptorKey( AMX.META_GENERIC_INTERFACE_NAME )
     String genericInterfaceName() default "" ;

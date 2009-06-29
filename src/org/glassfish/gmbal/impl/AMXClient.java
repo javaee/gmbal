@@ -95,6 +95,10 @@ public class AMXClient implements AMX {
         return hash;
     }
 
+    public String toString() {
+        return "AMXClient[" + oname + "]" ;
+    }
+
     private <T> T fetchAttribute( String name, Class<T> type ) {
         try {
             Object obj = server.getAttribute( oname, name ) ;
@@ -253,5 +257,9 @@ public class AMXClient implements AMX {
         } catch (IOException ex) {
             throw new GmbalException( "Exception in invoke", ex ) ;
         }
+    }
+
+    public ObjectName objectName() {
+        return oname ;
     }
 }

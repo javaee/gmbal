@@ -235,6 +235,13 @@ public interface Exceptions {
     @Log( id=MBEAN_SKELETON_START + 9 )
     void attributeGettingError( @Chain Exception ex, String name ) ;
 
+    @Message( "OpenDataException trying to create "
+        + "OpenMBEanParameterInfoSupport for parameter {0} on method {1}" )
+    @Log( id = MBEAN_SKELETON_START + 10 )
+    IllegalStateException excInOpenParameterInfo(
+        @Chain IllegalArgumentException exc,
+        String paramName, EvaluatedMethodDeclaration meth ) ;
+
 // MBeanTree
     static final int MBEAN_TREE_START =
         MBEAN_SKELETON_START + EXCEPTIONS_PER_CLASS ;
