@@ -37,6 +37,8 @@
 
 package org.glassfish.probe.provider;
 
+import java.util.Vector;
+
 /**
  *
  * @author abbagani
@@ -47,14 +49,61 @@ public class StatsProviderManager {
    }
 
    
-   public static boolean register(String configElement, PluginPoint pp,
+   synchronized public static boolean register(String configElement, PluginPoint pp,
                                     String subTreeRoot, Object statsProvider) {
-      if (spmd != null) {
-         spmd.register(configElement, pp,subTreeRoot,statsProvider);
-         return true;
+      //Ideally want to start this in a thread, so we can reduce the startup time
+      if (spmd == null) {
+          //Make an entry into the toBeRegistered map
+          toBeRegistered.add(
+                  new StatsProviderRegistryElement(configElement, pp,
+                                    subTreeRoot, statsProvider));
+      } else {
+          spmd.register(configElement, pp,subTreeRoot,statsProvider);
+          return true;
       }
        return false;
    }
 
+
+   synchronized public static void setStatsProviderManagerDelegate(
+                                    StatsProviderManagerDelegate lspmd) {
+      //System.out.println("in StatsProviderManager.setStatsProviderManagerDelegate ***********");
+      if (lspmd == null) {
+          //Should log and throw an exception
+          return;
+      }
+
+      //Assign the Delegate
+      spmd = lspmd;
+
+      //System.out.println("Running through the toBeRegistered array to call register ***********");
+
+      //First register the pending StatsProviderRegistryElements
+      for (StatsProviderRegistryElement spre : toBeRegistered) {
+          spmd.register(spre.configElement, spre.pp, spre.subTreeRoot,
+                        spre.statsProvider);
+      }
+
+      //Now that you registered the pending calls, Clear the toBeRegistered store
+      toBeRegistered.clear();
+   }
+
+   //variables
    static StatsProviderManagerDelegate spmd; // populate this during our initilaization process
+   static Vector<StatsProviderRegistryElement> toBeRegistered = new Vector();
+   
+   private static class StatsProviderRegistryElement {
+       String configElement;
+       PluginPoint pp;
+       String subTreeRoot;
+       Object statsProvider;
+       public StatsProviderRegistryElement(String configElement, PluginPoint pp,
+                                    String subTreeRoot, Object statsProvider) {
+           this.configElement = configElement;
+           this.pp = pp;
+           this.subTreeRoot = subTreeRoot;
+           this.statsProvider = statsProvider;
+       }
+   }
+
 }
