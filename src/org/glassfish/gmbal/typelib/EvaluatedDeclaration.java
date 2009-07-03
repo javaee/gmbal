@@ -50,8 +50,6 @@ public interface EvaluatedDeclaration extends EvaluatedType {
 
     List<Annotation> annotations() ;
     
-    String name() ;
-    
     int modifiers() ;
 
     AnnotatedElement element() ;

@@ -84,6 +84,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.glassfish.gmbal.generic.OperationTracer;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
@@ -132,16 +133,19 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized void suspendJMXRegistration() {
+        OperationTracer.clear() ;
         // Can be called anytime
         tree.suspendRegistration() ;
     }
 
     public synchronized void resumeJMXRegistration() {
+        OperationTracer.clear() ;
         // Can be called anytime
         tree.resumeRegistration();
     }
 
     public void stripPackagePrefix() {
+        OperationTracer.clear() ;
         checkRootNotCreated("stripPackagePrefix");
         stripPackagePrefix = true ;
     }
@@ -189,6 +193,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         // set actualRoot, rootName later
         // MBeanTree need mom, domain, rootParentName
         this.tree = new MBeanTree( this, domain, null, "type" ) ;
+        OperationTracer.clear() ;
     }
 
     public ManagedObjectManagerImpl( final ObjectName rootParentName ) {
@@ -198,9 +203,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         // set actualRoot, rootName later
         // MBeanTree need mom, domain, rootParentName
         this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
+        OperationTracer.clear() ;
     }
 
     public void close() throws IOException {
+        OperationTracer.clear() ;
+
         // Can be called anytime
         if (registrationDebug()) {
             dputil.enter( "close" ) ;
@@ -221,6 +229,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized ObjectName getRootParentName() {
+        OperationTracer.clear() ;
         checkRootCreated("getRootParentName");
         return tree.getRootParentName() ;
     }
@@ -233,22 +242,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized GmbalMBean createRoot() {
-        checkRootNotCreated( "createRoot" ) ;
-
-        GmbalMBean result = tree.setRoot( new Root(), null ) ;
-        rootCreated = true ;
-        return result ;
+        return createRoot( new Root() ) ;
     }
 
     public synchronized GmbalMBean createRoot(Object root) {
-        checkRootNotCreated( "createRoot" ) ;
-
-        GmbalMBean result = tree.setRoot( root, null ) ;
-        rootCreated = true ;
-        return result ;
+        return createRoot( root, null ) ;
     }
 
     public synchronized GmbalMBean createRoot(Object root, String name) {
+        OperationTracer.clear() ;
         checkRootNotCreated( "createRoot" ) ;
 
         GmbalMBean result = tree.setRoot( root, name ) ;
@@ -257,12 +259,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized Object getRoot() {
+        OperationTracer.clear() ;
         // Can be called anytime.
         return tree.getRoot() ;
     }
     
-    public synchronized MBeanSkeleton getSkeleton( EvaluatedClassDeclaration cls ) {
+    private synchronized MBeanSkeleton getSkeleton( EvaluatedClassDeclaration cls ) {
         // can be called anytime, otherwise we can't create the root itself!
+        OperationTracer.enter( "getSkeleton", cls ) ;
         if (registrationDebug()) {
             dputil.enter( "getSkeleton", cls ) ;
         }
@@ -310,6 +314,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             return result ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationDebug()) {
                 dputil.exit() ;
             }
@@ -318,6 +323,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     public synchronized TypeConverter getTypeConverter( EvaluatedType type ) {
         // Can be called anytime
+        OperationTracer.enter( "getTypeConverter", type ) ;
         if (registrationFineDebug()) {
             dputil.enter( "getTypeConverter", type ) ;
         }
@@ -435,6 +441,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         // Can be called anytime
         MBeanImpl result = null ;
         
+        OperationTracer.enter( "constructMBean", obj, name ) ;
         if (registrationDebug()) {
             dputil.enter( "constructMean", 
                 "obj=", obj,
@@ -483,7 +490,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @SuppressWarnings("unchecked")
     public synchronized GmbalMBean register( final Object parent,
         final Object obj, final String name ) {
+
+        OperationTracer.clear() ;
         checkRootCreated("register");
+        OperationTracer.enter( "register", parent, obj, name ) ;
         if (registrationDebug()) {
             dputil.enter( "register", 
                 "parent=", parent, 
@@ -494,7 +504,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         if (obj instanceof String) {
             throw Exceptions.self.objStringWrongRegisterCall( (String)obj ) ;
         }
-        
+
         // Construct the MBean
         try {
             final MBeanImpl mb = constructMBean( obj, name ) ;
@@ -503,6 +513,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     	} catch (JMException exc) {
             throw Exceptions.self.exceptionInRegister(exc) ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationDebug()) {
                 dputil.exit() ;
             }
@@ -525,7 +536,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
     
     public synchronized void unregister( Object obj ) {
+        OperationTracer.clear() ;
         checkRootCreated("unregister");
+        OperationTracer.enter( "unregister", obj ) ;
         if (registrationDebug()) {
             dputil.enter( "unregister", "obj=", obj ) ;
         }
@@ -535,6 +548,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         } catch (JMException exc) {
             throw Exceptions.self.exceptionInUnregister(exc) ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationDebug()) {
                 dputil.exit() ;
             }
@@ -542,7 +556,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized ObjectName getObjectName( Object obj ) {
+        OperationTracer.clear() ;
         checkRootCreated("getObjectName");
+        OperationTracer.enter( "getObjectName", obj ) ;
         if (registrationDebug()) {
             dputil.enter( "getObjectName", obj ) ;
         }
@@ -568,7 +584,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized Object getObject( ObjectName oname ) {
+        OperationTracer.clear() ;
         checkRootCreated("getObject");
+        OperationTracer.enter( "getObject", oname ) ;
         if (registrationDebug()) {
             dputil.enter( "getObject", oname ) ;
         }
@@ -601,6 +619,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized void setMBeanServer( MBeanServer server ) {
+        OperationTracer.clear() ;
         checkRootNotCreated("setMBeanServer");
 	this.server = server ;
     }
@@ -611,6 +630,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized void setResourceBundle( ResourceBundle rb ) {
+        OperationTracer.clear() ;
         checkRootNotCreated("setResourceBundle");
         this.resourceBundle = rb ;
     }
@@ -642,7 +662,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
     public synchronized void addAnnotation( AnnotatedElement element,
         Annotation annotation ) {
+        OperationTracer.clear() ;
         checkRootNotCreated("addAnnotation");
+        OperationTracer.enter( "addAnnotation", element, annotation ) ;
         if (registrationDebug()) {
             dputil.enter( "addAnnotation", "element = ", element,
                 "annotation = ", annotation ) ;
@@ -671,6 +693,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             map.put( annotation.getClass(), annotation ) ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationDebug()) {
                 dputil.exit() ;
             }
@@ -680,7 +703,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @SuppressWarnings({"unchecked"})
     public synchronized <T extends Annotation> T getAnnotation( 
         EvaluatedDeclaration element, Class<T> type ) {
+        OperationTracer.clear() ;
         // Can be called anytime
+        OperationTracer.enter( "getAnnotation", element, type ) ;
         if (registrationFineDebug()) {
             dputil.enter( "getAnnotation", "element=", element,
                 "type=", type.getName() ) ;
@@ -707,6 +732,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             return result ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationFineDebug()) {
                 dputil.exit() ;
             }
@@ -717,9 +743,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         getClassAnalyzer( final EvaluatedClassDeclaration cls,
         final Class<? extends Annotation> annotationClass ) {
         // Can be called anytime
+        OperationTracer.enter( "getClassAnalyzer", cls, annotationClass ) ;
         if (registrationDebug()) {
-            dputil.enter( "getClassAnalyzer", "cls = ", cls,
-                "annotationClass = ", annotationClass ) ;
+            dputil.enter( "getClassAnalyzer", "cls", cls,
+                "annotationClass", annotationClass ) ;
         }
         
         try {
@@ -762,6 +789,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             return new Pair<EvaluatedClassDeclaration,
                  EvaluatedClassAnalyzer>( annotatedClass, ca ) ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationDebug()) {
                 dputil.exit() ;
             }
@@ -772,6 +800,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         final EvaluatedClassAnalyzer ca ) {
         // Can be called anytime
         
+        OperationTracer.enter( "getInheritedAttributes", ca ) ;
         if (registrationDebug()) {
             dputil.enter( "getInheritedAttributes", "ca=", ca ) ;
         }
@@ -814,6 +843,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             return isList ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationDebug())
                 dputil.exit() ;
         }
@@ -900,6 +930,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             final EvaluatedClassAnalyzer ca,
             final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
         // Can be called anytime
+        OperationTracer.enter( "getAttributes", ca, adt ) ;
         if (registrationDebug()) {
             dputil.enter( "getAttributes" ) ;
         }
@@ -983,6 +1014,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
          
             return result ;
         } finally {
+            OperationTracer.exit() ;
             if (registrationDebug()) {
                 dputil.exit() ;
             }

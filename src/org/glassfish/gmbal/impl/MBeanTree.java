@@ -49,6 +49,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import org.glassfish.gmbal.GmbalMBean;
+import org.glassfish.gmbal.generic.OperationTracer;
 
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
@@ -251,6 +252,7 @@ public class MBeanTree {
     public synchronized ObjectName objectName( MBeanImpl parent,
         String type, String name ) 
         throws MalformedObjectNameException {
+        OperationTracer.enter( "objectName", parent, type, name ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "objectName", "parent", parent, 
                 "type", type, "name", name ) ;
@@ -315,6 +317,7 @@ public class MBeanTree {
                 throw Exceptions.self.malformedObjectName(exc, on) ;
             }
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationDebug()) {
                 dputil.exit( oname ) ;
             }
@@ -330,6 +333,7 @@ public class MBeanTree {
         MBeanRegistrationException, NotCompliantMBeanException, 
         MalformedObjectNameException {
         
+        OperationTracer.enter( "register", parent, obj, mb ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "register", 
                 "parent=", parent,
@@ -376,6 +380,7 @@ public class MBeanTree {
 
             return mb ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationDebug()) {
                 dputil.exit() ;
             }

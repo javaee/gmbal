@@ -83,6 +83,7 @@ import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
 import javax.management.openmbean.OpenDataException;
 import javax.management.openmbean.OpenMBeanParameterInfoSupport;
+import org.glassfish.gmbal.generic.OperationTracer;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
@@ -335,7 +336,7 @@ public class MBeanSkeleton {
         }
 
         try {
-
+            // XXX implement me!
         } finally {
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
@@ -344,6 +345,7 @@ public class MBeanSkeleton {
     }
 
     private void analyzeAttributes( EvaluatedClassAnalyzer ca ) {
+        OperationTracer.enter( "analyzeAttributes", ca ) ;
         if (mom.registrationFineDebug()) {
             dputil.enter( "analyzeAttributes", "ca=", ca ) ;
         }
@@ -380,6 +382,7 @@ public class MBeanSkeleton {
                 processAttribute( null, setters.get( str ) ) ;
             }
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
             }
@@ -387,6 +390,7 @@ public class MBeanSkeleton {
     }
 
     private void analyzeObjectNameKeys( EvaluatedClassAnalyzer ca) {
+        OperationTracer.enter( "analyzeObjectNameKeys", ca ) ;
         if (mom.registrationFineDebug()) {
             dputil.enter( "analyzeObjectNameKeys", "ca=", ca ) ;
         }
@@ -430,6 +434,7 @@ public class MBeanSkeleton {
                 Exceptions.self.nameOfManagedObject(),
                 ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR ) ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
             }
@@ -441,6 +446,7 @@ public class MBeanSkeleton {
     private Pair<Operation,ModelMBeanOperationInfo> makeOperation(
         final EvaluatedMethodDeclaration m ) {
 	
+        OperationTracer.enter( "makeOperation", m ) ;
         if (mom.registrationFineDebug()) {
             dputil.enter( "makeOperation", "m=", m ) ;
         }
@@ -558,6 +564,7 @@ public class MBeanSkeleton {
             
             return new Pair<Operation,ModelMBeanOperationInfo>( oper, operInfo ) ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
             }
@@ -565,6 +572,7 @@ public class MBeanSkeleton {
     }
 
     private void analyzeOperations( EvaluatedClassAnalyzer ca ) {
+        OperationTracer.enter( "analyzeOperations", ca ) ;
         if (mom.registrationFineDebug()) {
             dputil.enter( "analyzeOperations", "ca=", ca ) ;
         }
@@ -598,6 +606,7 @@ public class MBeanSkeleton {
                 mbeanOperationInfoList.add( info ) ;
             }
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationFineDebug()) {
                 dputil.exit() ;
             }
@@ -627,6 +636,7 @@ public class MBeanSkeleton {
     public Object getAttribute( FacetAccessor fa, String name) 
         throws AttributeNotFoundException, MBeanException, ReflectionException {
 
+        OperationTracer.enter( "getAttribute", fa, name ) ;
         if (mom.runtimeDebug()) {
             dputil.enter( "getAttribute", "fa=", fa, "name=", name ) ;
         }
@@ -643,6 +653,7 @@ public class MBeanSkeleton {
             result = getter.get( fa, mom.runtimeDebug() ) ;
             return result ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.runtimeDebug()) {
                 dputil.exit( result ) ; 
             }
@@ -654,6 +665,7 @@ public class MBeanSkeleton {
         throws AttributeNotFoundException, InvalidAttributeValueException, 
         MBeanException, ReflectionException  {
         
+        OperationTracer.enter( "setAttribute", emitter, fa, attribute ) ;
         if (mom.runtimeDebug()) {
             dputil.enter( "setAttribute", "emitter=", emitter,
                 "fa=", fa, "attribute=", attribute ) ;
@@ -697,6 +709,7 @@ public class MBeanSkeleton {
             
             emitter.sendNotification( notification ) ;    
         } finally {
+            OperationTracer.exit() ;
             if (mom.runtimeDebug()) {
                 dputil.exit() ;
             }
@@ -704,9 +717,10 @@ public class MBeanSkeleton {
     }
         
     public AttributeList getAttributes( FacetAccessor fa, String[] attributes) {
+        List<String> attrs = Arrays.asList( attributes ) ;
+        OperationTracer.enter( "getAttributes", attrs ) ;
         if (mom.runtimeDebug()) {
-            dputil.enter( "getAttributes", "attributes=",
-                Arrays.asList( attributes ) ) ;
+            dputil.enter( "getAttributes", "attributes", attrs ) ;
         }
         
         try {
@@ -734,6 +748,7 @@ public class MBeanSkeleton {
 
             return result ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.runtimeDebug()) {
                 dputil.exit() ;
             }
@@ -744,9 +759,10 @@ public class MBeanSkeleton {
         final NotificationBroadcasterSupport emitter,
         final FacetAccessor fa, final AttributeList attributes) {
 	
+        OperationTracer.enter( "setAttributes", emitter, fa, attributes ) ;
         if (mom.runtimeDebug()) {
-            dputil.enter( "setAttributes", "emitter=", emitter,
-                "fa=", fa, "attributes=", attributes ) ;
+            dputil.enter( "setAttributes", "emitter", emitter,
+                "fa", fa, "attributes", attributes ) ;
         }
         
         AttributeList result = new AttributeList() ;
@@ -769,6 +785,7 @@ public class MBeanSkeleton {
             
             return result ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.runtimeDebug()) {
                 dputil.exit( result ) ;
             }
@@ -777,13 +794,15 @@ public class MBeanSkeleton {
     
     public Object invoke( FacetAccessor fa, String actionName, Object params[], 
         String sig[]) throws MBeanException, ReflectionException  {
+
         final List<String> signature = Arrays.asList( sig ) ;
         final List<Object> parameters = Arrays.asList( params ) ;
         Object result = null ;
         
+        OperationTracer.enter( "invoke", fa, actionName, parameters, signature ) ;
         if (mom.runtimeDebug()) {
-            dputil.enter( "invoke", "fa=", fa, "actionName", actionName,
-                "params=", parameters, "signature=", signature ) ;
+            dputil.enter( "invoke", "fa", fa, "actionName", actionName,
+                "params", parameters, "signature", signature ) ;
         }
         
         try {
@@ -809,6 +828,7 @@ public class MBeanSkeleton {
 
             result = op.evaluate( fa, parameters ) ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.runtimeDebug()) {
                 dputil.exit( result ) ;
             }
@@ -820,6 +840,7 @@ public class MBeanSkeleton {
     public String getNameValue( final FacetAccessor fa ) throws
         MBeanException, ReflectionException {
         
+        OperationTracer.enter( "getNameValue", fa )  ;
         if (mom.runtimeDebug()) {
             dputil.enter( "getNameValue", "fa=", fa ) ;
         }
@@ -835,6 +856,7 @@ public class MBeanSkeleton {
                     mom.runtimeDebug()).toString();
             }
         } finally {
+            OperationTracer.exit() ;
             if (mom.runtimeDebug()) {
                 dputil.exit( value ) ;
             }

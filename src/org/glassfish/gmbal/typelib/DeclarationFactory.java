@@ -193,6 +193,10 @@ public class DeclarationFactory {
         }
 
         public EvaluatedType componentType() { return compType ; }
+
+        public String name() {
+            return compType.name() + "[]" ;
+        }
     }
 
     private static class EvaluatedFieldDeclarationImpl

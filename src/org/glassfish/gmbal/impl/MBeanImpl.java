@@ -54,7 +54,6 @@ import javax.management.MBeanRegistrationException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ReflectionException ;
 import javax.management.MBeanInfo ;
-import javax.management.DynamicMBean ;
 import javax.management.NotificationBroadcasterSupport ;
 import javax.management.MBeanNotificationInfo ;
 import javax.management.AttributeChangeNotification ;
@@ -63,6 +62,7 @@ import javax.management.ObjectName;
 import java.util.Map ;
 import java.util.HashMap ;
 import org.glassfish.gmbal.GmbalMBean;
+import org.glassfish.gmbal.generic.OperationTracer;
 
 public class MBeanImpl extends NotificationBroadcasterSupport 
     implements FacetAccessor, GmbalMBean{
@@ -252,27 +252,29 @@ public class MBeanImpl extends NotificationBroadcasterSupport
 
     public Object getAttribute(String attribute) 
         throws AttributeNotFoundException, MBeanException, ReflectionException {
-
+        OperationTracer.clear() ;
 	return skel.getAttribute( this, attribute ) ;
     }
     
     public void setAttribute(Attribute attribute) throws AttributeNotFoundException,
 	InvalidAttributeValueException, MBeanException, ReflectionException  {
-
+        OperationTracer.clear() ;
 	skel.setAttribute( this, this, attribute ) ;
     }
         
     public AttributeList getAttributes(String[] attributes) {
+        OperationTracer.clear() ;
 	return skel.getAttributes( this, attributes ) ;
     }
         
     public AttributeList setAttributes(AttributeList attributes) {
+        OperationTracer.clear() ;
 	return skel.setAttributes( this, this, attributes ) ;
     }
     
     public Object invoke(String actionName, Object params[], String signature[])
 	throws MBeanException, ReflectionException  {
-
+        OperationTracer.clear() ;
 	return skel.invoke( this, actionName, params, signature ) ;
     }
     

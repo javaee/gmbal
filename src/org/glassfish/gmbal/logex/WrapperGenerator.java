@@ -51,6 +51,7 @@ import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import org.glassfish.gmbal.generic.OperationTracer;
 
 /** Given an annotated interface, return a Proxy that implements that interface.
  * Interface must be annotated with @ExceptionWrapper( String idPrefix, String loggerName ).
@@ -239,11 +240,21 @@ public class WrapperGenerator {
             // Ignore exc: hard to report here.
             transMsg = msg ;
         }
+
+        String result ;
         if (transMsg.indexOf( "{0" ) >= 0 ) {
-            return java.text.MessageFormat.format( transMsg, messageParams ) ;
+            result = java.text.MessageFormat.format( transMsg, messageParams ) ;
         } else {
-            return transMsg ;
+            result = transMsg ;
         }
+
+        String trace = OperationTracer.getAsString() ;
+        if (trace.length() > 0) {
+            return result + '[' + trace + ']' ;
+        } else {
+            return result ;
+        }
+
     }
 
     private static Object handleFullLogging( Log log, Method method, Logger logger,

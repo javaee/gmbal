@@ -75,6 +75,7 @@ import org.glassfish.gmbal.ManagedData ;
 import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.DprintUtil;
 import org.glassfish.gmbal.generic.FacetAccessor;
+import org.glassfish.gmbal.generic.OperationTracer;
 import org.glassfish.gmbal.generic.Pair;
 
 import org.glassfish.gmbal.generic.Predicate;
@@ -264,6 +265,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     public static TypeConverter makeTypeConverter( final EvaluatedType type,
         final ManagedObjectManagerInternal mom ) {
         
+        OperationTracer.enter( "makeTypeConverter", type ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "makeTypeConverter", "type=", type,
                 "mom=", mom ) ;
@@ -306,6 +308,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             }
             throw new RuntimeException( exc ) ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationDebug()) {
                 dputil.exit( result ) ;
             }
@@ -353,6 +356,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	final ManagedObjectManagerInternal mom, final ManagedObject mo ) {
 
         TypeConverter result = null ;
+        OperationTracer.enter( "handleManagedObject", type, mo ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "handleManagedObject", "type=", type,
                 "mom=", mom, "mo=", mo ) ;
@@ -388,6 +392,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             }
             throw exc ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationDebug()) {
                 dputil.exit( result ) ;
             }
@@ -399,6 +404,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static Collection<AttributeDescriptor> analyzeManagedData(
         final EvaluatedClassDeclaration cls, final ManagedObjectManagerInternal mom ) {
 
+        OperationTracer.enter( "analyzerManagedData", cls ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "analyzeManagedData", "cls=", cls, "mom=", mom ) ;
         }
@@ -422,6 +428,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             }
             throw exc ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationDebug()) {
                 dputil.exit( result ) ;
             }
@@ -435,6 +442,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         final ManagedObjectManagerInternal mom, final ManagedData md,
         Collection<AttributeDescriptor> minfos ) {
 
+        OperationTracer.enter( "makeCompositeType", cls, md ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "makeCompositeType",
                 "cls=", cls, "mom=", mom, "md=", md, "minfos=", minfos ) ;
@@ -489,6 +497,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             }
             throw exc ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationDebug()) {
                 dputil.exit( result ) ;
             }
@@ -501,6 +510,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         final EvaluatedClassDeclaration cls,
 	final ManagedObjectManagerInternal mom, final ManagedData md ) {
 
+        OperationTracer.enter( "handleManagedData", cls, md ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "handleManagedData", "cls=", cls,
                 "mom=", mom, "md=", md ) ;
@@ -517,6 +527,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             result = new TypeConverterImpl( cls, myType ) {
                 public Object toManagedEntity( Object obj ) {
+                    OperationTracer.enter( "(ManagedData):toManagedEntity", obj ) ;
                     if (mom.runtimeDebug()) {
                         dputil.enter( "(ManagedData):toManagedEntity", "obj=", obj ) ;
                     }
@@ -550,6 +561,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                             throw Exceptions.self.exceptionInHandleManagedData(exc) ;
                         }
                     } finally {
+                        OperationTracer.exit() ;
                         if (mom.runtimeDebug()) {
                             dputil.exit( runResult ) ;
                         }
@@ -611,6 +623,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static TypeConverter handleArrayType( final EvaluatedArrayType type,
 	final ManagedObjectManagerInternal mom ) throws OpenDataException {
 
+        OperationTracer.enter( "handleArrayType", type ) ;
         if (mom.registrationDebug()) {
             dputil.enter( "handleArrayType" ) ;
         }
@@ -636,9 +649,15 @@ public abstract class TypeConverterImpl implements TypeConverter {
                         final int length = Array.getLength( obj ) ;
                         final Object result = Array.newInstance( cclass, length ) ;
                         for (int ctr=0; ctr<length; ctr++) {
-                            final Object elem = Array.get( obj, ctr ) ;
-                            final Object relem =  ctypeTc.toManagedEntity( elem ) ;
-                            Array.set( result, ctr, relem ) ;
+                            OperationTracer.enter( 
+                                "(handleArrayType):toManagedEntity", ctr ) ;
+                            try {
+                                final Object elem = Array.get( obj, ctr ) ;
+                                final Object relem =  ctypeTc.toManagedEntity( elem ) ;
+                                Array.set( result, ctr, relem ) ;
+                            } finally {
+                                OperationTracer.exit() ;
+                            }
                         }
 
                         return result ;
@@ -655,10 +674,16 @@ public abstract class TypeConverterImpl implements TypeConverter {
                         final int length = Array.getLength( entity ) ;
                         final Object result = Array.newInstance( cclass, length ) ;
                         for (int ctr=0; ctr<length; ctr++) {
-                            final Object elem = Array.get( entity, ctr ) ;
-                            final Object relem =
-                                ctypeTc.fromManagedEntity( elem ) ;
-                            Array.set( result, ctr, relem ) ;
+                            OperationTracer.enter(
+                                "(handleArrayType):fromManagedEntity", ctr ) ;
+                            try {
+                                final Object elem = Array.get( entity, ctr ) ;
+                                final Object relem =
+                                    ctypeTc.fromManagedEntity( elem ) ;
+                                Array.set( result, ctr, relem ) ;
+                            } finally {
+                                OperationTracer.exit() ;
+                            }
                         }
 
                         return result ;
@@ -731,8 +756,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
         final EvaluatedClassDeclaration type,
         final ManagedObjectManagerInternal mom ) {
 
+        OperationTracer.enter( "handleClass", type ) ;
         if (mom.registrationDebug()) {
-            dputil.enter( "handleClass" ) ;
+            dputil.enter( "handleClass", "type", type ) ;
         }
         
         TypeConverter result = null ;
@@ -822,6 +848,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             }
             throw exc ;
         } finally {
+            OperationTracer.exit() ;
             if (mom.registrationDebug()) {
                 dputil.exit( result ) ;
             }

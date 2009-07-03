@@ -64,6 +64,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import javax.management.ObjectName;
+import org.glassfish.gmbal.generic.OperationTracer;
 
 /**
  *
@@ -309,7 +310,6 @@ public class TypeEvaluator {
     // Visits the various java.lang.reflect Types to generate an EvaluatedType
     private static class TypeEvaluationVisitor  {
         private final Display<String,EvaluatedType> display ;
-
         private final PartialDefinitions partialDefinitions ;
         
         public TypeEvaluationVisitor( ) {
@@ -320,6 +320,7 @@ public class TypeEvaluator {
 
         // External entry point into the Visitor.
 	public EvaluatedType evaluateType( Object type ) {
+            OperationTracer.enter( "evaluateType", type ) ;
             if (DEBUG_EVALUATE) {
                 dputil.enter( "evaluateType", "type=", type ) ;
             }
@@ -350,6 +351,7 @@ public class TypeEvaluator {
                     throw Exceptions.self.evaluateTypeCalledWithUnknownType(type) ;
                 }
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG_EVALUATE) {
                     dputil.exit( result ) ;
                 }
@@ -361,6 +363,7 @@ public class TypeEvaluator {
         // The kind-specific visitXXX methods
 
         private EvaluatedType visitClassDeclaration( Class decl ) {
+            OperationTracer.enter( "visitClassDeclaration", decl ) ;
             if (DEBUG) {
                 dputil.enter( "visitClassDeclaration", "decl=", decl ) ;
             }
@@ -400,6 +403,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
@@ -409,6 +413,7 @@ public class TypeEvaluator {
         }
 
         private EvaluatedType visitParameterizedType( ParameterizedType pt ) {
+            OperationTracer.enter( "visitParameterizedType", pt ) ;
             if (DEBUG) {
                 dputil.enter( "visitParameterizedType", "pt=", pt ) ;
             }
@@ -436,6 +441,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
@@ -446,6 +452,8 @@ public class TypeEvaluator {
 
         private EvaluatedFieldDeclaration visitFieldDeclaration(
             final EvaluatedClassDeclaration cdecl, final Field fld ) {
+            OperationTracer.enter( "visitFieldDeclaration", 
+                cdecl.name(), fld ) ;
             if (DEBUG) {
                 dputil.enter( "visitFieldDeclaration", "cdecl=", cdecl,
                     "fld=", fld ) ;
@@ -477,6 +485,7 @@ public class TypeEvaluator {
                     dputil.info( "Caught exception ", exc, " for field ", fld ) ;
                 }
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
@@ -487,6 +496,8 @@ public class TypeEvaluator {
 
         private EvaluatedMethodDeclaration visitMethodDeclaration(
             final EvaluatedClassDeclaration cdecl, final Method mdecl ) {
+            OperationTracer.enter( "visitMethodDeclaration", 
+                cdecl.name(), mdecl ) ;
             if (DEBUG) {
                 dputil.enter( "visitMethodDeclaration", "cdecl=", cdecl,
                     "mdecl=", mdecl ) ;
@@ -528,6 +539,7 @@ public class TypeEvaluator {
         }
 
         private EvaluatedType visitTypeVariable( TypeVariable tvar ) {
+            OperationTracer.enter( "visitTypeVariable", tvar ) ;
             if (DEBUG) {
                 dputil.enter( "visitTypeVariable" ) ;
             }
@@ -537,6 +549,7 @@ public class TypeEvaluator {
             try {
                 result = lookup( tvar ) ;
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
@@ -546,8 +559,9 @@ public class TypeEvaluator {
         }
 
         private EvaluatedType visitGenericArrayType( GenericArrayType at ) {
+            OperationTracer.enter( "visitGenericArrayType", at ) ;
             if (DEBUG) {
-                dputil.enter( "visitTypeVariable" ) ;
+                dputil.enter( "visitGenericArrayType" ) ;
             }
 
             EvaluatedType result = null ;
@@ -556,6 +570,7 @@ public class TypeEvaluator {
                 result = DeclarationFactory.egat(
                     evaluateType( at.getGenericComponentType() ) ) ;
             } finally {
+                OperationTracer.exit();
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
@@ -565,8 +580,9 @@ public class TypeEvaluator {
         }
 
         private EvaluatedType visitWildcardType( WildcardType wt ) {
+            OperationTracer.enter( "visitWildCardType", wt ) ;
             if (DEBUG) {
-                dputil.enter( "visitTypeVariable" ) ;
+                dputil.enter( "visitWilcardType" ) ;
             }
 
             EvaluatedType result = null ;
@@ -595,6 +611,7 @@ public class TypeEvaluator {
         }
 
         private EvaluatedType lookup( TypeVariable tvar ) {
+            OperationTracer.enter( "lookup", tvar ) ;
             if (DEBUG) {
                 dputil.enter( "lookup", "tvar=", tvar ) ;
             }
@@ -622,6 +639,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
@@ -633,6 +651,8 @@ public class TypeEvaluator {
         private EvaluatedType getCorrectDeclaration( 
             OrderedResult<String,EvaluatedType> bindings,
             Class decl, EvaluatedClassDeclaration newDecl ) {
+            OperationTracer.enter( "getCorrectDeclaration", 
+                decl, newDecl.name() ) ;
             if (DEBUG) {
                 dputil.enter( "getCorrectDeclaration", "decl=", decl ) ;
             }
@@ -663,6 +683,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }
@@ -674,6 +695,7 @@ public class TypeEvaluator {
         private void processClass( final EvaluatedClassDeclaration newDecl,
             final Map<String,EvaluatedType> bindings, final Class decl ) {
 
+            OperationTracer.enter( "processClass", decl ) ;
             if (DEBUG) {
                 dputil.enter( "processClass", "bindings=", bindings,
                     "decl=", decl ) ;
@@ -723,6 +745,7 @@ public class TypeEvaluator {
             } finally {
                 display.exitScope() ;
 
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit() ;
                 }
@@ -730,6 +753,7 @@ public class TypeEvaluator {
         }
 
         private List<Type> getInheritance( Class cls ) {
+            OperationTracer.enter( "getInheritance", cls ) ;
             if (DEBUG) {
                 dputil.enter( "getInheritance", "cls=", cls ) ;
             }
@@ -741,6 +765,7 @@ public class TypeEvaluator {
                 result.add( cls.getGenericSuperclass() ) ;
                 result.addAll( Arrays.asList( cls.getGenericInterfaces() ) ) ;
             } finally {
+                OperationTracer.exit() ;
                 if (DEBUG) {
                     dputil.exit( result ) ;
                 }

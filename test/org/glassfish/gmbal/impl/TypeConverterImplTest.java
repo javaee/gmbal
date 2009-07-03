@@ -41,12 +41,8 @@
 
 package org.glassfish.gmbal.impl;
 
-import javax.management.openmbean.CompositeData;
-import javax.management.openmbean.OpenType;
 import junit.framework.TestCase;
 import org.glassfish.gmbal.ManagedObjectManagerFactory;
-import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
-import org.glassfish.gmbal.typelib.TypeEvaluator;
 
 /**
  *

@@ -105,4 +105,6 @@ public interface EvaluatedType {
      *
      */
     boolean isImmutable() ;
+
+    String name();
 }
