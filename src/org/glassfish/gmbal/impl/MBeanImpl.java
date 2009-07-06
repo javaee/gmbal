@@ -41,6 +41,7 @@ import java.lang.reflect.Field;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.FacetAccessorImpl;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import javax.management.Attribute ;
@@ -61,6 +62,8 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.util.Map ;
 import java.util.HashMap ;
+import java.util.HashSet;
+import java.util.Set;
 import org.glassfish.gmbal.GmbalMBean;
 import org.glassfish.gmbal.generic.OperationTracer;
 
@@ -73,6 +76,10 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     private String name ;
     private ObjectName oname ;
     private MBeanImpl parent ;
+    private final Set<String> subTypes ;	// Null if not used: don't create empty
+					// sets if not used.
+
+    // First index is type, second is name.
     private Map<String,Map<String,MBeanImpl>> children ;
 
     private Object target ;
@@ -90,6 +97,13 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         this.parent = null ;
         this.children = new HashMap<String,Map<String,MBeanImpl>>() ;
         this.target = obj ;
+	String[] stypes = skel.getMBeanType().subTypes() ;
+	if (stypes.length > 0) {
+	    this.subTypes = new HashSet( Arrays.asList(stypes)) ;
+	} else {
+	    this.subTypes = null ;
+	}
+
         addFacet( obj ) ;
         addFacet( new AMXImpl( this ) ) ;
 
@@ -191,11 +205,25 @@ public class MBeanImpl extends NotificationBroadcasterSupport
    
     public synchronized void addChild( MBeanImpl child ) {
         child.parent( this ) ;
+
+	// XXX Add test case!
+	if (subTypes != null && !subTypes.contains(child.type())) {
+	    throw Exceptions.self.invalidSubtypeOfParent( this.oname, 
+		this.subTypes, child.objectName(), child.type() ) ;
+	}
+	
         Map<String,MBeanImpl> map = children.get( child.type() ) ;
         if (map == null) {
             map = new HashMap<String,MBeanImpl>() ;
             children.put( child.type(), map ) ;
         }
+
+        // XXX add test case!
+	boolean isSingleton = child.skeleton().getMBeanType().isSingleton() ;
+	if (isSingleton && map.size() > 0) {
+	    throw Exceptions.self.childMustBeSingleton( this.oname, child.type(),
+		child.oname ) ;
+	}
         
         map.put( child.name(), child) ;
     }

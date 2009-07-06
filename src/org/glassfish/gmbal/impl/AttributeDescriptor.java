@@ -47,7 +47,8 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import javax.management.ReflectionException ;
 
-import org.glassfish.gmbal.generic.DprintUtil;
+import org.glassfish.gmbal.generic.MethodMonitor;
+import org.glassfish.gmbal.generic.MethodMonitorFactory;
 import org.glassfish.gmbal.generic.DumpIgnore;
 import org.glassfish.gmbal.generic.DumpToString;
 import org.glassfish.gmbal.generic.FacetAccessor;
@@ -72,7 +73,7 @@ public class AttributeDescriptor {
     private TypeConverter _tc ;
 
     @DumpIgnore
-    private DprintUtil dputil = new DprintUtil( getClass() ) ;
+    private MethodMonitor mm = MethodMonitorFactory.makeStandard( getClass() ) ;
 
     private static final Permission accessControlPermission =
         new ReflectPermission( "suppressAccessChecks" ) ;
@@ -136,9 +137,7 @@ public class AttributeDescriptor {
     public Object get( FacetAccessor fa,
         boolean debug ) throws MBeanException, ReflectionException {
         
-        if (debug) {
-            dputil.enter( "get", "fa=", fa ) ;
-        }
+        mm.enter( debug, "get", fa ) ;
         
         checkType( AttributeType.GETTER ) ;
                 
@@ -154,15 +153,8 @@ public class AttributeDescriptor {
             } else {
                 Exceptions.self.unknownDeclarationType(_decl) ;
             }
-        } catch (RuntimeException exc) {
-            if (debug) {
-                dputil.exception( "Error:", exc ) ;
-            }
-            throw exc ;
         } finally {
-            if (debug) {
-                dputil.exit( result ) ;
-            }
+            mm.exit( debug, result ) ;
         }
         
         return result ;
@@ -173,9 +165,7 @@ public class AttributeDescriptor {
         
         checkType( AttributeType.SETTER ) ;
         
-        if (debug) {
-            dputil.enter( "set", "target=", target, "value=", value ) ;
-        }
+        mm.enter( debug, "set", target, value ) ;
         
         try {
             if (_decl instanceof EvaluatedMethodDeclaration) {
@@ -188,15 +178,8 @@ public class AttributeDescriptor {
             } else {
                 Exceptions.self.unknownDeclarationType(_decl) ;
             }
-        } catch (RuntimeException exc) {
-            if (debug) {
-                dputil.exception( "Error:", exc ) ;
-            }
-            throw exc ;
         } finally {
-            if (debug) {
-                dputil.exit() ;
-            }
+            mm.exit( debug ) ;
         }
     }
     

@@ -73,7 +73,7 @@ public @interface AMXMetadata {
     String group() default "other" ;
 
     /** Return the list of types that are legal as types of children of this
-     * type.  If unknown, must be an empty array.  Not used is isLeaf is true.
+     * type.  If unknown, must be an empty array.
      * @return Array of child types
      */
     @DescriptorKey( AMX.META_SUB_TYPES )

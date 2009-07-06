@@ -42,11 +42,8 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.glassfish.gmbal.GmbalException;
 
 /** 
@@ -57,30 +54,24 @@ public class FacetAccessorImpl implements FacetAccessor {
     private Object delegate ;
     private Map<Class<?>,Object> facetMap =
         new HashMap<Class<?>,Object>() ;
-    private DprintUtil dputil ;
+    private MethodMonitor mm ;
     
     public FacetAccessorImpl( Object delegate ) {
         this.delegate = delegate ;
-        this.dputil = new DprintUtil( getClass() ) ;
+        this.mm = MethodMonitorFactory.makeStandard( getClass() ) ;
     }
     
     public <T> T facet(Class<T> cls, boolean debug ) {
         Object result = null ;
-        if (debug) {
-            dputil.enter( "facet", "cls=", cls ) ;
-        }
+        mm.enter( debug, "facet", cls ) ;
         
         try {
             if (cls.isInstance(delegate)) {
                 result = delegate ;
-                if (debug) {
-                    dputil.info( "result is delegate" ) ;
-                }
+                mm.info( debug, "result is delegate" ) ;
             } else {
                 result = facetMap.get( cls ) ;
-                if (debug) {
-                    dputil.info( "result=", result ) ;
-                }
+                mm.info( debug, "result=", result ) ;
             }
                     
             if (result == null) {
@@ -89,9 +80,7 @@ public class FacetAccessorImpl implements FacetAccessor {
                 return cls.cast( result ) ;
             }
         } finally {
-            if (debug) {
-                dputil.exit( result ) ;
-            }
+            mm.exit( debug, result ) ;
         }
     }
     
@@ -118,10 +107,7 @@ public class FacetAccessorImpl implements FacetAccessor {
     }
 
     public Object invoke(Method method, boolean debug, Object... args) {
-        if (debug) {
-            dputil.enter( "invoke", "method=", method, "args=",
-                Arrays.asList( args ) ) ;
-        }
+        mm.enter( debug, "invoke", method, args ) ;
         
         Object result = null ;
         try {
@@ -140,25 +126,15 @@ public class FacetAccessorImpl implements FacetAccessor {
             } catch (InvocationTargetException ex) {
                 throw new GmbalException( "Exception on invocation", ex ) ;
             }
-        } catch (RuntimeException exc) {
-            if (debug) {
-                dputil.exception( "Exception in method invoke call", exc ) ;
-            }
-
-            throw exc ;
         } finally {
-            if (debug) {
-                dputil.exit( result ) ;
-            }
+            mm.exit( debug, result ) ;
         }
         
         return result ;
     }
 
     public Object get(Field field, boolean debug) {
-        if (debug) {
-            dputil.enter( "get", "field=", field ) ;
-        }
+        mm.enter( debug, "get", field ) ;
 
         Object result = null ;
 
@@ -172,25 +148,15 @@ public class FacetAccessorImpl implements FacetAccessor {
             } catch (IllegalAccessException ex) {
                 throw new GmbalException( "Exception on field get", ex ) ;
             }
-        } catch (RuntimeException exc) {
-            if (debug) {
-                dputil.exception( "Exception in method invoke call", exc ) ;
-            }
-
-            throw exc ;
         } finally {
-            if (debug) {
-                dputil.exit( result ) ;
-            }
+            mm.exit( debug, result ) ;
         }
 
         return result ;
     }
 
     public void set(Field field, Object value, boolean debug) {
-        if (debug) {
-            dputil.enter( "set", "field=", field, "value", value ) ;
-        }
+        mm.enter( debug, "set", field, value ) ;
 
         try {
             Object target = facet( field.getDeclaringClass(), debug ) ;
@@ -202,16 +168,8 @@ public class FacetAccessorImpl implements FacetAccessor {
             } catch (IllegalAccessException ex) {
                 throw new GmbalException( "Exception on field get", ex ) ;
             }
-        } catch (RuntimeException exc) {
-            if (debug) {
-                dputil.exception( "Exception in method invoke call", exc ) ;
-            }
-
-            throw exc ;
         } finally {
-            if (debug) {
-                dputil.exit() ;
-            }
+            mm.exit( debug ) ;
         }
     }
 

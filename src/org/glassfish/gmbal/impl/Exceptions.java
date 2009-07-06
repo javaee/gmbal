@@ -42,6 +42,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
+import java.util.Set;
 import javax.management.AttributeNotFoundException;
 import javax.management.JMException;
 import javax.management.MBeanException;
@@ -183,6 +184,18 @@ public interface Exceptions {
     @Log( id=MBEAN_IMPL_START + 0 )
     IllegalArgumentException nodeAlreadyHasParent( MBeanImpl entity ) ;
 
+    @Message( "Parent object {0} only allows subtypes {1}: "
+        + " cannot add child {2} of type {3}" )
+    @Log( id=MBEAN_IMPL_START + 1 )
+    public IllegalArgumentException invalidSubtypeOfParent(ObjectName oname,
+	Set<String> subTypes, ObjectName objectName, String type);
+
+    @Message( "Parent object {0} cannot contain more than one object" +
+        " of type {1}: cannot add child {2}")
+    @Log( id=MBEAN_IMPL_START + 2 )
+    public IllegalArgumentException childMustBeSingleton(ObjectName pname, String ctype,
+	ObjectName cname);
+
 // MBeanSkeleton
     static final int MBEAN_SKELETON_START =
         MBEAN_IMPL_START + EXCEPTIONS_PER_CLASS ;
@@ -276,11 +289,11 @@ public interface Exceptions {
 
     @Message( "Parent object {0} not found" )
     @Log( id=MBEAN_TREE_START + 7 )
-    String parentNotFound( Object parent ) ;
+    IllegalArgumentException parentNotFound( Object parent ) ;
 
     @Message( "Object {0} is already registered as {1}")
     @Log( id=MBEAN_TREE_START + 8 )
-    String objectAlreadyRegistered( Object obj, MBeanImpl oldMbi ) ;
+    IllegalArgumentException objectAlreadyRegistered( Object obj, MBeanImpl oldMbi ) ;
 
     @Message( "Should not happen" )
     @Log( id=MBEAN_TREE_START + 9 )

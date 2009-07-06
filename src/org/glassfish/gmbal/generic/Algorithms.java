@@ -39,6 +39,7 @@ package org.glassfish.gmbal.generic ;
 import java.util.List ;
 import java.util.Map ;
 import java.util.ArrayList ;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -235,5 +236,38 @@ public final class Algorithms {
         }
 
         throw new IllegalArgumentException( zeroMsg ) ;
+    }
+
+    /** Convert argument to String, either by toString, ot Arrays.toString.
+     *
+     * @param arg Object to convert.
+     */
+    public static String convertToString( Object arg ) {
+	    if (arg == null)
+			return "<NULL>" ;
+
+		Class cls = arg.getClass() ;
+		if (cls.isArray()) {
+		    Class cclass = cls.getComponentType() ;
+		    if (cclass.equals( int.class ))
+				return Arrays.toString( (int[])arg ) ;
+		    if (cclass.equals( byte.class ))
+				return Arrays.toString( (byte[])arg ) ;
+		    if (cclass.equals( boolean.class ))
+				return Arrays.toString( (boolean[])arg ) ;
+		    if (cclass.equals( char.class ))
+				return Arrays.toString( (char[])arg ) ;
+		    if (cclass.equals( short.class ))
+				return Arrays.toString( (short[])arg ) ;
+		    if (cclass.equals( long.class ))
+				return Arrays.toString( (long[])arg ) ;
+		    if (cclass.equals( float.class ))
+				return Arrays.toString( (float[])arg ) ;
+		    if (cclass.equals( double.class ))
+				return Arrays.toString( (double[])arg ) ;
+		    return Arrays.toString( (Object[])arg ) ;
+		} else {
+		    return arg.toString() ;
+		}
     }
 }

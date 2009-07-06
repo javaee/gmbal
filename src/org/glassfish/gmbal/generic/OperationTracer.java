@@ -79,11 +79,7 @@ public class OperationTracer {
                 sb.append( ',' ) ;
             }
 
-            if (arg == null) {
-                sb.append( "null" ) ;
-            } else {
-                sb.append( arg ) ;
-            }
+	    sb.append( Algorithms.convertToString(obj)) ;
         }
         return sb.toString() ;
     }

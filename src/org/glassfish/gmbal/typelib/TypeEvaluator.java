@@ -40,7 +40,8 @@ package org.glassfish.gmbal.typelib;
 import java.lang.reflect.Field;
 import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.Display;
-import org.glassfish.gmbal.generic.DprintUtil;
+import org.glassfish.gmbal.generic.MethodMonitor;
+import org.glassfish.gmbal.generic.MethodMonitorFactory;
 import org.glassfish.gmbal.generic.UnaryFunction;
 import org.glassfish.gmbal.generic.Pair;
 
@@ -64,7 +65,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import javax.management.ObjectName;
-import org.glassfish.gmbal.generic.OperationTracer;
 
 /**
  *
@@ -73,7 +73,8 @@ import org.glassfish.gmbal.generic.OperationTracer;
 public class TypeEvaluator {
     private static boolean DEBUG = false ;
     private static boolean DEBUG_EVALUATE = false ;
-    private static final DprintUtil dputil = new DprintUtil( TypeEvaluator.class ) ;
+    private static final MethodMonitor mm = MethodMonitorFactory.makeStandard(
+	TypeEvaluator.class ) ;
 
     public static void setDebugLevel( int level ) {
         DEBUG = level > 1 ;
@@ -112,17 +113,13 @@ public class TypeEvaluator {
 
     private static void mapPut( EvaluatedClassDeclaration ecd, 
         Class cls ) {
-        if (DEBUG) {
-            dputil.enter( "mapPut", "ecd=", ecd, "cls=", cls ) ;
-        }
+        mm.enter( DEBUG, "mapPut", ecd, cls ) ;
 
         try {
             EvalMapKey key = new EvalMapKey( cls, emptyETList ) ;
             evalClassMap.put( key, ecd ) ;
         } finally {
-            if (DEBUG) {
-                dputil.exit() ;
-            }
+            mm.exit( DEBUG ) ;
         }
     }
 
@@ -320,10 +317,7 @@ public class TypeEvaluator {
 
         // External entry point into the Visitor.
 	public EvaluatedType evaluateType( Object type ) {
-            OperationTracer.enter( "evaluateType", type ) ;
-            if (DEBUG_EVALUATE) {
-                dputil.enter( "evaluateType", "type=", type ) ;
-            }
+            mm.enter( DEBUG_EVALUATE, "evaluateType", type ) ;
 
             EvaluatedType result = null ;
 
@@ -351,10 +345,7 @@ public class TypeEvaluator {
                     throw Exceptions.self.evaluateTypeCalledWithUnknownType(type) ;
                 }
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG_EVALUATE) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG_EVALUATE, result ) ;
             }
 
             return result ;
@@ -363,18 +354,13 @@ public class TypeEvaluator {
         // The kind-specific visitXXX methods
 
         private EvaluatedType visitClassDeclaration( Class decl ) {
-            OperationTracer.enter( "visitClassDeclaration", decl ) ;
-            if (DEBUG) {
-                dputil.enter( "visitClassDeclaration", "decl=", decl ) ;
-            }
+            mm.enter( DEBUG, "visitClassDeclaration", decl ) ;
 
             EvaluatedType result = null ;
 
             try {
                 if (decl.isArray()) {
-                    if (DEBUG) {
-                        dputil.info( "decl is an array" ) ;
-                    }
+                    mm.info( DEBUG, "decl is an array" ) ;
 
                     return DeclarationFactory.egat( evaluateType(
                         decl.getComponentType() ) ) ;
@@ -397,26 +383,18 @@ public class TypeEvaluator {
                             partialDefinitions.remove( decl ) ;
                         }
                     } else {
-                        if (DEBUG) {
-                            dputil.info( "found result=" + result ) ;
-                        }
+                        mm.info( DEBUG, "found result=" + result ) ;
                     }
                 }
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitParameterizedType( ParameterizedType pt ) {
-            OperationTracer.enter( "visitParameterizedType", pt ) ;
-            if (DEBUG) {
-                dputil.enter( "visitParameterizedType", "pt=", pt ) ;
-            }
+            mm.enter( DEBUG, "visitParameterizedType", pt ) ;
 
             Class<?> decl = (Class<?>)pt.getRawType() ;
 
@@ -441,10 +419,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
@@ -452,12 +427,7 @@ public class TypeEvaluator {
 
         private EvaluatedFieldDeclaration visitFieldDeclaration(
             final EvaluatedClassDeclaration cdecl, final Field fld ) {
-            OperationTracer.enter( "visitFieldDeclaration", 
-                cdecl.name(), fld ) ;
-            if (DEBUG) {
-                dputil.enter( "visitFieldDeclaration", "cdecl=", cdecl,
-                    "fld=", fld ) ;
-            }
+            mm.enter( DEBUG, "visitFieldDeclaration", cdecl, fld ) ;
 
             EvaluatedFieldDeclaration result = null ;
 
@@ -481,14 +451,9 @@ public class TypeEvaluator {
                 result = DeclarationFactory.efdecl(cdecl, fld.getModifiers(),
                     ftype, fld.getName(), fld ) ;
             } catch (Exception exc) {
-                if (DEBUG) {
-                    dputil.info( "Caught exception ", exc, " for field ", fld ) ;
-                }
+                mm.info( DEBUG, "Caught exception ", exc, " for field ", fld ) ;
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
@@ -496,12 +461,7 @@ public class TypeEvaluator {
 
         private EvaluatedMethodDeclaration visitMethodDeclaration(
             final EvaluatedClassDeclaration cdecl, final Method mdecl ) {
-            OperationTracer.enter( "visitMethodDeclaration", 
-                cdecl.name(), mdecl ) ;
-            if (DEBUG) {
-                dputil.enter( "visitMethodDeclaration", "cdecl=", cdecl,
-                    "mdecl=", mdecl ) ;
-            }
+            mm.enter( DEBUG, "visitMethodDeclaration", cdecl, mdecl ) ;
 
             EvaluatedMethodDeclaration result = null ;
 
@@ -513,56 +473,41 @@ public class TypeEvaluator {
                                 return evaluateType( type ) ;
                             } } ) ;
 
-                if (DEBUG) {
-                    dputil.info( "eptypes=" + eptypes ) ;
-                }
+                mm.info( DEBUG, "eptypes=" + eptypes ) ;
 
                 // Convenience for the test: all processing is done on a method
                 // named getThing, and this is where we need to debug, out of the
                 // many hundreds of other method calls.
                 if (mdecl.getName().equals( "getThing" )) {
-                    if (DEBUG) {
-                        dputil.info( "processing getThing method from test" ) ;
-                    }
+                    mm.info( DEBUG, "processing getThing method from test" ) ;
                 }
 
                 result = DeclarationFactory.emdecl( cdecl, mdecl.getModifiers(),
                     evaluateType( mdecl.getGenericReturnType() ),
                     mdecl.getName(), eptypes, mdecl ) ;
             } finally {
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitTypeVariable( TypeVariable tvar ) {
-            OperationTracer.enter( "visitTypeVariable", tvar ) ;
-            if (DEBUG) {
-                dputil.enter( "visitTypeVariable" ) ;
-            }
+            mm.enter( DEBUG, "visitTypeVariable" ) ;
 
             EvaluatedType result = null ;
 
             try {
                 result = lookup( tvar ) ;
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitGenericArrayType( GenericArrayType at ) {
-            OperationTracer.enter( "visitGenericArrayType", at ) ;
-            if (DEBUG) {
-                dputil.enter( "visitGenericArrayType" ) ;
-            }
+            mm.enter( DEBUG, "visitGenericArrayType" ) ;
 
             EvaluatedType result = null ;
 
@@ -570,20 +515,14 @@ public class TypeEvaluator {
                 result = DeclarationFactory.egat(
                     evaluateType( at.getGenericComponentType() ) ) ;
             } finally {
-                OperationTracer.exit();
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitWildcardType( WildcardType wt ) {
-            OperationTracer.enter( "visitWildCardType", wt ) ;
-            if (DEBUG) {
-                dputil.enter( "visitWilcardType" ) ;
-            }
+            mm.enter( DEBUG, "visitWilcardType" ) ;
 
             EvaluatedType result = null ;
 
@@ -602,19 +541,14 @@ public class TypeEvaluator {
                     result = EvaluatedType.EOBJECT ;
                 }
             } finally {
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType lookup( TypeVariable tvar ) {
-            OperationTracer.enter( "lookup", tvar ) ;
-            if (DEBUG) {
-                dputil.enter( "lookup", "tvar=", tvar ) ;
-            }
+            mm.enter( DEBUG, "lookup", "tvar=", tvar ) ;
 
             EvaluatedType result = null ;
 
@@ -622,9 +556,7 @@ public class TypeEvaluator {
                 result = display.lookup( tvar.getName() ) ;
 
                 if (result == null) {
-                    if (DEBUG) {
-                        dputil.info( "tvar not found in display" ) ;
-                    }
+                    mm.info( DEBUG, "tvar not found in display" ) ;
 
                     Type[] bounds = tvar.getBounds() ;
                     if (bounds.length > 0) {
@@ -639,10 +571,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
@@ -651,11 +580,7 @@ public class TypeEvaluator {
         private EvaluatedType getCorrectDeclaration( 
             OrderedResult<String,EvaluatedType> bindings,
             Class decl, EvaluatedClassDeclaration newDecl ) {
-            OperationTracer.enter( "getCorrectDeclaration", 
-                decl, newDecl.name() ) ;
-            if (DEBUG) {
-                dputil.enter( "getCorrectDeclaration", "decl=", decl ) ;
-            }
+            mm.enter( DEBUG, "getCorrectDeclaration", "decl=", decl ) ;
 
             EvaluatedType result = null ;
 
@@ -668,9 +593,7 @@ public class TypeEvaluator {
 
                 result = evalClassMap.get( key ) ;
                 if (result == null) {
-                    if (DEBUG) {
-                        dputil.info( "No result in evalClassMap" ) ;
-                    }
+                    mm.info( DEBUG, "No result in evalClassMap" ) ;
 
                     evalClassMap.put( key, newDecl ) ;
 
@@ -678,15 +601,10 @@ public class TypeEvaluator {
 
                     result = newDecl ;
                 } else {
-                    if (DEBUG) {
-                        dputil.info( "Found result in evalClassMap" ) ;
-                    }
+                    mm.info( DEBUG, "Found result in evalClassMap" ) ;
                 }
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;
@@ -695,11 +613,7 @@ public class TypeEvaluator {
         private void processClass( final EvaluatedClassDeclaration newDecl,
             final Map<String,EvaluatedType> bindings, final Class decl ) {
 
-            OperationTracer.enter( "processClass", decl ) ;
-            if (DEBUG) {
-                dputil.enter( "processClass", "bindings=", bindings,
-                    "decl=", decl ) ;
-            }
+            mm.enter( DEBUG, "processClass", bindings, decl ) ;
 
             display.enterScope() ;
             display.bind( bindings ) ;
@@ -712,9 +626,7 @@ public class TypeEvaluator {
                             return (EvaluatedClassDeclaration)evaluateType( pt ) ;
                         } } ) ;
 
-                if (DEBUG) {
-                    dputil.info( "inheritance=" + inheritance ) ;
-                }
+                mm.info( DEBUG, "inheritance=" + inheritance ) ;
 
                 newDecl.inheritance( inheritance ) ;
 
@@ -739,24 +651,16 @@ public class TypeEvaluator {
                 newDecl.methods( newMethods ) ;
                 newDecl.freeze() ;
 
-                if (DEBUG) {
-                    dputil.info( "newDecl=" + newDecl ) ;
-                }
+                mm.info( DEBUG, "newDecl=" + newDecl ) ;
             } finally {
                 display.exitScope() ;
 
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit() ;
-                }
+                mm.exit( DEBUG ) ;
             }
         }
 
         private List<Type> getInheritance( Class cls ) {
-            OperationTracer.enter( "getInheritance", cls ) ;
-            if (DEBUG) {
-                dputil.enter( "getInheritance", "cls=", cls ) ;
-            }
+            mm.enter( DEBUG, "getInheritance", "cls=", cls ) ;
 
             List<Type> result = null ;
 
@@ -765,10 +669,7 @@ public class TypeEvaluator {
                 result.add( cls.getGenericSuperclass() ) ;
                 result.addAll( Arrays.asList( cls.getGenericInterfaces() ) ) ;
             } finally {
-                OperationTracer.exit() ;
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+                mm.exit( DEBUG, result ) ;
             }
 
             return result ;

@@ -50,12 +50,13 @@ public class DprintUtil {
     
     private String sourceClassName ;
     private String loggerName = null ;
-    private ThreadLocal<Stack<String>> currentMethod = new ThreadLocal<Stack<String>>() {
-        @Override
-        public Stack<String> initialValue() {
-            return new Stack<String>() ;
-        }
-    } ;
+    private ThreadLocal<Stack<String>> currentMethod =
+	new ThreadLocal<Stack<String>>() {
+            @Override
+            public Stack<String> initialValue() {
+                return new Stack<String>() ;
+            }
+        } ;
 
     public DprintUtil( Class selfClass ) {
         sourceClassName = compressClassName( selfClass.getName() ) ;  
@@ -64,8 +65,7 @@ public class DprintUtil {
         }
     }        
     
-    private static String compressClassName( String name )
-    {
+    private static String compressClassName( String name ) {
 	// Note that this must end in . in order to be renamed correctly.
 	String prefix = "org.glassfish.gmbal." ;
 	if (name.startsWith( prefix ) ) {
@@ -87,19 +87,6 @@ public class DprintUtil {
         }
     }
     
-    private synchronized void dprint(String msg, Throwable exc ) {
-        String prefix = "(" + Thread.currentThread().getName() + "): " ;
-        
-        if (USE_LOGGER) {
-            String mname = currentMethod.get().peek() ;
-            Logger.getLogger( loggerName ).
-                logp( Level.INFO, prefix + msg, sourceClassName, mname, exc ) ;
-        } else {
-            System.out.println( prefix + sourceClassName + msg + ": " + exc ) ;
-            exc.printStackTrace() ;
-        }
-    }
-
     private String makeString( Object... args ) {
         if (args.length == 0) {
             return "";
@@ -114,11 +101,8 @@ public class DprintUtil {
             } else {
                 sb.append( ' ' ) ;
             }
-            if (obj == null) {
-                sb.append( "<NULL>" ) ;
-            } else {
-                sb.append( obj.toString() ) ;
-            }
+
+	    sb.append( Algorithms.convertToString(obj)) ;
         }
         sb.append( ')' ) ;
 
@@ -137,12 +121,6 @@ public class DprintUtil {
         dprint( "." + mname + "::" + str ) ;
     }
     
-    public void exception( String msg, Throwable exc ) {
-        String mname = currentMethod.get().peek() ;
-        String str = makeString( "Exception: ", msg, exc ) ;
-        dprint( "." + mname + "::" + str, exc ) ;
-    }
-
     public void exit() {
         String mname = currentMethod.get().peek() ;
         dprint( "." + mname + "<-" ) ;

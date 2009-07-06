@@ -38,15 +38,12 @@
 package org.glassfish.gmbal.impl ;
 
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
-import java.lang.reflect.Type ;
 
-import java.lang.reflect.AnnotatedElement ;
 
 import org.glassfish.gmbal.ManagedObjectManager ;
 import org.glassfish.gmbal.generic.Pair ;
 import org.glassfish.gmbal.InheritedAttribute ;
 
-import org.glassfish.gmbal.generic.DprintUtil;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Predicate;
 import java.lang.annotation.Annotation;

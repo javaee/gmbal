@@ -37,7 +37,6 @@
 
 package org.glassfish.gmbal.impl;
 
-import org.glassfish.gmbal.generic.DprintUtil;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,7 +48,8 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import org.glassfish.gmbal.GmbalMBean;
-import org.glassfish.gmbal.generic.OperationTracer;
+import org.glassfish.gmbal.generic.MethodMonitor;
+import org.glassfish.gmbal.generic.MethodMonitorFactory;
 
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
@@ -72,7 +72,7 @@ public class MBeanTree {
     private String typeString ; // What string is used for the type of the 
                                 // type name/value pair?
     private ManagedObjectManagerInternal mom ;
-    private DprintUtil dputil ;
+    private MethodMonitor mm ;
     private JMXRegistrationManager jrm ;
     
     private void addToObjectMaps( MBeanImpl mbean ) {
@@ -175,7 +175,7 @@ public class MBeanTree {
         this.typeString = typeString ;
         objectMap = new HashMap<Object,MBeanImpl>() ;
         objectNameMap = new HashMap<ObjectName,Object>() ;
-        dputil = new DprintUtil( getClass() ) ;
+        mm = MethodMonitorFactory.makeStandard( getClass() ) ;
         jrm = new JMXRegistrationManager() ;
     }
 
@@ -252,11 +252,8 @@ public class MBeanTree {
     public synchronized ObjectName objectName( MBeanImpl parent,
         String type, String name ) 
         throws MalformedObjectNameException {
-        OperationTracer.enter( "objectName", parent, type, name ) ;
-        if (mom.registrationDebug()) {
-            dputil.enter( "objectName", "parent", parent, 
-                "type", type, "name", name ) ;
-        }
+        mm.enter( mom.registrationDebug(), "objectName", parent,
+            type, name ) ;
 
         ObjectName oname = null ;
 
@@ -270,14 +267,12 @@ public class MBeanTree {
             result.append( domain ) ;
             result.append( ":" ) ;
 
-            if (mom.registrationDebug()) {
-                dputil.info( "rootParentPrefix=", rootParentPrefix ) ;
-                if (parent != null) {
-                    dputil.info( "parent.restName()=", parent.restName() ) ;
-                } else {
-                    dputil.info( "parent is null" ) ;
-                }
-            }
+	    mm.info( mom.registrationDebug(), "rootParentPrefix=", rootParentPrefix ) ;
+	    if (parent != null) {
+	        mm.info( mom.registrationDebug(), "parent.restName()=", parent.restName() ) ;
+	    } else {
+	        mm.info( mom.registrationDebug(), "parent is null" ) ;
+	    }
             
             // pp
             result.append( "pp" ) ;
@@ -317,10 +312,7 @@ public class MBeanTree {
                 throw Exceptions.self.malformedObjectName(exc, on) ;
             }
         } finally {
-            OperationTracer.exit() ;
-            if (mom.registrationDebug()) {
-                dputil.exit( oname ) ;
-            }
+            mm.exit( mom.registrationDebug(), oname ) ;
         }
 
         return oname ;
@@ -333,13 +325,7 @@ public class MBeanTree {
         MBeanRegistrationException, NotCompliantMBeanException, 
         MalformedObjectNameException {
         
-        OperationTracer.enter( "register", parent, obj, mb ) ;
-        if (mom.registrationDebug()) {
-            dputil.enter( "register", 
-                "parent=", parent,
-                "obj=", obj,
-                "mb=", mb ) ;
-        }
+        mm.enter( mom.registrationDebug(), "register", parent, obj, mb ) ;
         
         try { 
             if (parent == null) {
@@ -348,26 +334,16 @@ public class MBeanTree {
             
             MBeanImpl oldMB = objectMap.get( obj ) ;
             if (oldMB != null) {
-                String msg = Exceptions.self.objectAlreadyRegistered(obj, oldMB) ;
-                
-                if (mom.registrationDebug()) {
-                    dputil.info( msg ) ;
-                }
-                
-                throw new IllegalArgumentException( msg ) ;
+                throw Exceptions.self.objectAlreadyRegistered(obj, oldMB) ;
             }
             
             MBeanImpl parentEntity ;
 
             parentEntity = objectMap.get( parent ) ;
             if (parentEntity == null) {
-                String msg = Exceptions.self.parentNotFound(parent) ;
-                if (mom.registrationDebug()) {
-                    dputil.info( msg ) ;
-                }
-                throw new IllegalArgumentException( msg ) ;
+                throw Exceptions.self.parentNotFound(parent) ;
             }
-            
+
             ObjectName oname = objectName( parentEntity, mb.type(), 
                 mb.name() ) ;
             mb.objectName( oname ) ;
@@ -380,10 +356,7 @@ public class MBeanTree {
 
             return mb ;
         } finally {
-            OperationTracer.exit() ;
-            if (mom.registrationDebug()) {
-                dputil.exit() ;
-            }
+            mm.exit( mom.registrationDebug() ) ;
         }
     }
     

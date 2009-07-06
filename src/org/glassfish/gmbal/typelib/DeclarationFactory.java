@@ -47,7 +47,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import java.util.Map;
-import org.glassfish.gmbal.generic.DprintUtil ;
+import org.glassfish.gmbal.generic.MethodMonitor ;
+import org.glassfish.gmbal.generic.MethodMonitorFactory ;
 import org.glassfish.gmbal.generic.DumpToString;
 
 /** Utility class used to construct instances of the typelib interfaces directly from
@@ -56,7 +57,8 @@ import org.glassfish.gmbal.generic.DumpToString;
  */
 public class DeclarationFactory {
     private static boolean DEBUG = false ;
-    private static DprintUtil dputil = new DprintUtil( DeclarationFactory.class ) ;
+    private static MethodMonitor mm = MethodMonitorFactory.makeStandard(
+	DeclarationFactory.class ) ;
 
     private static final Map<EvaluatedType,EvaluatedArrayType> arrayMap =
         new HashMap<EvaluatedType,EvaluatedArrayType>() ;
@@ -75,17 +77,13 @@ public class DeclarationFactory {
     public static synchronized EvaluatedArrayType egat( final EvaluatedType compType ) {
         EvaluatedArrayType result = arrayMap.get( compType ) ;
         if (result == null) {
-            if (DEBUG) {
-                dputil.enter( "egat", "compType", compType ) ;
-            }
+	    mm.enter( DEBUG, "egat", "compType", compType ) ;
 
             try {
                 result = new EvaluatedArrayTypeImpl( compType ) ;
                 arrayMap.put( compType, result ) ;
             } finally {
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+	        mm.exit( DEBUG, result ) ;
             }
         }
 
@@ -105,9 +103,7 @@ public class DeclarationFactory {
         }
 
         if (result == null) {
-            if (DEBUG) {
-                dputil.enter( "ecdecl", "name", name ) ;
-            }
+	    mm.enter( DEBUG, "ecdecl", name ) ;
 
             try {
                 result = new EvaluatedClassDeclarationImpl( modifiers, name,
@@ -116,9 +112,7 @@ public class DeclarationFactory {
                     simpleClassMap.put( name, result ) ;
                 }
             } finally {
-                if (DEBUG) {
-                    dputil.exit( result ) ;
-                }
+	        mm.exit( DEBUG, result ) ;
             }
         }
 
@@ -129,9 +123,7 @@ public class DeclarationFactory {
         final EvaluatedClassDeclaration ecdecl, final int modifiers,
         final EvaluatedType ftype, final String name, final Field field ) {
 
-        if (DEBUG) {
-            dputil.enter( "efdecl", "name", name, "ftype", ftype ) ;
-        }
+        mm.enter( DEBUG, "efdecl", name, ftype ) ;
 
         EvaluatedFieldDeclaration result = null ;
 
@@ -139,9 +131,7 @@ public class DeclarationFactory {
             result = new EvaluatedFieldDeclarationImpl( ecdecl, modifiers,
                 ftype, name, field ) ;
         } finally {
-            if (DEBUG) {
-                dputil.exit( result ) ;
-            }
+            mm.exit( DEBUG, result ) ;
         }
 
         return result ;
@@ -152,9 +142,7 @@ public class DeclarationFactory {
         final EvaluatedType rtype, final String name,
         final List<EvaluatedType> ptypes, final Method method ) {
 
-        if (DEBUG) {
-            dputil.enter( "emdecl", "name", name, "ptypes", ptypes ) ;
-        }
+        mm.enter( DEBUG, "emdecl", name, ptypes ) ;
 
         EvaluatedMethodDeclaration result = null ;
 
@@ -162,9 +150,7 @@ public class DeclarationFactory {
             result = new EvaluatedMethodDeclarationImpl( ecdecl, modifiers,
                 rtype, name, ptypes, method ) ;
         } finally {
-            if (DEBUG) {
-                dputil.exit( result ) ;
-            }
+            mm.exit( DEBUG, result ) ;
         }
 
         return result ;
