@@ -85,6 +85,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.glassfish.gmbal.generic.DelayedObjectToString;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
@@ -299,7 +300,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
             
             mm.info(registrationFineDebug() || (registrationDebug() && newSkeleton),
-                "Skeleton", myObjectUtil.objectToString(result) ) ;
+                "Skeleton", new DelayedObjectToString( result, myObjectUtil ) ) ;
             
             return result ;
         } finally {
