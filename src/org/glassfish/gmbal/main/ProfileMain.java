@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.management.ObjectName;
 import org.glassfish.gmbal.Description;
 import org.glassfish.gmbal.ManagedAttribute;
 import org.glassfish.gmbal.ManagedData;
@@ -50,6 +51,8 @@ import org.glassfish.gmbal.ManagedObjectManagerFactory ;
 import org.glassfish.gmbal.ManagedObjectManager ;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.NameValue;
+import org.glassfish.gmbal.generic.Pair;
+import org.glassfish.gmbal.impl.AMXClient;
 
 /**
  *
@@ -245,12 +248,81 @@ public class ProfileMain {
 	}
     }
 
+    private static void checkAttributes( ManagedObjectManager mom,
+	MyRoot myroot ) {
+
+	for (Store store : myroot.getStores() ) {
+	    ObjectName oname = mom.getObjectName(store) ;
+ 	    AMXClient amx = new AMXClient( mom.getMBeanServer(), oname ) ;
+
+	    Object res = amx.getAttribute("Name") ;
+	    if (!res.equals( store.name() )) {
+	        throw new IllegalStateException( "bad store name" ) ;
+	    }
+	}
+    }
+
     private static void registerMBeans( ManagedObjectManager mom, 
 	MyRoot myroot ) {
 
 	for (Store store : myroot.getStores() ) {
 	    mom.registerAtRoot( store ) ;
 	}
+    }
+
+    public static class Timings {
+	private List<Pair<String,Long>> durations ;
+	private long start ;
+
+	public Timings() {
+	    start = System.currentTimeMillis() ;
+	    durations = new ArrayList<Pair<String,Long>>() ;
+	}
+
+	public void add( String msg ) {
+	    long elapsed = System.currentTimeMillis() - start ;
+
+	    Pair<String,Long> entry = new Pair<String,Long>(
+		msg, elapsed ) ;
+	    durations.add( entry ) ;
+
+	    start = System.currentTimeMillis() ;
+	}
+
+	public void dump( String msg ) {
+	    System.out.println( msg );
+	    for (Pair<String,Long> entry : durations) {
+		System.out.printf( "\t%10d:\t%s\n",
+		    entry.second(), entry.first() ) ;
+	    }
+	}
+    }
+
+    public static void run( boolean isWarmup, int count ) throws IOException {
+	Timings timings = new Timings() ;
+
+        final MyRoot myroot = new MyRoot() ;
+	initializeStores( myroot ) ;
+	timings.add( "Set up the data" ) ;
+
+        mom = ManagedObjectManagerFactory.createStandalone("test") ;
+	timings.add( "Create ManagedObjectManager" ) ;
+
+        mom.createRoot(myroot) ;
+	timings.add( "Create the root" ) ;
+
+	registerMBeans( mom, myroot ) ;
+	timings.add( "Register " + NUM_STORES + " MBeans" ) ;
+
+	checkAttributes( mom, myroot ) ;
+	timings.add( "Fetch 1 attribute on " + NUM_STORES + " MBeans" ) ;
+
+        mom.close();
+	timings.add( "Close the ManagedObjectManager" ) ;
+
+	String type = isWarmup ? "Warmup" : "Benchmark" ;
+
+	timings.dump( type + ": Iteration " + count ) ;
     }
 
     private static void msg( String arg ) {
@@ -263,31 +335,20 @@ public class ProfileMain {
 	msg( "Warming up" ) ;
 
 	for (int ctr=0; ctr<10; ctr++ ) {
-	    run() ;
+	    run( true, ctr ) ;
 	}
 
 	msg( "Timing" ) ;
 	long start = System.currentTimeMillis() ;
-	run() ;
+	run( false, 0 ) ;
 	long duration = System.currentTimeMillis() - start ;
 
 	int numBeans = NUM_STORES + 1 ;
 
-	msg( "It took " + duration + " milliseconds to create and register "
+	msg( "It took " + duration + " milliseconds to test "
 	    + numBeans + " MBeans" ) ;
 
 	msg( "That is " + (numBeans*1000)/duration
-	    + " MBean registrations per second" ) ;
-    }
-
-    public static void run() throws IOException {
-        final MyRoot myroot = new MyRoot() ;
-	initializeStores( myroot ) ;
-
-        mom = ManagedObjectManagerFactory.createStandalone("test") ;
-        mom.createRoot(myroot) ;
-	registerMBeans( mom, myroot ) ;
-        mom.close();
-        // TypeEvaluator.dumpEvalClassMap();
+	    + " MBean registrationi/getAttribute/unregister calls per second" ) ;
     }
 }
