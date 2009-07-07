@@ -74,7 +74,7 @@ public class GmbalMBeanNOPImpl implements GmbalMBean {
     }
 
     public MBeanNotificationInfo[] getNotificationInfo() {
-        return null ;
+        return new MBeanNotificationInfo[0] ;
     }
 
 }

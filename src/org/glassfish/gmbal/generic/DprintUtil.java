@@ -50,9 +50,9 @@ import java.util.logging.Logger;
 public class DprintUtil {
     private static final boolean USE_LOGGER = false ;
     
-    private String sourceClassName ;
-    private String loggerName = null ;
-    private ThreadLocal<Stack<String>> currentMethod =
+    private final String sourceClassName ;
+    private final String loggerName ;
+    private final ThreadLocal<Stack<String>> currentMethod =
 	new ThreadLocal<Stack<String>>() {
             @Override
             public Stack<String> initialValue() {
@@ -78,6 +78,8 @@ public class DprintUtil {
         sourceClassName = compressClassName( selfClass.getName() ) ;  
         if (USE_LOGGER) {
             loggerName = selfClass.getPackage().getName() ;
+        } else {
+            loggerName = null ;
         }
     }        
     

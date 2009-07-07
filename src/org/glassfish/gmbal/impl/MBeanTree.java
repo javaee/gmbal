@@ -40,6 +40,7 @@ package org.glassfish.gmbal.impl;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
 import javax.management.JMException;
@@ -54,10 +55,6 @@ import org.glassfish.gmbal.generic.MethodMonitorFactory;
 /** Represents the collection of DynamicMBeanImpls that we have registered with
  * a ManagedObjectManager.
  *
- * XXX Need to get some benchmarks for registration cost.  This should help
- * to determine whether we need to enable/disable MBean registration with the
- * MBeanServer.
- *
  * @author ken
  */
 public class MBeanTree {
@@ -69,6 +66,7 @@ public class MBeanTree {
     private String domain ;
     private ObjectName rootParentName ;
     private String rootParentPrefix ;
+    private String nullParentsParentPath ;
     private String typeString ; // What string is used for the type of the 
                                 // type name/value pair?
     private ManagedObjectManagerInternal mom ;
@@ -140,7 +138,7 @@ public class MBeanTree {
             Exceptions.self.typeNullInRootParent() ;
         }
 
-        String prefix = null ;
+        String prefix ;
         if (pp.equals( "/" )) {
             prefix = pp ;
         } else {
@@ -168,8 +166,10 @@ public class MBeanTree {
         this.rootParentName = rootParentName ;
         if (rootParentName == null) {
             rootParentPrefix = null ;
+            nullParentsParentPath =  "pp=/," ;
         } else {
             rootParentPrefix = parentPath( rootParentName ) ;
+            nullParentsParentPath = "pp=" + rootParentPrefix + "," ;
         }
 
         this.typeString = typeString ;
@@ -204,7 +204,7 @@ public class MBeanTree {
         throw Exceptions.self.notPartOfThisTree(entity) ;
     }
 
-    private String getQuotedName( String name ) {
+    static String getQuotedName( String name ) {
         // Adapted from the ObjectName.quote method.
         // Here we only quote if needed, and save a lot of
         // extra processing for String.equals or regex.
@@ -249,6 +249,23 @@ public class MBeanTree {
         }
     }
 
+    private Map<String,String> typePartMap = new WeakHashMap<String,String>() ;
+
+    private synchronized String getTypePart( String type ) {
+        String result = typePartMap.get( type ) ;
+        if (result == null) {
+            StringBuilder sb = new StringBuilder() ;
+            sb.append( typeString ) ;
+            sb.append( "=" ) ;
+            sb.append( getQuotedName( type ) ) ;
+            result = sb.toString() ;
+
+            typePartMap.put( type, result ) ;
+        }
+
+        return result ;
+    }
+
     public synchronized ObjectName objectName( MBeanImpl parent,
         String type, String name ) 
         throws MalformedObjectNameException {
@@ -267,37 +284,23 @@ public class MBeanTree {
             result.append( domain ) ;
             result.append( ":" ) ;
 
-	    mm.info( mom.registrationDebug(), "rootParentPrefix=", rootParentPrefix ) ;
-	    if (parent != null) {
-	        mm.info( mom.registrationDebug(), "parent.restName()=", parent.restName() ) ;
-	    } else {
-	        mm.info( mom.registrationDebug(), "parent is null" ) ;
-	    }
-            
             // pp
-            result.append( "pp" ) ;
-            result.append( "=" ) ;
-
-            if ((rootParentPrefix == null) && (parent == null)) {
-                result.append( '/' ) ;
+            String ppPart ;
+            if (parent == null) {
+                ppPart = nullParentsParentPath ;
             } else {
-                if (rootParentPrefix != null) {
-                    result.append( rootParentPrefix ) ;
-                }
-
-                if (parent != null) {
-                    result.append( getQuotedName( '/' + parent.restName() ) ) ;
-                }
+                ppPart = parent.getParentPathPart( rootParentPrefix ) ;
             }
 
-            result.append( ',' ) ;
+            mm.info( mom.registrationDebug(), "ppPart", ppPart ) ;
+            result.append( ppPart ) ;
 
             // type
-            result.append( typeString ) ;
-            result.append( "=" ) ;
-            result.append( getQuotedName( type ) ) ;
+            String typePart = getTypePart( type ) ;
+            mm.info( mom.registrationDebug(), "typePart", typePart ) ;
+            result.append( typePart ) ;
 
-            // name
+            // name: this is not a good candidate for caching
             if (name.length() > 0) {
                 result.append( ',') ;
                 result.append( "name" ) ;

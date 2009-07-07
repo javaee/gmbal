@@ -76,14 +76,15 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     private String name ;
     private ObjectName oname ;
     private MBeanImpl parent ;
-    private final Set<String> subTypes ;	// Null if not used: don't create empty
-					// sets if not used.
+    private final Set<String> subTypes ; // Null if not used: don't create empty
+					 // sets if not used.
 
     // First index is type, second is name.
     private Map<String,Map<String,MBeanImpl>> children ;
 
     private Object target ;
     private MBeanServer server ;
+    private String parentPathForObjectName;
     
     public MBeanImpl( final MBeanSkeleton skel, 
         final Object obj, final MBeanServer server,
@@ -112,6 +113,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         // two places (here and call to new MBeanSkeleton( skel, skel )).
         // This will also be important for dealing with multiple upper bounds.
         this.server = server ;
+        this.parentPathForObjectName = null ;
     }
         
     @Override
@@ -206,12 +208,12 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     public synchronized void addChild( MBeanImpl child ) {
         child.parent( this ) ;
 
-	// XXX Add test case!
-	if (subTypes != null && !subTypes.contains(child.type())) {
-	    throw Exceptions.self.invalidSubtypeOfParent( this.oname, 
-		this.subTypes, child.objectName(), child.type() ) ;
-	}
-	
+        // XXX Add test case!
+        if (subTypes != null && !subTypes.contains(child.type())) {
+            throw Exceptions.self.invalidSubtypeOfParent( this.oname,
+                this.subTypes, child.objectName(), child.type() ) ;
+        }
+
         Map<String,MBeanImpl> map = children.get( child.type() ) ;
         if (map == null) {
             map = new HashMap<String,MBeanImpl>() ;
@@ -219,12 +221,12 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         }
 
         // XXX add test case!
-	boolean isSingleton = child.skeleton().getMBeanType().isSingleton() ;
-	if (isSingleton && map.size() > 0) {
-	    throw Exceptions.self.childMustBeSingleton( this.oname, child.type(),
-		child.oname ) ;
-	}
-        
+        boolean isSingleton = child.skeleton().getMBeanType().isSingleton() ;
+        if (isSingleton && map.size() > 0) {
+            throw Exceptions.self.childMustBeSingleton( this.oname,
+                child.type(), child.objectName() ) ;
+        }
+
         map.put( child.name(), child) ;
     }
    
@@ -252,10 +254,31 @@ public class MBeanImpl extends NotificationBroadcasterSupport
 	}
     }
 
-    public synchronized String restName() {
+    private synchronized String restName() {
         StringBuilder sb = new StringBuilder( 60 ) ;
         restNameHelper( sb ) ;
         return sb.toString() ;
+    }
+
+    public synchronized String getParentPathPart( String rootParentPrefix ) {
+        if (parentPathForObjectName == null) {
+            StringBuilder result = new StringBuilder() ;
+            result.append( "pp" ) ;
+            result.append( "=" ) ;
+
+            if (rootParentPrefix != null) {
+                result.append( rootParentPrefix ) ;
+            }
+
+            // Note that the "/" MUST be passed to getQuotedName, or we
+            // can get things like /"...", which is wrong.
+            result.append( MBeanTree.getQuotedName( "/" + restName() )) ;
+            result.append( ',' ) ;
+
+            parentPathForObjectName = result.toString() ;
+        }
+
+        return parentPathForObjectName ;
     }
  
     public synchronized void register() throws InstanceAlreadyExistsException, 

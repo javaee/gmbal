@@ -208,6 +208,7 @@ public class WrapperGenerator {
             Constructor cons = rtype.getConstructor(String.class) ;
             return (Exception)cons.newInstance(msg) ;
         } catch (Exception exc) {
+            // ignore findbugs: lots of exceptions with same handler.
             throw new RuntimeException( exc ) ;
         }
     }
@@ -238,6 +239,7 @@ public class WrapperGenerator {
             transMsg = catalog.getString( msg ) ;
         } catch (Exception exc) {
             // Ignore exc: hard to report here.
+            // Ignore findbugs: regardless of exception, just use msg as result.
             transMsg = msg ;
         }
 

@@ -121,13 +121,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         ManagedObjectManager.RegistrationDebugLevel.NONE ;
     private boolean runDebugFlag = false ;
 
-    private void checkRootNotCreated( String methodName ) {
+    private synchronized void checkRootNotCreated( String methodName ) {
         if (rootCreated) {
             throw Exceptions.self.createRootCalled(methodName) ;
         }
     }
 
-    private void checkRootCreated( String methodName ) {
+    private synchronized void checkRootCreated( String methodName ) {
         if (!rootCreated) {
             throw Exceptions.self.createRootNotCalled(methodName) ;
         }
@@ -145,7 +145,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         tree.resumeRegistration();
     }
 
-    public void stripPackagePrefix() {
+    public synchronized void stripPackagePrefix() {
         mm.clear() ;
         checkRootNotCreated("stripPackagePrefix");
         stripPackagePrefix = true ;
@@ -153,7 +153,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
     private static final class StringComparator implements Serializable,
         Comparator<String> {
-
+        private static final long serialVersionUID = 8274851916877850245L;
         public int compare(String o1, String o2) {
             return - o1.compareTo( o2 ) ;
         }
@@ -376,7 +376,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     // XXX Needs Test for the AMX_TYPE case
-    public String getTypeName( Class<?> cls, String fieldName,
+    public synchronized String getTypeName( Class<?> cls, String fieldName,
         String nameFromAnnotation ) {
         // Can be called anytime
         String result = getAMXTypeFromField( cls, fieldName ) ;
@@ -418,6 +418,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         
         mm.enter( registrationDebug(), "constructMean", obj, name ) ;
         
+        String objName = name ;
         try {
             final Class<?> cls = obj.getClass() ;
             final EvaluatedClassDeclaration cdecl = 
@@ -429,7 +430,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             result = new MBeanImpl( skel, obj, server, type ) ;
             
-            String objName = name ;
             if (objName == null) {
                 objName = skel.getNameValue( result ) ;
                 if (objName == null) {
@@ -441,7 +441,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             result.name( objName ) ;
         } catch (JMException exc) {
-	    // XXX log this
+            Exceptions.self.errorInConstructingMBean( objName, exc ) ;
         } finally {
             mm.exit( registrationDebug(), result ) ;
         }

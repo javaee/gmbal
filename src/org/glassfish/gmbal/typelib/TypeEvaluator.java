@@ -260,7 +260,7 @@ public class TypeEvaluator {
         Pair<Class<?>,List<Type>> getKey( Class cls ) {
             List<Type> list = new ArrayList<Type>() ;
             for (TypeVariable tv : cls.getTypeParameters()) {
-                Type type = null ;
+                Type type ;
                 Type[] bounds = tv.getBounds() ;
                 if (bounds.length > 0) {
                     if (bounds.length > 1) {

@@ -53,6 +53,7 @@ import org.glassfish.gmbal.impl.AttributeDescriptor.AttributeType;
 import org.glassfish.gmbal.logex.Chain;
 import org.glassfish.gmbal.logex.ExceptionWrapper;
 import org.glassfish.gmbal.logex.Log;
+import org.glassfish.gmbal.logex.LogLevel;
 import org.glassfish.gmbal.logex.Message;
 import org.glassfish.gmbal.logex.WrapperGenerator;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
@@ -362,6 +363,10 @@ public interface Exceptions {
     @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 6 )
     IllegalStateException createRootCalled( String methodName ) ;
 
+    @Message( "Could not construct MBean {0}")
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 7 )
+    public void errorInConstructingMBean(String objName, @Chain JMException exc);
+
 // TypeConverterImpl
     static final int TYPE_CONVERTER_IMPL_START =
         MANAGED_OBJECT_MANAGER_IMPL_START + EXCEPTIONS_PER_CLASS ;
@@ -456,9 +461,14 @@ public interface Exceptions {
     IllegalStateException iteratorNotFound( EvaluatedClassDeclaration cls ) ;
 
     @Message( "next() method not found in type {0}") 
-    @Log( id=TYPE_CONVERTER_IMPL_START + 16 ) 
+    @Log( id=TYPE_CONVERTER_IMPL_START + 17 )
     IllegalStateException nextNotFound( EvaluatedClassDeclaration cls ) ;
- ;
+
+    @Message( "Could not set field {1} in CompositeData for type {0}")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 18, level=LogLevel.FINE )
+    public void errorInConstructingOpenData(String name, String id,
+        @Chain JMException ex);
+
 // JMXRegistrationManager start
     static final int JMX_REGISTRATION_MANAGER_START =
         TYPE_CONVERTER_IMPL_START + EXCEPTIONS_PER_CLASS ;

@@ -331,8 +331,6 @@ public abstract class TypeConverterImpl implements TypeConverter {
     }
 
     // Special object name used to represent a NULL objectName result.
-    // XXX Is this the best way to handle this?  Should it be handled
-    // in getParent instead?
     static final ObjectName NULL_OBJECTNAME = makeObjectName(
         "NULL:type=Null,name=Null" ) ;
 
@@ -485,7 +483,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
                                     FacetAccessor fa = mom.getFacetAccessor( obj ) ;
                                     value = minfo.get(fa, mom.runtimeDebug());
                                 } catch (JMException ex) {
-				    // XXX log this at fine level
+                                    Exceptions.self.errorInConstructingOpenData(
+                                        cls.name(), minfo.id(), ex ) ;
                                 }
                             }
 

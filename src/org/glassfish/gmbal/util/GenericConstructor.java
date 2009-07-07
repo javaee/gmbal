@@ -108,6 +108,8 @@ public class GenericConstructor<T> {
                 result = resultType.cast( constructor.newInstance( args ) ) ;	
                 break ;
             } catch (Exception exc) {
+                // There are 4 checked exceptions here with identical handling.
+                // Ignore FindBugs complaints.
                 constructor = null ;
                 Logger.getLogger("org.glassfish.gmbal.util").
                     log(Level.WARNING, "Error invoking constructor", exc );

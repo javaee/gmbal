@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import javax.management.ObjectName;
 import org.glassfish.gmbal.Description;
@@ -82,7 +83,7 @@ public class ProfileMain {
 		return false;
 	    }
 	    final Item other = (Item) obj;
-	    return true;
+	    return other.name.equals( name ) ;
         }
 
         public Item( String name, double size, double mass ) {
@@ -227,12 +228,13 @@ public class ProfileMain {
 
     // Just name stores "Store_XXX"
     private static final int NUM_STORES = 5000 ;
+    private static final Random random = new Random() ;
 
     private static void initializeStores( MyRoot myroot ) {
         int i = 0 ;
 	for (String str : itemNames) {
-	    Item item = new Item( str, 100*Math.random(),
-		100*Math.random() ) ;
+	    Item item = new Item( str, random.nextInt(100),
+		random.nextInt(100) ) ;
 	    myroot.addItem(item);
 	    items[i++] = item ;
 	}
@@ -240,8 +242,8 @@ public class ProfileMain {
 	for (int ctr=0; ctr<NUM_STORES; ctr++ ) {
 	    Store store = new Store( "Store_" + ctr ) ;
 	    for (Item item : items) {
-		if (100*Math.random() < 20) {
-		    store.addItem( item, 3 + (int)(11 * Math.random() ));
+		if (random.nextInt( 100 ) < 20) {
+		    store.addItem( item, 3 + random.nextInt( 11 ) );
 		}
 	    }
 	    myroot.addStore( store );
@@ -333,7 +335,6 @@ public class ProfileMain {
     // of the items.  Assign size and mass to each item randomly from 1-100.
     public static void main( String[] args ) throws IOException {
 	msg( "Warming up" ) ;
-
 	for (int ctr=0; ctr<10; ctr++ ) {
 	    run( true, ctr ) ;
 	}
@@ -343,12 +344,12 @@ public class ProfileMain {
 	run( false, 0 ) ;
 	long duration = System.currentTimeMillis() - start ;
 
-	int numBeans = NUM_STORES + 1 ;
+	long numBeans = NUM_STORES + 1 ;
 
 	msg( "It took " + duration + " milliseconds to test "
 	    + numBeans + " MBeans" ) ;
 
 	msg( "That is " + (numBeans*1000)/duration
-	    + " MBean registrationi/getAttribute/unregister calls per second" ) ;
+	    + " MBean register/getAttribute/unregister calls per second" ) ;
     }
 }
