@@ -559,13 +559,7 @@ public class MBeanSkeleton {
 
     // The rest of the methods are used in the DynamicMBeanImpl code.
     public String getType() {
-	mm.enter( mom.runtimeDebug(), "getType");
-
-	try {
-	    return type;
-	} finally {
-	    mm.exit( mom.runtimeDebug(), type);
-	}
+        return type;
     }
 
     public AMXMetadata getMBeanType() {

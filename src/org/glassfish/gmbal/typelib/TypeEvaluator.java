@@ -64,6 +64,7 @@ import java.lang.reflect.TypeVariable ;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.WeakHashMap;
 import javax.management.ObjectName;
 
 /**
@@ -224,6 +225,10 @@ public class TypeEvaluator {
         // System.out.println( ObjectUtility.defaultObjectToString(evalClassMap) ) ;
     }
 
+    // XXX This is another weak hashmap that strongly references its key!
+    private static Map<Class,EvaluatedType> classMap =
+	new WeakHashMap<Class, EvaluatedType>() ;
+
     /** Given any generic java type, evaluate all of its type bounds and
      * return an evaluated type.
      * 
@@ -231,8 +236,13 @@ public class TypeEvaluator {
      * @return The evaluated type
      */
     public static synchronized EvaluatedType getEvaluatedType( Class cls ) {
-        TypeEvaluationVisitor visitor = new TypeEvaluationVisitor() ;
-        EvaluatedType etype = visitor.evaluateType( cls ) ;
+        EvaluatedType etype = classMap.get( cls ) ;
+	if (etype == null) {
+            TypeEvaluationVisitor visitor = new TypeEvaluationVisitor() ;
+            etype = visitor.evaluateType( cls ) ;
+	    classMap.put( cls, etype ) ;
+	}
+
         return etype ;
     }
 

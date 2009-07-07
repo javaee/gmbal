@@ -253,10 +253,31 @@ public class ProfileMain {
 	}
     }
 
+    private static void msg( String arg ) {
+	System.out.println( arg ) ;
+    }
+
     // Create stores so that each store has a 20% probability of carrying any
     // of the items.  Assign size and mass to each item randomly from 1-100.
     public static void main( String[] args ) throws IOException {
-        run() ;
+	msg( "Warming up" ) ;
+
+	for (int ctr=0; ctr<10; ctr++ ) {
+	    run() ;
+	}
+
+	msg( "Timing" ) ;
+	long start = System.currentTimeMillis() ;
+	run() ;
+	long duration = System.currentTimeMillis() - start ;
+
+	int numBeans = NUM_STORES + 1 ;
+
+	msg( "It took " + duration + " milliseconds to create and register "
+	    + numBeans + " MBeans" ) ;
+
+	msg( "That is " + (numBeans*1000)/duration
+	    + " MBean registrations per second" ) ;
     }
 
     public static void run() throws IOException {

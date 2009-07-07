@@ -35,6 +35,9 @@
  */
 package org.glassfish.gmbal.generic;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 /** Contains various factory methods for constructing MethodMonitors,
  *
  * @author ken_admin
@@ -135,8 +138,8 @@ public class MethodMonitorFactory {
 	}
     } ;
 
-    public static MethodMonitor dprintUtil( final Class cls ) { 
-	final DprintUtil dputil = new DprintUtil( cls ) ;
+    public static MethodMonitor dprintUtil( final Class cls ) {
+	final DprintUtil dputil = DprintUtil.getDprintUtil( cls ) ;
 
 	return new MethodMonitorBase( "DprintUtil" ) {
 	    @Override
@@ -145,8 +148,8 @@ public class MethodMonitorFactory {
 		    dputil.enter( name, args ) ;
 		}
 	    }
-	    
-	    @Override 
+
+	    @Override
 	    public void info( boolean enabled, Object... args ) {
 		if (enabled) {
 		    dputil.info( args ) ;
@@ -162,7 +165,52 @@ public class MethodMonitorFactory {
 	} ;
     }
 
+    // This is the same as compose( operationTracer, dprintUtil ), but
+    // it is created so often that this avoid some significant overhead.
+    private static MethodMonitor standardImpl( final Class cls ) {
+	final DprintUtil dputil = DprintUtil.getDprintUtil( cls ) ;
+
+	return new MethodMonitorBase( "StandardImpl" ) {
+	    @Override
+	    public void enter(boolean enabled, String name, Object... args) {
+		OperationTracer.enter( name, args ) ;
+		if (enabled) {
+		    dputil.enter( name, args ) ;
+		}
+	    }
+
+	    @Override
+	    public void info( boolean enabled, Object... args ) {
+		if (enabled) {
+		    dputil.info( args ) ;
+		}
+	    }
+
+	    @Override
+	    public void exit(boolean enabled, Object result) {
+	        OperationTracer.exit();
+		if (enabled) {
+		    dputil.exit( result ) ;
+		}
+	    }
+
+	    @Override
+	    public void clear() {
+	        OperationTracer.clear() ;
+	    }
+	} ;
+    }
+
+    private static Map<Class<?>,MethodMonitor> stdMap =
+	new WeakHashMap<Class<?>,MethodMonitor>() ;
+
     public static MethodMonitor makeStandard( Class cls ) {
-	return compose( operationTracer, dprintUtil(cls) ) ;
+	 MethodMonitor result = stdMap.get( cls ) ;
+	 if (result == null) {
+	     result = standardImpl( cls ) ;
+	     stdMap.put( cls, result ) ;
+	 }
+
+	 return result ;
     }
 }

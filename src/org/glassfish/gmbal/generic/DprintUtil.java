@@ -37,7 +37,9 @@
 
 package org.glassfish.gmbal.generic;
 
+import java.util.Map;
 import java.util.Stack;
+import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,7 +60,21 @@ public class DprintUtil {
             }
         } ;
 
-    public DprintUtil( Class selfClass ) {
+    private static Map<String,DprintUtil> dpuMap =
+	new WeakHashMap<String,DprintUtil>() ;
+
+    public static DprintUtil getDprintUtil( Class<?> cls ) {
+	String cname = cls.getName() ;
+	DprintUtil result = dpuMap.get( cname ) ;
+	if (result == null) {
+	    result = new DprintUtil( cls ) ;
+	    dpuMap.put( cname, result ) ;
+	}
+
+	return result ;
+    }
+
+    private DprintUtil( Class selfClass ) {
         sourceClassName = compressClassName( selfClass.getName() ) ;  
         if (USE_LOGGER) {
             loggerName = selfClass.getPackage().getName() ;

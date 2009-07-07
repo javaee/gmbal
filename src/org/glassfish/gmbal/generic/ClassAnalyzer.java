@@ -45,6 +45,8 @@ import java.lang.reflect.AnnotatedElement ;
 import java.lang.reflect.Method ;
 
 import java.lang.annotation.Annotation ;
+import java.util.Map;
+import java.util.WeakHashMap;
     
 /** Analyzes class inheritance hiearchy and provides methods for searching for
  * classes and methods.
@@ -100,6 +102,19 @@ public class ClassAnalyzer {
 	}
     } ;
 
+    private static Map<Class<?>,ClassAnalyzer> caMap =
+	new WeakHashMap<Class<?>,ClassAnalyzer>() ;
+
+    public static synchronized ClassAnalyzer getClassAnalyzer( Class<?> cls ) {
+        ClassAnalyzer result = caMap.get( cls ) ;
+	if (result == null) {
+	    result = new ClassAnalyzer(cls) ;
+	    caMap.put( cls, result ) ;
+	}
+
+	return result ;
+    }
+
     private List<Class<?>> classInheritance ;
     private String contents = null ;
 
@@ -110,12 +125,8 @@ public class ClassAnalyzer {
         classInheritance = result ;
     }
 
-    public ClassAnalyzer( final Class<?> cls ) {
+    private ClassAnalyzer( final Class<?> cls ) {
 	this( new Graph<Class<?>>( cls, finder ) ) ;
-    }
-
-    public ClassAnalyzer( final List<Class<?>> classes ) {
-	this( new Graph<Class<?>>( classes, finder ) ) ;
     }
 
     public List<Class<?>> findClasses( Predicate<Class> pred ) {

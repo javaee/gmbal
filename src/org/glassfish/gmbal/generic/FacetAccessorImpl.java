@@ -40,7 +40,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,9 +50,15 @@ import org.glassfish.gmbal.GmbalException;
  * @author ken
  */
 public class FacetAccessorImpl implements FacetAccessor {
+
     private Object delegate ;
     private Map<Class<?>,Object> facetMap =
         new HashMap<Class<?>,Object>() ;
+
+    // This class spends a bit too much time in mm because it is called
+    // very frequently, so use if (debug) in front of each mm call.
+    // This means that there is no operation tracing for this class in
+    // the standard MethodMonitor, but that should be fine.
     private MethodMonitor mm ;
     
     public FacetAccessorImpl( Object delegate ) {
@@ -63,15 +68,15 @@ public class FacetAccessorImpl implements FacetAccessor {
     
     public <T> T facet(Class<T> cls, boolean debug ) {
         Object result = null ;
-        mm.enter( debug, "facet", cls ) ;
+        if (debug) mm.enter( debug, "facet", cls ) ;
         
         try {
             if (cls.isInstance(delegate)) {
                 result = delegate ;
-                mm.info( debug, "result is delegate" ) ;
+                if (debug) mm.info( debug, "result is delegate" ) ;
             } else {
                 result = facetMap.get( cls ) ;
-                mm.info( debug, "result=", result ) ;
+                if (debug) mm.info( debug, "result=", result ) ;
             }
                     
             if (result == null) {
@@ -80,7 +85,7 @@ public class FacetAccessorImpl implements FacetAccessor {
                 return cls.cast( result ) ;
             }
         } finally {
-            mm.exit( debug, result ) ;
+            if (debug) mm.exit( debug, result ) ;
         }
     }
     
@@ -97,7 +102,7 @@ public class FacetAccessorImpl implements FacetAccessor {
                 "Cannot add facet of supertype of this object" ) ;
         }
                 
-        ClassAnalyzer ca = new ClassAnalyzer( obj.getClass() ) ;
+        ClassAnalyzer ca = ClassAnalyzer.getClassAnalyzer( obj.getClass() ) ;
         ca.findClasses( 
             new Predicate<Class>() {
                 public boolean evaluate(Class arg) {
@@ -107,7 +112,7 @@ public class FacetAccessorImpl implements FacetAccessor {
     }
 
     public Object invoke(Method method, boolean debug, Object... args) {
-        mm.enter( debug, "invoke", method, args ) ;
+        if (debug) mm.enter( debug, "invoke", method, args ) ;
         
         Object result = null ;
         try {
@@ -127,14 +132,14 @@ public class FacetAccessorImpl implements FacetAccessor {
                 throw new GmbalException( "Exception on invocation", ex ) ;
             }
         } finally {
-            mm.exit( debug, result ) ;
+            if (debug) mm.exit( debug, result ) ;
         }
         
         return result ;
     }
 
     public Object get(Field field, boolean debug) {
-        mm.enter( debug, "get", field ) ;
+        if (debug) mm.enter( debug, "get", field ) ;
 
         Object result = null ;
 
@@ -149,14 +154,14 @@ public class FacetAccessorImpl implements FacetAccessor {
                 throw new GmbalException( "Exception on field get", ex ) ;
             }
         } finally {
-            mm.exit( debug, result ) ;
+            if (debug) mm.exit( debug, result ) ;
         }
 
         return result ;
     }
 
     public void set(Field field, Object value, boolean debug) {
-        mm.enter( debug, "set", field, value ) ;
+        if (debug) mm.enter( debug, "set", field, value ) ;
 
         try {
             Object target = facet( field.getDeclaringClass(), debug ) ;
@@ -169,7 +174,7 @@ public class FacetAccessorImpl implements FacetAccessor {
                 throw new GmbalException( "Exception on field get", ex ) ;
             }
         } finally {
-            mm.exit( debug ) ;
+            if (debug) mm.exit( debug ) ;
         }
     }
 
@@ -179,7 +184,7 @@ public class FacetAccessorImpl implements FacetAccessor {
                 "Cannot add facet of supertype of this object" ) ;
         }
         
-        ClassAnalyzer ca = new ClassAnalyzer( cls ) ;
+        ClassAnalyzer ca = ClassAnalyzer.getClassAnalyzer( cls ) ;
         ca.findClasses( 
             new Predicate<Class>() {
                 public boolean evaluate(Class arg) {
