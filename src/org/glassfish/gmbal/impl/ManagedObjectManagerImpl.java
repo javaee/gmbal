@@ -103,23 +103,89 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             .useToString( EvaluatedType.class )
             .useToString( ManagedObjectManager.class ) ;
 
-    private boolean rootCreated = false ;
+    private static final class StringComparator implements Serializable,
+        Comparator<String> {
+        private static final long serialVersionUID = 8274851916877850245L;
+        public int compare(String o1, String o2) {
+            return - o1.compareTo( o2 ) ;
+        }
+    } ;
+    private static Comparator<String> REV_COMP = new StringComparator() ;
 
-    private String domain ;
-    private ResourceBundle resourceBundle ;
-    private MBeanServer server ; 
-    private MBeanTree tree ;
-    private MBeanSkeleton amxSkeleton ;
-
+    // All finals should be initialized in this order in the private constructor
+    @DumpIgnore
+    private final MethodMonitor mm ;
+    private final String domain ;
+    private final MBeanTree tree ;
     private final Map<EvaluatedClassDeclaration,MBeanSkeleton> skeletonMap ;
     private final Map<EvaluatedType,TypeConverter> typeConverterMap ;
     private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
+    private final MBeanSkeleton amxSkeleton ;
 
-    @DumpIgnore
-    private MethodMonitor mm = null ;
-    private ManagedObjectManager.RegistrationDebugLevel regDebugLevel = 
-        ManagedObjectManager.RegistrationDebugLevel.NONE ;
-    private boolean runDebugFlag = false ;
+    // All non-finals should be initialized in this order in the init() method.
+    private boolean rootCreated ;
+    private ResourceBundle resourceBundle ;
+    private MBeanServer server ;
+    private ManagedObjectManager.RegistrationDebugLevel regDebugLevel ;
+    private boolean runDebugFlag ;
+
+    // Maintain the list of typePrefixes in reversed sorted order, so that
+    // we strip the longest prefix first.
+    private final SortedSet<String> typePrefixes = new TreeSet<String>(
+        REV_COMP ) ;
+    private boolean stripPackagePrefix = false ;
+
+    private ManagedObjectManagerImpl( final String domain, final ObjectName rootParentName ) {
+	this.mm = MethodMonitorFactory.makeStandard( getClass() ) ;
+        this.domain = domain ;
+        this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
+        this.skeletonMap = 
+            new WeakHashMap<EvaluatedClassDeclaration,MBeanSkeleton>() ;
+        this.typeConverterMap = new WeakHashMap<EvaluatedType,TypeConverter>() ;
+        this.addedAnnotations = 
+            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
+
+        final EvaluatedClassDeclaration ecd =
+            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(
+                AMX.class ) ;
+        this.amxSkeleton = getSkeleton( ecd ) ;
+    }
+
+    private void init() {
+        tree.clear() ;
+        skeletonMap.clear() ;
+        typeConverterMap.clear() ;
+        addedAnnotations.clear() ;
+        mm.clear() ;
+
+        rootCreated = false ;
+        resourceBundle = null ;
+        this.server = ManagementFactory.getPlatformMBeanServer() ;
+        regDebugLevel = ManagedObjectManager.RegistrationDebugLevel.NONE ;
+        runDebugFlag = false ;
+    }
+    
+    public ManagedObjectManagerImpl( final String domain ) {
+        this( domain, null ) ;
+        init() ;
+    }
+
+    public ManagedObjectManagerImpl( final ObjectName rootParentName ) {
+        this( rootParentName.getDomain(), rootParentName ) ;
+        init() ;
+    }
+
+    public void close() throws IOException {
+        // Can be called anytime
+
+        mm.enter( registrationDebug(), "close" ) ;
+        
+        try {
+            init() ;
+        } finally {
+	    mm.exit( registrationDebug() ) ;
+        }
+    }
 
     private synchronized void checkRootNotCreated( String methodName ) {
         if (rootCreated) {
@@ -150,85 +216,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         checkRootNotCreated("stripPackagePrefix");
         stripPackagePrefix = true ;
     }
-    
-    private static final class StringComparator implements Serializable,
-        Comparator<String> {
-        private static final long serialVersionUID = 8274851916877850245L;
-        public int compare(String o1, String o2) {
-            return - o1.compareTo( o2 ) ;
-        }
-    } ;
-    private Comparator<String> revComp = new StringComparator() ;
-    
-    // Maintain the list of typePrefixes in reversed sorted order, so that
-    // we strip the longest prefix first.
-    private final SortedSet<String> typePrefixes = new TreeSet<String>( 
-        revComp ) ;
-    private boolean stripPackagePrefix = false ;
 
     @Override
     public String toString( ) {
         // Can be called anytime
         return "ManagedObjectManagerImpl[domain=" + domain + "]" ;
     }
-    
-    private ManagedObjectManagerImpl() {
-        this.resourceBundle = null ;
-        this.server = ManagementFactory.getPlatformMBeanServer() ;
-        this.skeletonMap = 
-            new WeakHashMap<EvaluatedClassDeclaration,MBeanSkeleton>() ;
-        this.typeConverterMap = new WeakHashMap<EvaluatedType,TypeConverter>() ;
-        this.addedAnnotations = 
-            new HashMap<AnnotatedElement, Map<Class, Annotation>>() ;
-
-        final EvaluatedClassDeclaration ecd =
-            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(
-                AMX.class ) ;
-	this.mm = MethodMonitorFactory.makeStandard( getClass() ) ;
-        this.amxSkeleton = getSkeleton( ecd ) ;
-    }
-    
-    public ManagedObjectManagerImpl( final String domain ) {
-        this() ;
-        this.domain = domain ;
-
-        // set actualRoot, rootName later
-        // MBeanTree need mom, domain, rootParentName
-        this.tree = new MBeanTree( this, domain, null, "type" ) ;
-        mm.clear() ;
-    }
-
-    public ManagedObjectManagerImpl( final ObjectName rootParentName ) {
-        this() ;
-        this.domain = rootParentName.getDomain() ;
-
-        // set actualRoot, rootName later
-        // MBeanTree need mom, domain, rootParentName
-        this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
-        mm.clear() ;
-    }
-
-    public void close() throws IOException {
-        mm.clear() ;
-
-        // Can be called anytime
-
-        mm.enter( registrationDebug(), "close" ) ;
-        
-        try {
-            tree.clear() ;
-            skeletonMap.clear() ;
-            typeConverterMap.clear() ;
-            addedAnnotations.clear() ;
-            server = null ;
-            resourceBundle = null ;
-        } finally {
-	    mm.exit( registrationDebug() ) ;
-        }
-    }
 
     public synchronized ObjectName getRootParentName() {
-        mm.clear() ;
         checkRootCreated("getRootParentName");
         return tree.getRootParentName() ;
     }
@@ -238,6 +233,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
         // No methods: will simply implement an AMX container
+        public String toString() {
+            return "GmbalDefaultRoot" ;
+        }
     }
     
     public synchronized GmbalMBean createRoot() {
@@ -629,7 +627,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @SuppressWarnings({"unchecked"})
     public synchronized <T extends Annotation> T getAnnotation( 
         EvaluatedDeclaration element, Class<T> type ) {
-        mm.clear() ;
 
         // Can be called anytime
         mm.enter( registrationFineDebug(), "getAnnotation", element,
@@ -821,7 +818,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             final EvaluatedClassAnalyzer ca,
             final ManagedObjectManagerInternal.AttributeDescriptorType adt ) {
         // Can be called anytime
-        mm.enter( registrationDebug(), "getAttributes" ) ;
+        // mm.enter( registrationDebug(), "getAttributes" ) ;
 
         try {
             final Map<String,AttributeDescriptor> getters = 
@@ -902,7 +899,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
          
             return result ;
         } finally {
-	    mm.exit( registrationDebug() ) ;
+	    // mm.exit( registrationDebug() ) ;
         }
     }
 

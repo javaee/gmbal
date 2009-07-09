@@ -38,6 +38,7 @@ package org.glassfish.gmbal.generic ;
 
 import java.util.List ;
 import java.util.ArrayList ;
+import java.util.Formatter;
 
 public class OperationTracer {
     private static boolean enabled = true ;
@@ -81,6 +82,7 @@ public class OperationTracer {
 
 	    sb.append( Algorithms.convertToString(obj)) ;
         }
+        sb.append( ')' ) ;
         return sb.toString() ;
     }
 
@@ -89,16 +91,11 @@ public class OperationTracer {
      */
     public static String getAsString() {
         final StringBuilder sb = new StringBuilder() ;
+        final Formatter fmt = new Formatter( sb ) ;
         final List<Pair<String,Object[]>> elements = state.get() ;
-        boolean first = true ;
+        int ctr = 0 ;
         for (Pair<String,Object[]> elem : elements) {
-            if (first) {
-                first = false ;
-            } else {
-                sb.append( ':' ) ;
-            }
-
-            sb.append( format( elem ) ) ;
+            fmt.format( "\n\t(%3d): %s", ctr++, format( elem ) ) ;
         }
 
         return sb.toString() ;

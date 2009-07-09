@@ -99,10 +99,6 @@ public class TypeEvaluator {
     // Cache of representations of classes with bound type variables.
     // A class may be in many EvalMapKeys with different tvar bindings.
     // XXX EvaluatedClassDeclaration strongly references Class!
-    // XXX Is this part of the problem in Gmbal-10: a value strongly 
-    // references its key, trapping the value in the Weak map?
-    // XXX We can't have extra attempts to process things like java.lang.Object
-    // So what is the best way to handle this?
     // Design sketch: Create a custom Map implementation (or just something
     // with get/put/iterate) that has two maps: a HashMap for system classes,
     // and a WeakHashMap for non-system classes.
@@ -393,7 +389,7 @@ public class TypeEvaluator {
                             partialDefinitions.remove( decl ) ;
                         }
                     } else {
-                        mm.info( DEBUG, "found result=" + result ) ;
+                        mm.info( DEBUG, "found result:" + result ) ;
                     }
                 }
             } finally {
@@ -441,21 +437,21 @@ public class TypeEvaluator {
 
             EvaluatedFieldDeclaration result = null ;
 
-            // Only looking at final fields
-            if (!Modifier.isFinal(fld.getModifiers())) {
-                return null ;
-            }
-
-            // Do a simpler type check, since we've seen getGenericType fail.
-            // But it is not the full type; so leave the full type case to the
-            // try block below.
-            Class fieldType = fld.getType() ;
-            EvaluatedType et = evaluateType( fieldType ) ;
-            if (!et.isImmutable()) {
-                return null ;
-            }
-
             try {
+                // Only looking at final fields
+                if (!Modifier.isFinal(fld.getModifiers())) {
+                    return null ;
+                }
+
+                // Do a simpler type check, since we've seen getGenericType fail.
+                // But it is not the full type; so leave the full type case to the
+                // try block below.
+                Class fieldType = fld.getType() ;
+                EvaluatedType et = evaluateType( fieldType ) ;
+                if (!et.isImmutable()) {
+                    return null ;
+                }
+
                 final EvaluatedType ftype = evaluateType( fld.getGenericType() ) ;
 
                 result = DeclarationFactory.efdecl(cdecl, fld.getModifiers(),
@@ -483,7 +479,7 @@ public class TypeEvaluator {
                                 return evaluateType( type ) ;
                             } } ) ;
 
-                mm.info( DEBUG, "eptypes=" + eptypes ) ;
+                mm.info( DEBUG, "eptypes" + eptypes ) ;
 
                 // Convenience for the test: all processing is done on a method
                 // named getThing, and this is where we need to debug, out of the
@@ -558,7 +554,7 @@ public class TypeEvaluator {
         }
 
         private EvaluatedType lookup( TypeVariable tvar ) {
-            mm.enter( DEBUG, "lookup", "tvar=", tvar ) ;
+            mm.enter( DEBUG, "lookup", tvar ) ;
 
             EvaluatedType result = null ;
 
@@ -590,7 +586,7 @@ public class TypeEvaluator {
         private EvaluatedType getCorrectDeclaration( 
             OrderedResult<String,EvaluatedType> bindings,
             Class decl, EvaluatedClassDeclaration newDecl ) {
-            mm.enter( DEBUG, "getCorrectDeclaration", "decl=", decl ) ;
+            mm.enter( DEBUG, "getCorrectDeclaration", decl ) ;
 
             EvaluatedType result = null ;
 
@@ -636,7 +632,7 @@ public class TypeEvaluator {
                             return (EvaluatedClassDeclaration)evaluateType( pt ) ;
                         } } ) ;
 
-                mm.info( DEBUG, "inheritance=" + inheritance ) ;
+                mm.info( DEBUG, "inheritance", inheritance ) ;
 
                 newDecl.inheritance( inheritance ) ;
 
@@ -661,7 +657,7 @@ public class TypeEvaluator {
                 newDecl.methods( newMethods ) ;
                 newDecl.freeze() ;
 
-                mm.info( DEBUG, "newDecl=" + newDecl ) ;
+                mm.info( DEBUG, "newDecl" + newDecl ) ;
             } finally {
                 display.exitScope() ;
 
@@ -670,7 +666,7 @@ public class TypeEvaluator {
         }
 
         private List<Type> getInheritance( Class cls ) {
-            mm.enter( DEBUG, "getInheritance", "cls=", cls ) ;
+            mm.enter( DEBUG, "getInheritance", cls ) ;
 
             List<Type> result = null ;
 

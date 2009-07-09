@@ -53,7 +53,7 @@ import javax.management.MBeanServer ;
  * <ol>
  * <li> Methods suspendJMXRegistration, resumeJMXRegistration,
  * getDomain, getMBeanServer, getResourceBundle, setRuntimeDebug, 
- * setRegistrationDebugLevel, and setTypelibDebug may be 
+ * setRegistrationDebugLevel, setTypelibDebug, and close may be 
  * called at any time.
  * <li> All calls to addAnnotation, stripPrefix, and
  * stripPackageName must occur before any call to a createRoot method.
@@ -62,6 +62,7 @@ import javax.management.MBeanServer ;
  * a createRoot method is called.
  * <li>Only one call to a createRoot method is permitted on any 
  * ManagedObjectManager.
+ * <li>A call to close returns the MOM to the pre-createRoot state.
  * </ol>
  * If these constraints are violated, an IllegalStateException is thrown.
  */

@@ -1642,4 +1642,54 @@ public class JmxaTest extends TestCase {
         AMX[] children = parent.getChildren() ;
         System.out.println( "children = " + Arrays.asList( children )) ;
     }
+
+    // An illegal definition
+    @ManagedData
+    class Foo {
+        private String name = "foo" ;
+
+        public String toString() {
+            return "FooObject" ;
+        }
+
+        @ManagedAttribute
+        String getName() { return name ; }
+
+        @ManagedAttribute
+        String illegalAttribute( String arg ) { return "I'm Illegal!" ; }
+    }
+
+    @ManagedObject
+    class Bar {
+        private String name = "bar" ;
+
+        public String toString() {
+            return "BarObject" ;
+        }
+
+        @NameValue
+        @ManagedAttribute
+        String getName() { return name ; }
+
+        @ManagedAttribute
+        Foo getFoo() { return new Foo() ; }
+    }
+
+    public void testIllegalAttribute() throws IOException {
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
+            "test" ) ;
+
+        try {
+            mom.createRoot() ;
+            Object obj = new Bar() ;
+            mom.registerAtRoot( obj ) ;
+            fail( "Expected exception not seen") ;
+        } catch (IllegalArgumentException exp) {
+            // This is expected
+        } catch (Throwable thr) {
+            fail( "Unexpected exception " + thr ) ;
+        } finally {
+            mom.close() ;
+        }
+    }
 }

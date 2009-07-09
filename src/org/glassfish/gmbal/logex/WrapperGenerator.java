@@ -185,24 +185,6 @@ public class WrapperGenerator {
 	}
     }
 
-    private static LogRecord makeLogRecord( Level level, String key,
-        Object[] args, Throwable cause, Logger logger ) {
-        LogRecord result = new LogRecord( level, key ) ;
-        if (args != null && args.length > 0) {
-            result.setParameters( args ) ;
-        }
-        if (level != Level.INFO) {
-            if (cause != null) {
-                result.setThrown( cause ) ;
-            }
-            inferCaller( result ) ;
-        }
-
-        result.setLoggerName( logger.getName() ) ;
-        result.setResourceBundle( logger.getResourceBundle() ) ;
-        return result ;
-    }
-
     private static Exception makeException( Class<?> rtype, String msg ) {
         try {
             Constructor cons = rtype.getConstructor(String.class) ;
@@ -213,19 +195,6 @@ public class WrapperGenerator {
         }
     }
 
-    private static class ShortFormatter extends Formatter {
-        @Override
-        public String format(LogRecord record) {
-            StringBuilder sb = new StringBuilder() ;
-            sb.append(record.getLevel().getLocalizedName());
-            sb.append(": ");
-            String message = formatMessage( record ) ;
-            sb.append(message);
-            return sb.toString();
-        }
-    }
-
-    private final static Formatter formatter = new ShortFormatter() ;
 
     private static String handleMessageOnly( Method method, Logger logger,
         Object[] messageParams ) {
@@ -250,47 +219,95 @@ public class WrapperGenerator {
             result = transMsg ;
         }
 
-        String trace = OperationTracer.getAsString() ;
-        if (trace.length() > 0) {
-            return result + '[' + trace + ']' ;
+        return result ;
+    }
+
+    private enum ReturnType { EXCEPTION, STRING, NULL } ;
+
+    private static ReturnType classifyReturnType( Method method ) {
+        Class<?> rtype = method.getReturnType() ;
+        if (Exception.class.isAssignableFrom(rtype)) {
+            return ReturnType.EXCEPTION ;
+        } else if (rtype.equals( String.class)) {
+            return ReturnType.STRING ;
+        } else if (rtype.equals( void.class ) ) {
+            return ReturnType.NULL ;
         } else {
-            return result ;
+            throw new RuntimeException( "Method " + method
+                + " has an illegal return type" ) ;
+        }
+    }
+
+    private static LogRecord makeLogRecord( Level level, String key,
+        Object[] args, Logger logger ) {
+        LogRecord result = new LogRecord( level, key ) ;
+        if (args != null && args.length > 0) {
+            result.setParameters( args ) ;
         }
 
+        result.setLoggerName( logger.getName() ) ;
+        result.setResourceBundle( logger.getResourceBundle() ) ;
+        if (level != Level.INFO) {
+            inferCaller( result ) ;
+        }
+
+        return result ;
     }
+    
+    // Note: This is used ONLY to format the message used in the method
+    // result, not in the actual log handler.
+    // We define this class simply to re-use the code in formatMessage.
+    static class ShortFormatter extends Formatter {
+        @Override
+        public String format( LogRecord record ) {
+            StringBuilder sb = new StringBuilder() ;
+            sb.append(record.getLevel().getLocalizedName());
+            sb.append(": ");
+            String message = formatMessage( record ) ;
+            sb.append(message);
+            return sb.toString() ;
+        }
+    }
+
+    private final static ShortFormatter formatter = new ShortFormatter() ;
 
     private static Object handleFullLogging( Log log, Method method, Logger logger,
         String idPrefix, Object[] messageParams, Throwable cause )  {
 
-        int logId = log.id() ;
-        Level level = log.level().getLevel() ;
-        Class<?> rtype = method.getReturnType() ;
-        final int numParams =
-            (messageParams == null) ? 0 : messageParams.length ;
+        final Level level = log.level().getLevel() ;
+        final ReturnType rtype = classifyReturnType( method ) ;
+        final String msgString = getMessage( method, messageParams.length,
+            idPrefix, log.id() ) ;
+        final LogRecord lrec = makeLogRecord( level, msgString,
+            messageParams, logger ) ;
+        final String message = formatter.format( lrec ) ;
 
-        final String msgString = getMessage( method, numParams,
-            idPrefix, logId ) ;
-        LogRecord lrec = makeLogRecord( level, msgString,
-            messageParams, cause, logger ) ;
+        Exception exc = null ;
+        if (rtype == ReturnType.EXCEPTION) {
+            exc = makeException( method.getReturnType(), message ) ;
+            if (cause != null) {
+                exc.initCause( cause ) ;
+            }
+
+            if (level != Level.INFO) {
+                lrec.setThrown( exc ) ;
+            }
+        }
 
         if (logger.isLoggable(level)) {
+            final String context = OperationTracer.getAsString() ;
+            String newMsg = msgString ;
+            if (context.length() > 0) {
+                newMsg += "\nCONTEXT:" + context ;
+                lrec.setMessage( newMsg ) ;
+            }
             logger.log( lrec ) ;
         }
 
-        if (rtype.equals( void.class ))
-            return null ;
-
-        String fullMessage = formatter.format( lrec ) ;
-
-        if (Exception.class.isAssignableFrom(rtype)) {
-            Exception exc = makeException( rtype, fullMessage ) ;
-            exc.initCause( cause ) ;
-            return exc ;
-        }  else if (String.class.isAssignableFrom(rtype)) {
-            return fullMessage ;
-        } else {
-            throw new RuntimeException( "Method " + method
-                + " has an illegal return type" ) ;
+        switch (rtype) {
+            case EXCEPTION : return exc ;
+            case STRING : return message ;
+            default : return null ;
         }
     }
 
