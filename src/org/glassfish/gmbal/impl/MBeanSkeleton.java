@@ -80,6 +80,7 @@ import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
 import javax.management.openmbean.OpenMBeanParameterInfoSupport;
+import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.MethodMonitor;
 import org.glassfish.gmbal.generic.MethodMonitorFactory;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
@@ -126,19 +127,15 @@ public class MBeanSkeleton {
 	}
     }
 
-    @AMXMetadata
-    private static class DefaultMBeanTypeHolder {
-    }
-    private static AMXMetadata defaultMBeanType =
-	DefaultMBeanTypeHolder.class.getAnnotation(AMXMetadata.class);
-
     public MBeanSkeleton(final EvaluatedClassDeclaration annotatedClass,
 	final EvaluatedClassAnalyzer ca,
 	final ManagedObjectManagerInternal mom) {
 
-	mbeanType = mom.getAnnotation(annotatedClass, AMXMetadata.class);
+        boolean isDefault = false ;
+	mbeanType = mom.getFirstAnnotationOnClass(annotatedClass, AMXMetadata.class);
 	if (mbeanType == null) {
-	    mbeanType = defaultMBeanType;
+            isDefault = true ;
+	    mbeanType = mom.getDefaultAMXMetadata() ;
 	}
 
 	type = mom.getTypeName(annotatedClass.cls(), "AMX_TYPE",
@@ -147,6 +144,16 @@ public class MBeanSkeleton {
 	descriptor = makeValidDescriptor(
 	    DescriptorIntrospector.descriptorForElement(
 	    annotatedClass.cls()), DescriptorType.mbean, type);
+
+        if (isDefault) {
+            final Map<String,Object> defaultMBeanTypeData =
+                Algorithms.getAnnotationValues(mom.getDefaultAMXMetadata(),
+                    false) ;
+
+            for (Map.Entry<String,Object> entry : defaultMBeanTypeData.entrySet()) {
+                descriptor.setField(entry.getKey(), entry.getValue());
+            }
+        }
 
 	sequenceNumber = new AtomicLong();
 
@@ -358,7 +365,6 @@ public class MBeanSkeleton {
 	    // Handle setters without getters
 	    for (String str : setterNames) {
 		processAttribute(null, setters.get(str));
-
 	    }
 	} finally {
 	    mm.exit( mom.registrationFineDebug() );
@@ -485,7 +491,8 @@ public class MBeanSkeleton {
 		}
 	    };
 
-	    final ParameterNames pna = m.annotation(ParameterNames.class);
+	    final ParameterNames pna = mom.getAnnotation( m,
+                ParameterNames.class);
 	    mm.info( mom.registrationFineDebug(), "pna", pna);
 
 	    if (pna != null && pna.value().length != atcs.size()) {

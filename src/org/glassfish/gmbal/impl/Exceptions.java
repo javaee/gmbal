@@ -39,6 +39,7 @@ package org.glassfish.gmbal.impl;
 
 import java.io.InvalidObjectException;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
@@ -56,6 +57,7 @@ import org.glassfish.gmbal.logex.Log;
 import org.glassfish.gmbal.logex.LogLevel;
 import org.glassfish.gmbal.logex.Message;
 import org.glassfish.gmbal.logex.WrapperGenerator;
+import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
@@ -256,6 +258,11 @@ public interface Exceptions {
         @Chain IllegalArgumentException exc,
         String paramName, EvaluatedMethodDeclaration meth ) ;
 
+    @Message( "Exception on invoking annotation method {0}")
+    @Log( id = MBEAN_SKELETON_START + 11, level=LogLevel.SEVERE )
+    public RuntimeException annotationMethodException(Method m,
+        @Chain Exception exc);
+
 // MBeanTree
     static final int MBEAN_TREE_START =
         MBEAN_SKELETON_START + EXCEPTIONS_PER_CLASS ;
@@ -365,7 +372,24 @@ public interface Exceptions {
 
     @Message( "Could not construct MBean {0}")
     @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 7 )
-    public void errorInConstructingMBean(String objName, @Chain JMException exc);
+    public IllegalArgumentException errorInConstructingMBean(String objName,
+        @Chain JMException exc);
+
+    @Message( "Attempt made to register non-singleton object of type {1}"
+        + " without a name as a child of {0}" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 8 )
+    public IllegalArgumentException nonSingletonRequiresName(
+        MBeanImpl parentEntity, String type);
+
+    @Message( "Attempt made to register singleton object of type {1}"
+        + " with name {2} as a child of {0}")
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 9 )
+    public IllegalArgumentException singletonCannotSpecifyName(
+        MBeanImpl parentEntity, String type, String name);
+
+    @Message( "No {0} annotation found on {1}" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 10 )
+    public IllegalArgumentException noAnnotationFound(String name, String cls );
 
 // TypeConverterImpl
     static final int TYPE_CONVERTER_IMPL_START =
@@ -477,4 +501,5 @@ public interface Exceptions {
     @Log( id=JMX_REGISTRATION_MANAGER_START + 0 )
     void deferredRegistrationException( @Chain JMException exc,
         MBeanImpl mbean ) ;
+
 }

@@ -50,6 +50,7 @@ import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
 import javax.management.ObjectName;
+import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
@@ -116,7 +117,7 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     
     FacetAccessor getFacetAccessor( Object obj ) ;
     
-    MBeanImpl constructMBean( Object obj, String name ) ;
+    MBeanImpl constructMBean( MBeanImpl parentEntity, Object obj, String name ) ;
 
     ObjectName getRootParentName() ;
     
@@ -125,4 +126,9 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     boolean registrationFineDebug() ;
     
     boolean runtimeDebug() ;
+
+    AMXMetadata getDefaultAMXMetadata() ;
+
+    <T extends Annotation> T getFirstAnnotationOnClass(
+        EvaluatedClassDeclaration element, Class<T> type ) ;
 }

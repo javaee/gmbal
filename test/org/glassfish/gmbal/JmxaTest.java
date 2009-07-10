@@ -649,6 +649,7 @@ public class JmxaTest extends TestCase {
 
     @ManagedObject
     @Description( MOE_DESCRIPTION ) 
+    @AMXMetadata( isSingleton=true )
     public static class ManagedObjectExample {
 	private int num ;
 	private String name ;
@@ -1045,7 +1046,7 @@ public class JmxaTest extends TestCase {
     private static final String NMD_TYPE = "NestedManagedDataTest" ;
     
     @ManagedObject
-    @AMXMetadata( type=NMD_TYPE )
+    @AMXMetadata( type=NMD_TYPE, isSingleton=true )
     @Description( "Nested Managed Data test")
     public static class NestedManagedDataTest {
         Person person ;
@@ -1545,8 +1546,13 @@ public class JmxaTest extends TestCase {
             // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
             // mom.setRuntimeDebug( false ) ;
 
-            assertTrue( result instanceof CompositeData[] ) ;
-            CompositeData[] cds = (CompositeData[]) result ;
+            assertTrue( result instanceof CompositeData ) ;
+            CompositeData wsfl = (CompositeData) result ;
+
+            Object o2 = wsfl.get( "toArray" ) ;
+            assertTrue( o2 instanceof CompositeData[] ) ;
+            CompositeData[] cds = (CompositeData[])o2 ;
+
             assertEquals( features.length, cds.length ) ;
 
             Set<String> strresults = new HashSet<String>() ;
@@ -1598,6 +1604,7 @@ public class JmxaTest extends TestCase {
 
     @ManagedObject
     @Description( "A test MBean for Gmbal" )
+    @AMXMetadata( isSingleton=true )
     public final static class Gmbal1
     {
         private volatile String mTest;
@@ -1688,6 +1695,149 @@ public class JmxaTest extends TestCase {
             // This is expected
         } catch (Throwable thr) {
             fail( "Unexpected exception " + thr ) ;
+        } finally {
+            mom.close() ;
+        }
+    }
+
+    public static class MyDataObject {
+        private String name ;
+        private int value ;
+
+        public MyDataObject( String name, int value ) {
+            this.name = name ;
+            this.value = value ;
+        }
+
+        public String name() {
+            return name ;
+        }
+
+        public int value() {
+            return value ;
+        }
+    }
+
+    @ManagedData
+    @InheritedAttributes( {
+        @InheritedAttribute( methodName="name" , description="The name" ),
+        @InheritedAttribute( methodName="value" , description="The value" )
+    } )
+    public interface MyDataObjectDummy {}
+
+    @ManagedObject
+    @Description( "Test for inherited attributes on ManagedData")
+    public static class MyDataObjectBean {
+        private MyDataObject md = new MyDataObject( "Montara", 42 ) ;
+
+        @ManagedAttribute
+        MyDataObject getMDO() { return md ; }
+
+        @NameValue
+        String name() {
+            return "MyDataObjectBeanTest" ;
+        }
+    }
+
+    public void testMyDataObject() throws IOException,
+        AttributeNotFoundException, MBeanException, ReflectionException {
+
+        MyDataObjectBean mdob = new MyDataObjectBean() ;
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
+            "test" );
+
+        try {
+            mom.addAnnotation( MyDataObject.class,
+                MyDataObjectDummy.class.getAnnotation(ManagedData.class )) ;
+            mom.addAnnotation( MyDataObject.class,
+                MyDataObjectDummy.class.getAnnotation(InheritedAttributes.class )) ;
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+
+            GmbalMBean res = mom.registerAtRoot( mdob ) ;
+
+            ObjectName on = mom.getObjectName(mdob) ;
+
+            Object obj = res.getAttribute("MDO") ;
+
+            System.out.println( "Contents of " + on + ": " + obj ) ;
+            assertTrue( obj instanceof CompositeData ) ;
+
+            CompositeData cd = (CompositeData)obj ;
+            assertEquals( cd.get( "name" ), mdob.getMDO().name() ) ;
+            assertEquals( cd.get( "value" ), mdob.getMDO().value() ) ;
+        } finally {
+            mom.close() ;
+        }
+    }
+
+    @ManagedObject
+    public class MBeanBase {
+        @ManagedAttribute
+        public int value() { return 42 ; }
+    }
+
+    @AMXMetadata( isSingleton=true )
+    public class SingletonMBean extends MBeanBase {
+    }
+
+    public class NonSingletonMBean extends MBeanBase {
+        @NameValue
+        String name() { return "me" ; }
+    }
+
+    public class UnnamedNonSingletonMBean extends MBeanBase {
+    }
+
+    private void doRegisterAtRoot( ManagedObjectManager mom, Object obj,
+        boolean exceptionExpected ) {
+
+        try {
+            mom.registerAtRoot(obj) ;
+            mom.unregister(obj);
+
+            assertTrue( "Unexpected successful completion", !exceptionExpected ) ;
+        } catch (IllegalArgumentException exc) {
+            assertTrue( "Unexpected exception " + exc, exceptionExpected ) ;
+        } catch (Throwable thr) {
+            fail( "Unexpected exception " + thr ) ;
+        }
+    }
+
+    private void doRegisterAtRoot( ManagedObjectManager mom, Object obj,
+        String name, boolean exceptionExpected ) {
+
+        try {
+            mom.registerAtRoot(obj, name) ;
+            mom.unregister(obj);
+
+            assertTrue( "Unexpected successful completion", !exceptionExpected ) ;
+        } catch (IllegalArgumentException exc) {
+            assertTrue( "Unexpected exception " + exc, exceptionExpected ) ;
+        } catch (Throwable thr) {
+            fail( "Unexpected exception " + thr ) ;
+        }
+    }
+
+    public void testSingletonMBean() throws IOException {
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
+            "test" );
+
+        SingletonMBean smb = new SingletonMBean() ;
+        NonSingletonMBean nsmb = new NonSingletonMBean() ;
+        UnnamedNonSingletonMBean unsmb = new UnnamedNonSingletonMBean() ;
+
+        try {
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+
+            // just test registerAtRoot variants
+            doRegisterAtRoot( mom, smb, false ) ;
+            doRegisterAtRoot( mom, nsmb, false ) ;
+            doRegisterAtRoot( mom, unsmb, true ) ;
+            doRegisterAtRoot( mom, smb, "foo", true ) ;
+            doRegisterAtRoot( mom, nsmb, "foo", false ) ;
+            doRegisterAtRoot( mom, unsmb, "foo", false ) ;
         } finally {
             mom.close() ;
         }

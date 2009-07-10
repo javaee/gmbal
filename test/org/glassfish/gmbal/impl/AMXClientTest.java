@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.Map;
 import javax.management.Attribute;
 import javax.management.AttributeList;
-import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfo;
 import junit.framework.TestCase;
 import org.glassfish.gmbal.AMX;
+import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.Description;
 import org.glassfish.gmbal.GmbalMBean;
 import org.glassfish.gmbal.ManagedAttribute;
@@ -26,6 +26,7 @@ import org.glassfish.gmbal.ManagedObjectManager;
 import org.glassfish.gmbal.ManagedObjectManagerFactory;
 import org.glassfish.gmbal.ManagedOperation;
 import org.glassfish.gmbal.NameValue;
+import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.ObjectUtility;
 import org.glassfish.gmbal.generic.Pair;
 
@@ -209,6 +210,13 @@ public class AMXClientTest extends TestCase {
         assertEquals(expResult, result);
     }
 
+    @AMXMetadata
+    public interface Dummy {}
+
+    private static final Map<String,Object> AMX_DEFAULTS =
+        Algorithms.getAnnotationValues(
+            Dummy.class.getAnnotation(AMXMetadata.class), false ) ;
+
     /**
      * Test of getMeta method, of class AMXClient.
      */
@@ -228,6 +236,7 @@ public class AMXClientTest extends TestCase {
         expResult.put( "displayName", "AMXClientTest$MyManagedClass" ) ;
         expResult.put( "log", "F" ) ;
         expResult.put( "descriptorType", "mbean" ) ;
+        expResult.putAll( AMX_DEFAULTS );
 
         Map result = instance.getMeta();
 

@@ -98,7 +98,7 @@ public class MBeanTree {
         }
         
         // Now register the root MBean.
-        MBeanImpl rootMB = mom.constructMBean( root, rootName ) ;
+        MBeanImpl rootMB = mom.constructMBean( null, root, rootName ) ;
         
         ObjectName oname ;
         try {
@@ -320,33 +320,37 @@ public class MBeanTree {
 
         return oname ;
     }
-    
+
+    public MBeanImpl getParentEntity( Object parent ) {
+        if (parent == null) {
+            throw Exceptions.self.parentCannotBeNull() ;
+        }
+
+        MBeanImpl parentEntity ;
+
+        parentEntity = objectMap.get( parent ) ;
+        if (parentEntity == null) {
+            throw Exceptions.self.parentNotFound(parent) ;
+        }
+
+        return parentEntity ;
+    }
+
     public synchronized GmbalMBean register(
-        final Object parent, 
+        final MBeanImpl parentEntity,
         final Object obj, 
         final MBeanImpl mb ) throws InstanceAlreadyExistsException, 
         MBeanRegistrationException, NotCompliantMBeanException, 
         MalformedObjectNameException {
         
-        mm.enter( mom.registrationDebug(), "register", parent, obj, mb ) ;
+        mm.enter( mom.registrationDebug(), "register", parentEntity, obj, mb ) ;
         
         try { 
-            if (parent == null) {
-                throw Exceptions.self.parentCannotBeNull() ;
-            }
-            
             MBeanImpl oldMB = objectMap.get( obj ) ;
             if (oldMB != null) {
                 throw Exceptions.self.objectAlreadyRegistered(obj, oldMB) ;
             }
             
-            MBeanImpl parentEntity ;
-
-            parentEntity = objectMap.get( parent ) ;
-            if (parentEntity == null) {
-                throw Exceptions.self.parentNotFound(parent) ;
-            }
-
             ObjectName oname = objectName( parentEntity, mb.type(), 
                 mb.name() ) ;
             mb.objectName( oname ) ;

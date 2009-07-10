@@ -98,6 +98,12 @@ import org.glassfish.gmbal.typelib.TypeEvaluator;
  * XXX Test attribute change notification.
  */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
+    @AMXMetadata
+    private static class DefaultMBeanTypeHolder { }
+
+    private static final AMXMetadata DEFAULT_AMX_METADATA =
+	DefaultMBeanTypeHolder.class.getAnnotation(AMXMetadata.class);
+
     private static ObjectUtility myObjectUtil =
         new ObjectUtility(true, 0, 4)
             .useToString( EvaluatedType.class )
@@ -229,7 +235,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     @ManagedObject
-    @AMXMetadata( type="gmbal-root")
+    @AMXMetadata( type="gmbal-root", isSingleton=true)
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
         // No methods: will simply implement an AMX container
@@ -410,7 +416,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public synchronized MBeanImpl constructMBean( Object obj, String name ) {
+    public synchronized MBeanImpl constructMBean( MBeanImpl parentEntity,
+        Object obj, String name ) {
+
         // Can be called anytime
         MBeanImpl result = null ;
         
@@ -423,6 +431,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(cls) ;
             final MBeanSkeleton skel = getSkeleton( cdecl ) ;
 
+            AMXMetadata amd = getFirstAnnotationOnClass( cdecl, AMXMetadata.class ) ;
+            if (amd == null) {
+                amd = getDefaultAMXMetadata() ;
+            }
+
             String type = skel.getType() ;
 	    mm.info( registrationDebug(), "Stripped type", type ) ;
 
@@ -434,12 +447,24 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                     objName = "" ;
                 }
             }  
+
+            if (objName.length() == 0) {
+                if (!amd.isSingleton()) {
+                    throw Exceptions.self.nonSingletonRequiresName( 
+                        parentEntity, type ) ;
+                }
+            } else {
+                if (amd.isSingleton()) {
+                    throw Exceptions.self.singletonCannotSpecifyName( 
+                        parentEntity, type, name ) ;
+                }
+            }
            
             mm.info( registrationDebug(), "Name value =", objName ) ;
             
             result.name( objName ) ;
         } catch (JMException exc) {
-            Exceptions.self.errorInConstructingMBean( objName, exc ) ;
+            throw Exceptions.self.errorInConstructingMBean( objName, exc ) ;
         } finally {
             mm.exit( registrationDebug(), result ) ;
         }
@@ -461,9 +486,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
         // Construct the MBean
         try {
-            final MBeanImpl mb = constructMBean( obj, name ) ;
+            MBeanImpl parentEntity = tree.getParentEntity(parent) ;
+
+            final MBeanImpl mb = constructMBean( parentEntity, obj, name ) ;
             
-            return tree.register( parent, obj, mb) ;
+            return tree.register( parentEntity, obj, mb) ;
     	} catch (JMException exc) {
             throw Exceptions.self.exceptionInRegister(exc) ;
         } finally {
@@ -576,7 +603,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
     public synchronized String getDescription( EvaluatedDeclaration element ) {
         // Can be called anytime
-        Description desc = element.annotation( Description.class ) ;
+        Description desc ;
+        if (element instanceof EvaluatedClassDeclaration) {
+            EvaluatedClassDeclaration ecd = (EvaluatedClassDeclaration)element;
+            desc = getFirstAnnotationOnClass(ecd, Description.class ) ;
+        } else {
+            desc = getAnnotation( element, Description.class ) ;
+        }
+
         String result = "" ;
         if (desc != null) {
             result = desc.value() ;
@@ -610,7 +644,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 addedAnnotations.put( element, map ) ;
             }
 
-            Annotation  ann = map.get( annotation.getClass() ) ;
+            Class<?> annotationType = annotation.annotationType() ;
+            Annotation ann = map.get( annotationType ) ;
             if (ann != null) {
                 mm.info( registrationDebug(), "Duplicate annotation") ;
                 
@@ -618,9 +653,23 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                     annotation.getClass().getName()) ;
             }
 
-            map.put( annotation.getClass(), annotation ) ;
+            map.put( annotationType, annotation ) ;
         } finally {
             mm.exit( registrationDebug() ) ;
+        }
+    }
+
+    public <T extends Annotation> T getFirstAnnotationOnClass(
+        EvaluatedClassDeclaration element, Class<T> type ) {
+
+        EvaluatedClassAnalyzer eca = new EvaluatedClassAnalyzer( element ) ;
+        List<EvaluatedClassDeclaration> ecds = eca.findClasses(
+            forAnnotation(type, EvaluatedClassDeclaration.class) ) ;
+
+        if (ecds.size() > 0) {
+            return getAnnotation( ecds.get(0), type ) ;
+        }  else {
+            return null ;
         }
     }
 
@@ -666,16 +715,20 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             final EvaluatedClassDeclaration annotatedClass = Algorithms.getFirst(
                 ca.findClasses( forAnnotation( annotationClass, 
                     EvaluatedClassDeclaration.class ) ),
-                "No " + annotationClass.getName() + " annotation found on" 
-                    + "EvaluatedClassAnalyzer " + ca ) ;
+                new Runnable() {
+                    public void run() {
+                        throw Exceptions.self.noAnnotationFound(
+                            annotationClass.getName(), cls.name() ) ;
+                    }
+                } ) ;
 
             mm.info( registrationDebug(), "annotatedClass = " + annotatedClass ) ;
     
             final List<EvaluatedClassDeclaration> classes =
                 new ArrayList<EvaluatedClassDeclaration>() ;
             classes.add( annotatedClass ) ;
-            final IncludeSubclass incsub = annotatedClass.annotation(
-                IncludeSubclass.class ) ;
+            final IncludeSubclass incsub = getFirstAnnotationOnClass(
+                annotatedClass, IncludeSubclass.class ) ;
             if (incsub != null) {
                 for (Class<?> klass : incsub.value()) {
                     EvaluatedClassDeclaration ecd = 
@@ -719,9 +772,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
                 new UnaryFunction<EvaluatedClassDeclaration,List<InheritedAttribute>>() {
                     public List<InheritedAttribute> evaluate( EvaluatedClassDeclaration cls ) {
-                        final InheritedAttribute ia = getAnnotation(cls,
+                        final InheritedAttribute ia = getFirstAnnotationOnClass(cls,
                             InheritedAttribute.class);
-                        final InheritedAttributes ias = getAnnotation(cls,
+                        final InheritedAttributes ias = getFirstAnnotationOnClass(cls,
                             InheritedAttributes.class);
                         if ((ia != null) && (ias != null)) {
                             throw Exceptions.self.badInheritedAttributeAnnotation(cls) ;
@@ -834,7 +887,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             ca.findFields( new Predicate<EvaluatedFieldDeclaration>() {
                 public boolean evaluate( EvaluatedFieldDeclaration field ) {
-                    ManagedAttribute ma = field.annotation(
+                    ManagedAttribute ma = getAnnotation( field,
                         ManagedAttribute.class ) ;
                     if (ma == null) {
                         return false ;
@@ -864,7 +917,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             ca.findMethods( new Predicate<EvaluatedMethodDeclaration>() {
                 public boolean evaluate( EvaluatedMethodDeclaration method ) {
-                    ManagedAttribute ma = method.annotation(
+                    ManagedAttribute ma = getAnnotation( method,
                         ManagedAttribute.class ) ;
                     AttributeDescriptor ad ;
                     if (ma == null) {
@@ -965,5 +1018,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 return getAnnotation( elem, annotation ) != null ;
             }
         } ;
+    }
+
+    public AMXMetadata getDefaultAMXMetadata() {
+        return DEFAULT_AMX_METADATA ;
     }
 }

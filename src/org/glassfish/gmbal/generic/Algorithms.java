@@ -36,12 +36,19 @@
  */ 
 package org.glassfish.gmbal.generic ;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List ;
 import java.util.Map ;
 import java.util.ArrayList ;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class Algorithms {
     private Algorithms() {}
@@ -211,31 +218,78 @@ public final class Algorithms {
                 }
         } ) ;     
     }
-        
-    public static <T> T getOne( Collection<T> list, String zeroMsg, 
-        String manyMsg ) {
-        T result = null ;
-        for (T element : list) {
-            if (result == null) {
-                result = element ;
-            } else {
-                throw new IllegalArgumentException( manyMsg ) ;                
-            }
-        }
 
-        if (result == null) {
-            throw new IllegalArgumentException( zeroMsg) ;
-        } else {
-            return result ;
-        }
-    }
-
-    public static <T> T getFirst( Collection<T> list, String zeroMsg ) {
+    /** Return the first element of the list, or invoke handleEmptyList if
+     * list is empty.
+     * @param <T>
+     * @param list The list 
+     * @param handleEmptyList A runnable to call when the list is empty. Typically 
+     * throws an exception.
+     * @return
+     */
+    public static <T> T getFirst( Collection<T> list, Runnable handleEmptyList ) {
         for (T element : list) {
             return element ;
         }
 
-        throw new IllegalArgumentException( zeroMsg ) ;
+        handleEmptyList.run();
+        return null ;
+    }
+
+    /** Converts obj from an Array to a List, if obj is an array.
+     * Otherwise just returns a List containing obj.
+     *
+     * @param obj
+     * @return
+     */
+    public static List convertToList( Object arg ) {
+        List result = new ArrayList() ;
+        if (arg != null) {
+            Class cls = arg.getClass() ;
+            if (cls.isArray()) {
+                Class cclass = cls.getComponentType() ;
+                if (cclass.equals( int.class )) {
+                    for (int elem : (int[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else if (cclass.equals( byte.class )) {
+                    for (byte elem : (byte[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else if (cclass.equals( boolean.class )) {
+                    for (boolean elem : (boolean[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else if (cclass.equals( char.class )) {
+                    for (char elem : (char[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else if (cclass.equals( short.class )) {
+                    for (short elem : (short[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else if (cclass.equals( long.class )) {
+                    for (long elem : (long[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else if (cclass.equals( float.class )) {
+                    for (float elem : (float[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else if (cclass.equals( double.class )) {
+                    for (double elem : (double[])arg) {
+                        result.add( elem ) ;
+                    }
+                } else {
+                    return Arrays.asList( (Object[])arg ) ;
+                }
+            } else {
+                result.add( arg ) ;
+                return result ;
+            }
+        }
+
+        return result ;
     }
 
     /** Convert argument to String, either by toString, ot Arrays.toString.
@@ -243,31 +297,77 @@ public final class Algorithms {
      * @param arg Object to convert.
      */
     public static String convertToString( Object arg ) {
-	    if (arg == null)
-			return "<NULL>" ;
+        if (arg == null)
+            return "<NULL>" ;
 
-		Class cls = arg.getClass() ;
-		if (cls.isArray()) {
-		    Class cclass = cls.getComponentType() ;
-		    if (cclass.equals( int.class ))
-				return Arrays.toString( (int[])arg ) ;
-		    if (cclass.equals( byte.class ))
-				return Arrays.toString( (byte[])arg ) ;
-		    if (cclass.equals( boolean.class ))
-				return Arrays.toString( (boolean[])arg ) ;
-		    if (cclass.equals( char.class ))
-				return Arrays.toString( (char[])arg ) ;
-		    if (cclass.equals( short.class ))
-				return Arrays.toString( (short[])arg ) ;
-		    if (cclass.equals( long.class ))
-				return Arrays.toString( (long[])arg ) ;
-		    if (cclass.equals( float.class ))
-				return Arrays.toString( (float[])arg ) ;
-		    if (cclass.equals( double.class ))
-				return Arrays.toString( (double[])arg ) ;
-		    return Arrays.toString( (Object[])arg ) ;
-		} else {
-		    return arg.toString() ;
-		}
+        Class cls = arg.getClass() ;
+        if (cls.isArray()) {
+            Class cclass = cls.getComponentType() ;
+            if (cclass.equals( int.class ))
+                        return Arrays.toString( (int[])arg ) ;
+            if (cclass.equals( byte.class ))
+                        return Arrays.toString( (byte[])arg ) ;
+            if (cclass.equals( boolean.class ))
+                        return Arrays.toString( (boolean[])arg ) ;
+            if (cclass.equals( char.class ))
+                        return Arrays.toString( (char[])arg ) ;
+            if (cclass.equals( short.class ))
+                        return Arrays.toString( (short[])arg ) ;
+            if (cclass.equals( long.class ))
+                        return Arrays.toString( (long[])arg ) ;
+            if (cclass.equals( float.class ))
+                        return Arrays.toString( (float[])arg ) ;
+            if (cclass.equals( double.class ))
+                        return Arrays.toString( (double[])arg ) ;
+            return Arrays.toString( (Object[])arg ) ;
+        } else {
+            return arg.toString() ;
+        }
+    }
+
+    private static Set<String> annotationMethods ;
+    static {
+        annotationMethods = new HashSet<String>() ;
+        for (Method m : Annotation.class.getDeclaredMethods()) {
+            annotationMethods.add( m.getName()) ;
+        }
+    }
+
+    /** Given an annotation, return a Map that maps each field (given by a 
+     * method name) to its value in the annotation.  If the value is an 
+     * annotation, that value is recursively converted into a Map in the
+     * same way.
+     * 
+     * @param ann The annotation to examine.
+     * @param convertArraysToLists true if annotation values of array type
+     * should be converted to an appropriate list.  This is often MUCH more
+     * useful, but some contexts require arrays.
+     * @return A map of annotation fields to their values.
+     */
+    public static Map<String,Object> getAnnotationValues( Annotation ann,
+        boolean convertArraysToLists ) {
+        // We must ignore all of the methods defined in the java.lang.Annotation API.
+        Map<String,Object> result = new HashMap<String,Object>() ;
+        for (Method m : ann.getClass().getDeclaredMethods()) {
+            String name = m.getName() ;
+            if (!annotationMethods.contains( name ) ) {
+                try {
+                    Object value = m.invoke(ann);
+                    Class valueClass = value.getClass() ;
+                    if (valueClass.isAnnotation()) {
+                        value = getAnnotationValues( (Annotation)value,
+                            convertArraysToLists ) ;
+                    } else if (convertArraysToLists && valueClass.isArray()) {
+                        value = convertToList(value) ;
+                    }
+                    result.put( name, value ) ;
+                } catch (Exception ex) {
+                    Logger.getLogger(Algorithms.class.getName()).log(
+                        Level.SEVERE, null, ex);
+                }
+            }
+        }
+
+        return result ;
     }
 }

@@ -272,8 +272,10 @@ public abstract class TypeConverterImpl implements TypeConverter {
                 result = handleSimpleType( type, stype ) ;
             } else if (type instanceof EvaluatedClassDeclaration) {
                 EvaluatedClassDeclaration cls = (EvaluatedClassDeclaration)type ;
-                final ManagedObject mo = cls.annotation( ManagedObject.class ) ;
-                final ManagedData md = cls.annotation( ManagedData.class ) ;
+                final ManagedObject mo = mom.getFirstAnnotationOnClass( cls,
+                    ManagedObject.class ) ;
+                final ManagedData md = mom.getFirstAnnotationOnClass( cls,
+                    ManagedData.class ) ;
 
                 if (mo != null) {
                     result = handleManagedObject( cls, mom, mo ) ;
@@ -624,6 +626,10 @@ public abstract class TypeConverterImpl implements TypeConverter {
         return result ;
     }
 
+    private static final Runnable NoOp = new Runnable() {
+        public void run() {}
+    } ;
+
     private static EvaluatedMethodDeclaration findMethod(
         final EvaluatedClassAnalyzer eca, final String mname ) {
 
@@ -633,7 +639,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     return m.name().equals( mname ) ;
                 } 
             } 
-        ), "" ) ;
+        ),  NoOp ) ;
     }
 
     private static EvaluatedType getReturnType( EvaluatedClassDeclaration decl,

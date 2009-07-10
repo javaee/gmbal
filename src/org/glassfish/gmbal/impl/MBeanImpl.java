@@ -145,8 +145,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     @Override
     public String toString() {
 
-        return "MBeanImpl[skel=" + skel
-            + ",type=" + type + ",name=" + name
+        return "MBeanImpl[type=" + type + ",name=" + name
             + ",oname=" + oname + "]" ;
     }
     
