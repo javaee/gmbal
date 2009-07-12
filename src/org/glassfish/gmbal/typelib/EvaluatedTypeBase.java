@@ -143,6 +143,7 @@ public abstract class EvaluatedTypeBase implements EvaluatedType {
     // Note that findbugs flags this as a "strange equals method".
     // But that is intentional, because this equals method must deal
     // with circular structures.
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     public boolean equals( Object obj ) {
         ObjectSet set = new ObjectSet() ;
         return equals( obj, set ) ;

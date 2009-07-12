@@ -46,6 +46,7 @@ package org.glassfish.gmbal;
  * @author ken
  */
 public class GmbalException extends RuntimeException {
+    private static final long serialVersionUID = -7478444176079980162L;
     public GmbalException( String msg ) {
         super( msg ) ;
     }

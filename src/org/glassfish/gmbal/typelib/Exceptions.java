@@ -38,7 +38,6 @@
 package org.glassfish.gmbal.typelib;
 
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.WildcardType;
 import org.glassfish.gmbal.logex.Chain;
 import org.glassfish.gmbal.logex.ExceptionWrapper;
 import org.glassfish.gmbal.logex.Log;

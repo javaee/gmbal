@@ -41,12 +41,9 @@ import java.util.Collections ;
 import java.util.List ;
 import java.util.ArrayList ;
 
-import java.lang.annotation.Annotation ;
-
 import org.glassfish.gmbal.generic.Predicate ;
 import org.glassfish.gmbal.generic.Graph ;
 
-import org.glassfish.gmbal.impl.ManagedObjectManagerInternal;
     
 /** Analyzes class inheritance hiearchy and provides methods for searching for
  * classes and methods.

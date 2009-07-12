@@ -1,27 +1,27 @@
-/* 
+/*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
- * 
- * Copyright 2007-2009 Sun Microsystems, Inc. All rights reserved.
- * 
+ *
+ * Copyright 2003-2007 Sun Microsystems, Inc. All rights reserved.
+ *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
  * and Distribution License("CDDL") (collectively, the "License").  You
  * may not use this file except in compliance with the License. You can obtain
  * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
- * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific
  * language governing permissions and limitations under the License.
- * 
+ *
  * When distributing the software, include this License Header Notice in each
- * file and include the License file at legal/LICENSE.TXT.
+ * file and include the License file at glassfish/bootstrap/legal/LICENSE.txt.
  * Sun designates this particular file as subject to the "Classpath" exception
  * as provided by Sun in the GPL Version 2 section of the License file that
  * accompanied this code.  If applicable, add the following below the License
  * Header, with the fields enclosed by brackets [] replaced by your own
  * identifying information: "Portions Copyrighted [year]
  * [name of copyright owner]"
- * 
+ *
  * Contributor(s):
- * 
+ *
  * If you wish your version of this file to be governed by only the CDDL or
  * only the GPL Version 2, indicate your decision by adding "[Contributor]
  * elects to include this software in this distribution under the [CDDL or GPL
@@ -32,43 +32,10 @@
  * and therefore, elected the GPL Version 2 license, then the option applies
  * only if the new code is made subject to such option by the copyright
  * holder.
- * 
- */ 
-
-package org.glassfish.gmbal.impl ;
-
-import javax.management.openmbean.OpenType ;
-import org.glassfish.gmbal.typelib.EvaluatedType;
-
-/** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, ObjectName, 
- * TabularData, or CompositeData.
  */
-public interface TypeConverter {
-    /** Java generic type of attribute in problem-domain Object.
-     * @return The Java type that this TypeConverter handles.
-     */
-    EvaluatedType getDataType() ;
+package org.glassfish.gmbal.generic ;
 
-    /** Open MBeans Open Type for management domain object.
-     * @return The OpenType that this TypeConverter handles.
-     */
-    OpenType getManagedType() ;
-
-    /** Convert from a problem-domain Object obj to a managed entity.
-     * @param obj The Java object to be converted to an open type.
-     * @return The resulting open type.
-     */
-    Object toManagedEntity( Object obj ) ;
-
-    /** Convert from a ManagedEntity to a problem-domain Object.
-     * @param entity The managed entity to be converted to a java type.
-     * @return The resulting java type.
-     */
-    Object fromManagedEntity( Object entity ) ;
-
-    /** Returns true if this TypeConverter is an identity transformation.
-     * @return True if this TypeConverter is an identity transformation.
-     */
-    boolean isIdentity() ;
+public interface BinaryBooleanFunction<S,T> {
+    boolean evaluate( S arg1, T arg2 ) ;
 }
 

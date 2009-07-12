@@ -37,7 +37,6 @@
 
 package org.glassfish.gmbal.typelib;
 
-import java.util.List;
 import org.glassfish.gmbal.generic.ObjectSet;
 
 /**

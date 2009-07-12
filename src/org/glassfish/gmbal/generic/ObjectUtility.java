@@ -61,16 +61,12 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.management.ObjectName;
 import javax.management.openmbean.ArrayType;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
 import javax.management.openmbean.TabularType;
-import org.glassfish.gmbal.ManagedObjectManager;
-import org.glassfish.gmbal.typelib.EvaluatedType;
 
 /** General object related utilities.  This class must not depend on
  * generated log wrappers.

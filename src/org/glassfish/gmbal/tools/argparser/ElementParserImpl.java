@@ -88,18 +88,18 @@ public class ElementParserImpl implements ElementParser {
 
     // Used for complex data types like List and arrays.
     private ResultData getData( Method meth ) {
-	UnaryFunction<String,Object> func ;
-	String[] description ;
+	UnaryFunction<String,Object> lfunc ;
+	String[] ldesc ;
 	Class type = meth.getReturnType() ;
 
 	if (type.isArray()) {
 	    final String sep = getSeparator( meth ) ;
 	    final Class elementClass = type.getComponentType() ;
 	    final ResultData elementResultData = getSimpleData( elementClass ) ;
-	    description = append( "A " + sep + "-separated list of ",
+	    ldesc = append( "A " + sep + "-separated list of ",
 		elementResultData.second() ) ;
 	    
-	    func = new UnaryFunction<String,Object>() {
+	    lfunc = new UnaryFunction<String,Object>() {
 		public Object evaluate( String value ) {
 		    String[] elements = value.split( sep ) ;
 		    Object result = Array.newInstance( elementClass, 
@@ -117,10 +117,10 @@ public class ElementParserImpl implements ElementParser {
 	    final String sep = getSeparator( meth ) ;
 	    Class elementClass = getListElementClass( meth ) ;
 	    final ResultData elementResultData = getSimpleData( elementClass ) ;
-	    description = append( "A " + sep + "-separated list of ",
+	    ldesc = append( "A " + sep + "-separated list of ",
 		elementResultData.second() ) ;
 
-	    func = new UnaryFunction<String,Object>() {
+	    lfunc = new UnaryFunction<String,Object>() {
 		public Object evaluate( String value ) {
 		    String[] elements = value.split( sep ) ;
 		    List result = new ArrayList( elements.length ) ;
@@ -136,8 +136,7 @@ public class ElementParserImpl implements ElementParser {
 	    return getSimpleData( type ) ;    
 	}
 
-	return new ResultData( func,
-	    description ) ;
+	return new ResultData( lfunc, ldesc ) ;
     }
 
     // Used for all types that take a single element.  This does 

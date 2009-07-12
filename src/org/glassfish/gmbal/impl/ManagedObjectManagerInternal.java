@@ -39,7 +39,6 @@ package org.glassfish.gmbal.impl ;
 
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 
-
 import org.glassfish.gmbal.ManagedObjectManager ;
 import org.glassfish.gmbal.generic.Pair ;
 import org.glassfish.gmbal.InheritedAttribute ;

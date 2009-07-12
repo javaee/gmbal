@@ -1131,6 +1131,7 @@ public class JmxaTest extends TestCase {
                 this( name, false, false ) ;
             }
 
+            @Override
             public String toString() {
                 return name ;
             }
@@ -1655,6 +1656,7 @@ public class JmxaTest extends TestCase {
     class Foo {
         private String name = "foo" ;
 
+        @Override
         public String toString() {
             return "FooObject" ;
         }
@@ -1670,6 +1672,7 @@ public class JmxaTest extends TestCase {
     class Bar {
         private String name = "bar" ;
 
+        @Override
         public String toString() {
             return "BarObject" ;
         }
@@ -1841,5 +1844,34 @@ public class JmxaTest extends TestCase {
         } finally {
             mom.close() ;
         }
+    }
+
+    @ManagedObject 
+    @Description( "Test for @ManagedAttribute field")
+    public static class TestFieldAttribute {
+        @NameValue String name() { return "name" ; }
+
+        @ManagedAttribute
+        private final int value = 42 ;
+    }
+
+    public void testFieldAttribute() throws IOException,
+        AttributeNotFoundException, MBeanException, ReflectionException {
+
+        TestFieldAttribute tobj = new TestFieldAttribute() ;
+
+        ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
+            "test" );
+
+        try {
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+            GmbalMBean mb = mom.registerAtRoot( tobj ) ;
+
+            assertEquals( tobj.value, mb.getAttribute( "value" )) ;
+        } finally {
+            mom.close() ;
+        }
+
     }
 }

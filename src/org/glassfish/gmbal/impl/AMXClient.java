@@ -95,6 +95,7 @@ public class AMXClient implements AMX {
         return hash;
     }
 
+    @Override
     public String toString() {
         return "AMXClient[" + oname + "]" ;
     }

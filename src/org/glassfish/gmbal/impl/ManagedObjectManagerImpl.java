@@ -239,6 +239,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
         // No methods: will simply implement an AMX container
+        @Override
         public String toString() {
             return "GmbalDefaultRoot" ;
         }

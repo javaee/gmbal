@@ -172,7 +172,6 @@ public class MBeanSkeleton {
 	mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>();
 
 	analyzeAttributes(ca);
-	analyzeFields(ca);
 	analyzeOperations(ca);
 	analyzeObjectNameKeys(ca);
 
@@ -324,16 +323,6 @@ public class MBeanSkeleton {
 	    mbeanAttributeInfoList.add(ainfo);
 	} finally {
 	    mm.exit( mom.registrationFineDebug() );
-	}
-    }
-
-    private void analyzeFields(EvaluatedClassAnalyzer ca) {
-	mm.enter( mom.registrationFineDebug(), "analyzeFields", ca);
-
-	try {
-	    // XXX implement me!
-	} finally {
-	    mm.exit( mom.registrationFineDebug());
 	}
     }
 

@@ -41,10 +41,8 @@ import java.util.Collections ;
 import java.util.List ;
 import java.util.ArrayList ;
 
-import java.lang.reflect.AnnotatedElement ;
 import java.lang.reflect.Method ;
 
-import java.lang.annotation.Annotation ;
 import java.util.Map;
 import java.util.WeakHashMap;
     

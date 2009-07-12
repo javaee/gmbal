@@ -18,6 +18,7 @@ public class DelayedObjectToString {
 	this.ou = ou ;
     }
 
+    @Override
     public String toString() {
 	return ou.objectToString( obj ) ;
     }
