@@ -1872,6 +1872,53 @@ public class JmxaTest extends TestCase {
         } finally {
             mom.close() ;
         }
+    }
 
+    @ManagedObject
+    @Description( "Test MBean for quotation problems") 
+    @AMXMetadata( type="test:bean")
+    public static class QuoteTestBean {
+        private String name ;
+
+        public QuoteTestBean( String name ) {
+            this.name = name ;
+        }
+
+        @ManagedAttribute
+        @Description( "simple value")
+        int getNumber() { return 42 ; }
+
+        @NameValue
+        String name() {
+            return name ;
+        }
+    }
+
+    public void testQuotes() throws IOException {
+        ManagedObjectManager mom = null ;
+
+        QuoteTestBean root = new QuoteTestBean("needs=quote") ;
+        QuoteTestBean child1 = new QuoteTestBean("noquote") ;
+        QuoteTestBean child2 = new QuoteTestBean("child=needs:quote") ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot( root ) ;
+            ObjectName rootName = mom.getObjectName(root) ;
+            System.out.println( "rootName=" + rootName ) ;
+
+            mom.registerAtRoot( child1 ) ;
+            ObjectName child1Name = mom.getObjectName(child1) ;
+            System.out.println( "child1Name=" + child1Name ) ;
+
+            mom.registerAtRoot( child2 ) ;
+            ObjectName child2Name = mom.getObjectName(child2) ;
+            System.out.println( "child2Name=" + child2Name ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
     }
 }

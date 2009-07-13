@@ -276,8 +276,8 @@ public class WrapperGenerator {
 
         final Level level = log.level().getLevel() ;
         final ReturnType rtype = classifyReturnType( method ) ;
-        final String msgString = getMessage( method, messageParams.length,
-            idPrefix, log.id() ) ;
+        final int len = messageParams == null ? 0 : messageParams.length ;
+        final String msgString = getMessage( method, len, idPrefix, log.id() ) ;
         final LogRecord lrec = makeLogRecord( level, msgString,
             messageParams, logger ) ;
         final String message = formatter.format( lrec ) ;

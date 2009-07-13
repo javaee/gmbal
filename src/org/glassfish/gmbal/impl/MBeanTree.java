@@ -58,7 +58,6 @@ import org.glassfish.gmbal.generic.MethodMonitorFactory;
  * @author ken
  */
 public class MBeanTree {
-    private boolean rootIsSet = false ;
     private Object root = null ;
     private MBeanImpl rootEntity = null ;
     private Map<Object,MBeanImpl> objectMap ;
@@ -91,12 +90,6 @@ public class MBeanTree {
     }
     
     public synchronized GmbalMBean setRoot( Object root, String rootName ) {
-        if (rootIsSet) {
-            throw Exceptions.self.rootAlreadySet() ;
-        } else {
-            rootIsSet = true ;
-        }
-        
         // Now register the root MBean.
         MBeanImpl rootMB = mom.constructMBean( null, root, rootName ) ;
         
@@ -107,17 +100,21 @@ public class MBeanTree {
             throw Exceptions.self.noRootObjectName(ex) ;
         }
         rootMB.objectName( oname ) ;
-        
+
         addToObjectMaps( rootMB ) ;
+        this.root = root ;
+        rootEntity = rootMB ;
         
         try {
             rootMB.register();
         } catch (JMException ex) {
+            removeFromObjectMaps(rootMB);
+            this.root = null ;
+            rootEntity = null ;
+
             throw Exceptions.self.rootRegisterFail( ex ) ;
         }
         
-        this.root = root ;
-        rootEntity = rootMB ;
         return rootMB ;
     }
     
@@ -370,7 +367,6 @@ public class MBeanTree {
     public synchronized void unregister( Object obj ) 
         throws InstanceNotFoundException, MBeanRegistrationException {
         if (obj == root) {
-            rootIsSet = false ;
             root = null ;
             rootEntity = null ;
         }
@@ -421,7 +417,7 @@ public class MBeanTree {
     }
     
     public synchronized void clear(){
-        if (rootIsSet) {
+        if (root != null) {
             try {
                 unregister(root);
             } catch (InstanceNotFoundException ex) {

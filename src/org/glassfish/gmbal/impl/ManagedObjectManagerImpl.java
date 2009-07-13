@@ -257,8 +257,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         mm.clear() ;
         checkRootNotCreated( "createRoot" ) ;
 
-        GmbalMBean result = tree.setRoot( root, name ) ;
-        rootCreated = true ;
+        GmbalMBean result = null ;
+
+        try {
+            // Assume successful create, so that AMX checks that
+            // back through getRootParentName will succeed.
+            rootCreated = true ;
+            result = tree.setRoot( root, name ) ;
+        } catch (RuntimeException exc) {
+            rootCreated = false ;
+            throw exc ;
+        }
+
         return result ;
     }
 

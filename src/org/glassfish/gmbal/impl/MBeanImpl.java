@@ -265,13 +265,17 @@ public class MBeanImpl extends NotificationBroadcasterSupport
             result.append( "pp" ) ;
             result.append( "=" ) ;
 
-            if (rootParentPrefix != null) {
-                result.append( rootParentPrefix ) ;
+            String qname ;
+            if (rootParentPrefix == null) {
+                qname = "/" + restName() ;
+            } else {
+                qname = rootParentPrefix + "/" + restName() ;
             }
+
+            result.append( MBeanTree.getQuotedName( qname ) ) ;
 
             // Note that the "/" MUST be passed to getQuotedName, or we
             // can get things like /"...", which is wrong.
-            result.append( MBeanTree.getQuotedName( "/" + restName() )) ;
             result.append( ',' ) ;
 
             parentPathForObjectName = result.toString() ;
