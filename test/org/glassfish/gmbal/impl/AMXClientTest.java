@@ -16,7 +16,6 @@ import javax.management.AttributeList;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfo;
 import junit.framework.TestCase;
-import org.glassfish.gmbal.AMX;
 import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.Description;
 import org.glassfish.gmbal.GmbalMBean;
@@ -262,7 +261,7 @@ public class AMXClientTest extends TestCase {
         AMXClient root = getAMX( mtype, 0) ;
 
         // Check that child's parent is root
-        AMX result = child.getParent() ;
+        AMXMBeanInterface result = child.getParent() ;
         assertEquals( root, result ) ;
 
         // Check that root's parent is correct
@@ -291,8 +290,8 @@ public class AMXClientTest extends TestCase {
         AMXClient gc1 = getAMX( mtype, 2) ;
         AMXClient gc2 = getAMX( mtype, 3) ;
 
-        AMX[] expResult = new AMX[] { gc1, gc2 } ;
-        AMX[] result = child.getChildren();
+        AMXMBeanInterface[] expResult = new AMXMBeanInterface[] { gc1, gc2 } ;
+        AMXMBeanInterface[] result = child.getChildren();
 
         assertEquals( Arrays.asList(expResult), Arrays.asList(result) );
     }

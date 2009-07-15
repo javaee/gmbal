@@ -64,6 +64,7 @@ import java.util.Map ;
 import java.util.HashMap ;
 import java.util.HashSet;
 import java.util.Set;
+import org.glassfish.external.amx.AMX;
 import org.glassfish.gmbal.GmbalMBean;
 import org.glassfish.gmbal.generic.OperationTracer;
 
@@ -262,7 +263,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     public synchronized String getParentPathPart( String rootParentPrefix ) {
         if (parentPathForObjectName == null) {
             StringBuilder result = new StringBuilder() ;
-            result.append( "pp" ) ;
+            result.append( AMX.PARENT_PATH_KEY ) ;
             result.append( "=" ) ;
 
             String qname ;

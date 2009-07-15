@@ -37,6 +37,7 @@
 
 package org.glassfish.gmbal ;
 
+import org.glassfish.gmbal.impl.AMXMBeanInterface;
 import java.io.IOException;
 import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
@@ -86,12 +87,17 @@ import javax.management.MBeanInfo;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.glassfish.external.statistics.BoundedRangeStatistic;
+import org.glassfish.external.statistics.impl.BoundedRangeStatisticImpl;
+import org.glassfish.gmbal.generic.Pair;
 import org.glassfish.gmbal.impl.AMXClient;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
+
+import static org.glassfish.gmbal.generic.Algorithms.* ;
 
 public class JmxaTest extends TestCase {
     //==============================================================================================
@@ -1645,9 +1651,9 @@ public class JmxaTest extends TestCase {
         AMXClient client = new AMXClient( mom.getMOM().getMBeanServer(),
             childName ) ;
         System.out.println( "client = " + client ) ;
-        AMX parent = client.getParent() ;
+        AMXMBeanInterface parent = client.getParent() ;
         System.out.println( "parent = " + parent ) ;
-        AMX[] children = parent.getChildren() ;
+        AMXMBeanInterface[] children = parent.getChildren() ;
         System.out.println( "children = " + Arrays.asList( children )) ;
     }
 
@@ -1920,5 +1926,80 @@ public class JmxaTest extends TestCase {
                 mom.close() ;
             }
         }
+    }
+
+    private static final long BRTEST_CURRENT    = 27 ;
+    private static final long BRTEST_HWM        = 36 ;
+    private static final long BRTEST_LWM        = 11 ;
+    private static final long BRTEST_TOP        = 100 ;
+    private static final long BRTEST_BOTTOM     = 0 ;
+    private static final String BRTEST_NAME     = "TestAttr" ;
+    private static final String BRTEST_UNITS    = "Barns" ;
+    private static final String BRTEST_DESC     = "A silly stat" ;
+    private static final long BRTEST_START_TIME = System.currentTimeMillis() ;
+    private static final long BRTEST_SAMPLE_TIME= BRTEST_START_TIME + 237 ;
+
+    private static final List<Pair<String,Object>> BRTEST_DATA = list(
+        pair( "current", (Object)BRTEST_CURRENT ),
+        pair( "highWaterMark", (Object)BRTEST_HWM ),
+        pair( "lowWaterMark", (Object)BRTEST_LWM ),
+        pair( "upperBound", (Object)BRTEST_TOP ),
+        pair( "lowerBound", (Object)BRTEST_BOTTOM ),
+        pair( "name", (Object)BRTEST_NAME ),
+        pair( "unit", (Object)BRTEST_UNITS ),
+        pair( "description", (Object)BRTEST_DESC ),
+        pair( "startTime", (Object)BRTEST_START_TIME ),
+        pair( "lastSampleTime", (Object)BRTEST_SAMPLE_TIME ) )  ;
+
+    // Test the BoundedRangeStatistic
+    @ManagedObject
+    @Description( "BoundedRangeStatistic test")
+    public static class BRMBean {
+        private final BoundedRangeStatistic brstat =
+            new BoundedRangeStatisticImpl( BRTEST_CURRENT, BRTEST_HWM,
+                BRTEST_LWM, BRTEST_TOP, BRTEST_BOTTOM, BRTEST_NAME,
+                BRTEST_UNITS, BRTEST_DESC, BRTEST_START_TIME,
+                BRTEST_SAMPLE_TIME ) ;
+
+        @ManagedAttribute
+        @Description( "The stat attr")
+        BoundedRangeStatistic getStat() {
+            return brstat ;
+        }
+
+        @NameValue
+        String name() { return "TestBean" ; }
+    }
+
+    public void testBoundedRangeStatistic() throws IOException,
+        AttributeNotFoundException, MBeanException, ReflectionException {
+
+        ManagedObjectManager mom = null ;
+
+        BRMBean root = new BRMBean() ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            GmbalMBean gmb = mom.createRoot( root ) ;
+            ObjectName rootName = mom.getObjectName(root) ;
+            System.out.println( "rootName=" + rootName ) ;
+
+            Object data = gmb.getAttribute( "Stat" ) ;
+            assertTrue( data instanceof CompositeData) ;
+            CompositeData brdata = (CompositeData)data ;
+
+            for (Pair<String,Object> elem : BRTEST_DATA) {
+                String aname = elem.first() ;
+                Object exp = elem.second() ;
+                Object act = brdata.get( aname ) ;
+                assertEquals( aname + " has unexpected value", act, exp ) ;
+            }
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+
     }
 }

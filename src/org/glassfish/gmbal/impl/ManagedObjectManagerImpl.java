@@ -63,7 +63,6 @@ import javax.management.ObjectName ;
 import org.glassfish.gmbal.generic.Pair ;
 import org.glassfish.gmbal.generic.Algorithms ;
 
-import org.glassfish.gmbal.AMX ;
 import org.glassfish.gmbal.GmbalMBean ;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.Description ;
@@ -85,6 +84,12 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.glassfish.external.statistics.BoundaryStatistic;
+import org.glassfish.external.statistics.BoundedRangeStatistic;
+import org.glassfish.external.statistics.CountStatistic;
+import org.glassfish.external.statistics.RangeStatistic;
+import org.glassfish.external.statistics.Statistic;
+import org.glassfish.gmbal.ManagedData;
 import org.glassfish.gmbal.generic.DelayedObjectToString;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
@@ -94,10 +99,17 @@ import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
 
+import org.glassfish.external.statistics.StringStatistic;
+import org.glassfish.external.amx.AMX;
+
+import org.glassfish.external.statistics.TimeStatistic;
+import static org.glassfish.gmbal.generic.Algorithms.* ;
+
 /* Implementation notes:
  * XXX Test attribute change notification.
  */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
+
     @AMXMetadata
     private static class DefaultMBeanTypeHolder { }
 
@@ -144,7 +156,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ManagedObjectManagerImpl( final String domain, final ObjectName rootParentName ) {
 	this.mm = MethodMonitorFactory.makeStandard( getClass() ) ;
         this.domain = domain ;
-        this.tree = new MBeanTree( this, domain, rootParentName, "type" ) ;
+        this.tree = new MBeanTree( this, domain, rootParentName, AMX.TYPE_KEY ) ;
         this.skeletonMap = 
             new WeakHashMap<EvaluatedClassDeclaration,MBeanSkeleton>() ;
         this.typeConverterMap = new WeakHashMap<EvaluatedType,TypeConverter>() ;
@@ -153,10 +165,119 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
         final EvaluatedClassDeclaration ecd =
             (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(
-                AMX.class ) ;
+                AMXMBeanInterface.class ) ;
         this.amxSkeleton = getSkeleton( ecd ) ;
     }
 
+    @ManagedData
+    @Description( "The Statistic model and its sub-models specify the data"
+        + " models which are requried to be used to provide the performance data"
+        + " described by the specific attributes in the Stats models" )
+    @InheritedAttributes( {
+        @InheritedAttribute( methodName="getName",
+            description = "The name of this Statistic" ),
+        @InheritedAttribute( methodName="getUnit",
+            description = "The unit of measurement for this Statistic" ),
+        @InheritedAttribute( methodName="getDescription",
+            description = "A human-readable description of the Statistic" ),
+        @InheritedAttribute( methodName="getStartTime",
+            description = "The time of the first measurement represented as a long" ),
+        @InheritedAttribute( methodName="getLastSampleTime",
+            description = "The time of the first measurement represented as a long")
+    } )
+    public interface DummyStatistic { }
+
+    @ManagedData
+    @Description( "Specifies standard timing measurements")
+    @InheritedAttributes( {
+        @InheritedAttribute( methodName="getCount",
+            description = "Number of times the operation was invoked since "
+                 + "the beginning of this measurement"  ),
+        @InheritedAttribute( methodName="getMaxTime",
+            description = "The maximum amount of time taken to complete one invocation "
+                + "of this operation since the beginning of this measurement" ),
+        @InheritedAttribute( methodName="getMinTime",
+            description = "The minimum amount of time taken to complete one invocation "
+                + "of this operation since the beginning of this measurement" ),
+        @InheritedAttribute( methodName="getTotalTime",
+            description = "The total amount of time taken to complete every invocation "
+                + "of this operation since the beginning of this measurement" )
+    } )
+    public interface DummyTimeStatistic extends DummyStatistic { }
+
+    @ManagedData
+    @Description( "Specifies standard measurements of the upper and lower limits of the value of an attribute" )
+    @InheritedAttributes( {
+        @InheritedAttribute( methodName = "getUpperBound",
+            description = "The upper limit of the value of this attribute" ),
+        @InheritedAttribute( methodName = "getLowerBound",
+            description = "The lower limit of the value of this attribute" )
+    } )
+    public interface DummyBoundaryStatistic extends DummyStatistic {}
+
+    @ManagedData
+    @Description( "Specifies standard count measurements" )
+    @InheritedAttributes( {
+        @InheritedAttribute( methodName = "getCount",
+            description = "The count since the last reset" )
+    } )
+    public interface DummyCountStatistic {}
+
+    @ManagedData
+    @Description( "Specifies standard measurements of the lowest and highest values"
+        + " an attribute has held as well as its current value" ) 
+    @InheritedAttributes( {
+        @InheritedAttribute( methodName = "getHighWaterMark",
+            description = "The highest value this attribute has held since"
+                + " the beginninYg of the measurement" ),
+        @InheritedAttribute( methodName = "getLowWaterMark",
+            description = "The lowest value this attribute has held since"
+                + " the beginninYg of the measurement" ),
+        @InheritedAttribute( methodName = "getCurrent",
+            description = "The current value of this attribute" )
+    } ) 
+    public interface DummyRangeStatistic {}
+
+    @ManagedData
+    @Description( "Provides standard measurements of a range that has fixed limits" ) 
+    public interface DummyBoundedRangeStatistic extends DummyBoundaryStatistic, DummyRangeStatistic {}
+
+    @ManagedData
+    @Description( "Custom statistic type whose value is a string")
+    @InheritedAttributes( {
+        @InheritedAttribute(
+            methodName="getCurrent",
+            description="Returns the String value of the statistic" )
+    } )
+    public interface DummyStringStatistic extends DummyStatistic { }
+
+    List<Pair<Class,Class>> statsData = list(
+        pair( (Class)DummyStringStatistic.class, (Class)StringStatistic.class ),
+        pair( (Class)DummyTimeStatistic.class, (Class)TimeStatistic.class ),
+        pair( (Class)DummyStatistic.class, (Class)Statistic.class ),
+        pair( (Class)DummyBoundaryStatistic.class, (Class)BoundaryStatistic.class ),
+        pair( (Class)DummyBoundedRangeStatistic.class, (Class)BoundedRangeStatistic.class ),
+        pair( (Class)DummyCountStatistic.class, (Class)CountStatistic.class ),
+        pair( (Class)DummyRangeStatistic.class, (Class)RangeStatistic.class )
+    ) ;
+
+    private void addAnnotationIfNotNull( AnnotatedElement elemement,
+        Annotation annotation ) {
+        if (annotation != null) {
+            addAnnotation(elemement, annotation);
+        }
+    }
+
+    private void initializeStatisticsSupport() {
+        for (Pair<Class,Class> pair : statsData) {
+            Class dummy = pair.first() ;
+            Class real = pair.second() ;
+            addAnnotationIfNotNull( real, dummy.getAnnotation( ManagedData.class ) ) ;
+            addAnnotationIfNotNull( real, dummy.getAnnotation( Description.class ) ) ;
+            addAnnotationIfNotNull( real, dummy.getAnnotation( InheritedAttributes.class ) ) ;
+        }
+    }
+    
     private void init() {
         tree.clear() ;
         skeletonMap.clear() ;
@@ -169,6 +290,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         this.server = ManagementFactory.getPlatformMBeanServer() ;
         regDebugLevel = ManagedObjectManager.RegistrationDebugLevel.NONE ;
         runDebugFlag = false ;
+        initializeStatisticsSupport() ;
     }
     
     public ManagedObjectManagerImpl( final String domain ) {
@@ -238,7 +360,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     @AMXMetadata( type="gmbal-root", isSingleton=true)
     @Description( "Dummy class used when no root is specified" ) 
     private static class Root {
-        // No methods: will simply implement an AMX container
+        // No methods: will simply implement an AMXMBeanInterface container
         @Override
         public String toString() {
             return "GmbalDefaultRoot" ;
@@ -260,7 +382,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         GmbalMBean result = null ;
 
         try {
-            // Assume successful create, so that AMX checks that
+            // Assume successful create, so that AMXMBeanInterface checks that
             // back through getRootParentName will succeed.
             rootCreated = true ;
             result = tree.setRoot( root, name ) ;
@@ -644,7 +766,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         mm.clear() ;
         checkRootNotCreated("addAnnotation");
         mm.enter( registrationDebug(), "addAnnotation", element, annotation ) ;
-        
+        if (annotation == null) {
+            throw Exceptions.self.cannotAddNullAnnotation( element ) ;
+        }
+
         try {
             Map<Class, Annotation> map = addedAnnotations.get( element ) ;
             if (map == null) {
@@ -671,7 +796,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public <T extends Annotation> T getFirstAnnotationOnClass(
-        EvaluatedClassDeclaration element, Class<T> type ) {
+        final EvaluatedClassDeclaration element, final Class<T> type ) {
 
         EvaluatedClassAnalyzer eca = new EvaluatedClassAnalyzer( element ) ;
         List<EvaluatedClassDeclaration> ecds = eca.findClasses(

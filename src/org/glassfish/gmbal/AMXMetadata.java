@@ -42,12 +42,14 @@ import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
 
+import org.glassfish.external.amx.AMX ;
+
 /** Annotation to contol exactly how the type value in the ObjectName 
  * is extracted from a class when registering an instance of that class.
  * The absence of this annotation is the same as the default values.
  * Note that this is simply an application of the general @DescriptorKey
  * mechanism, but these particular metadata attributes control some of the
- * behavior of the AMX API.
+ * behavior of the AMXMBeanInterface API.
  * <p>Note that supportsAdoption is not included here, because that attribute
  * is always false for gmbal.
  *
@@ -62,28 +64,28 @@ public @interface AMXMetadata {
      *
      * @return
      */
-    @DescriptorKey( AMX.META_SINGLETON )
+    @DescriptorKey( AMX.DESC_IS_SINGLETON )
     boolean isSingleton() default false ;
 
     /** String denoting classification of MBean.  Predefined values are
      * configuration, monitoring, jsr77, utility, and other.
      * @return The group type.
      */
-    @DescriptorKey( AMX.META_GROUP_TYPE )
+    @DescriptorKey( AMX.DESC_GROUP )
     String group() default "other" ;
 
     /** Return the list of types that are legal as types of children of this
      * type.  If unknown, must be an empty array.
      * @return Array of child types
      */
-    @DescriptorKey( AMX.META_SUB_TYPES )
+    @DescriptorKey( AMX.DESC_SUB_TYPES )
     String[] subTypes() default {} ;
 
-    /** Return the generic AMX interface to be used.
+    /** Return the generic AMXMBeanInterface interface to be used.
      * @return name of interface to use.
      * XXX Do we really want a direct dependency on a GFv3 classname here?
      */
-    @DescriptorKey( AMX.META_GENERIC_INTERFACE_NAME )
+    @DescriptorKey( AMX.DESC_GENERIC_INTERFACE_NAME )
     String genericInterfaceName() default "org.glassfish.admin.amx.core.proxy" ;
 
     /** True if the MBeanInfo is invariant, that is, has the same
@@ -92,19 +94,19 @@ public @interface AMXMetadata {
      *
      * @return True if the MBeanInfo is invariant
      */
-    @DescriptorKey( AMX.META_MBEANINFO_INVARIANT )
+    @DescriptorKey( AMX.DESC_STD_IMMUTABLE_INFO )
     boolean immutableInfo() default true ;
 
     /** Defines the name of the interface to use when generating a proxy
      * for this class.  Defaults to a generic interface.
      * @return
      */
-    @DescriptorKey( AMX.META_INTERFACE_NAME )
+    @DescriptorKey( AMX.DESC_STD_INTERFACE_NAME )
     String interfaceClassName() default "" ;
 
     /** An explicit type to use for the MBean.  
      * <p>
-     * Note that this is NOT part of the AMX-defined metadata, but gmbal
+     * Note that this is NOT part of the AMXMBeanInterface-defined metadata, but gmbal
      * needs it here to have a place to override the type.
      * <p>
      * Gmbal determines the type name as follows:
@@ -123,6 +125,6 @@ public @interface AMXMetadata {
      * </ol>
      * @return The type for this MBean.
      */
-    @DescriptorKey( AMX.META_TYPE )
+    @DescriptorKey( "type" )
     String type() default "" ;
 } 

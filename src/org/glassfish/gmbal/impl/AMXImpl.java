@@ -38,7 +38,6 @@
 package org.glassfish.gmbal.impl;
 
 import javax.management.MBeanException;
-import org.glassfish.gmbal.AMX;
 import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.UnaryFunction;
 import java.util.ArrayList;
@@ -57,7 +56,7 @@ import javax.management.modelmbean.ModelMBeanInfoSupport;
  *
  * @author ken
  */
-public class AMXImpl implements AMX {
+public class AMXImpl implements AMXMBeanInterface {
     private MBeanImpl mbean ;
 
     public AMXImpl( final MBeanImpl mb ) {
@@ -84,10 +83,10 @@ public class AMXImpl implements AMX {
         return result ;
     }
 
-    public AMX getParent() {
+    public AMXMBeanInterface getParent() {
         MBeanImpl parent = mbean.parent() ;
         if (parent != null) {
-            return parent.facet( AMX.class, false ) ;
+            return parent.facet( AMXMBeanInterface.class, false ) ;
         } else {
             ManagedObjectManagerInternal mom = mbean.skeleton().mom() ;
             ObjectName rpn = mom.getRootParentName() ;
@@ -99,30 +98,30 @@ public class AMXImpl implements AMX {
         }
     }
 
-    public AMX[] getChildren() {
-        List<AMX> children = getContained( mbean.children().keySet() ) ;
-        return children.toArray( new AMX[children.size()] ) ;
+    public AMXMBeanInterface[] getChildren() {
+        List<AMXMBeanInterface> children = getContained( mbean.children().keySet() ) ;
+        return children.toArray( new AMXMBeanInterface[children.size()] ) ;
     }
 
-    private static UnaryFunction<MBeanImpl,AMX> extract =
-        new UnaryFunction<MBeanImpl,AMX>() {
+    private static UnaryFunction<MBeanImpl,AMXMBeanInterface> extract =
+        new UnaryFunction<MBeanImpl,AMXMBeanInterface>() {
             @SuppressWarnings("unchecked")
-            public AMX evaluate( MBeanImpl mb ) {
-                return mb.facet( AMX.class, false ) ;
+            public AMXMBeanInterface evaluate( MBeanImpl mb ) {
+                return mb.facet( AMXMBeanInterface.class, false ) ;
             }
         } ;
 
-   private List<AMX> getContained( Set<String> types ) {
-        List<AMX> result = new ArrayList<AMX>() ;
+   private List<AMXMBeanInterface> getContained( Set<String> types ) {
+        List<AMXMBeanInterface> result = new ArrayList<AMXMBeanInterface>() ;
         for (String str : types ) {
             result.addAll( Arrays.asList( getContained( str ) ) ) ;
         }
         return result ;
    }
 
-    private AMX[] getContained(String type) {
-        Collection<AMX> children = Algorithms.map( mbean.children().get( type ),
+    private AMXMBeanInterface[] getContained(String type) {
+        Collection<AMXMBeanInterface> children = Algorithms.map( mbean.children().get( type ),
             extract ).values() ;
-        return children.toArray( new AMX[children.size()] ) ;
+        return children.toArray( new AMXMBeanInterface[children.size()] ) ;
     }
 }

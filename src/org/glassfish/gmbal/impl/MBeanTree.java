@@ -48,6 +48,7 @@ import javax.management.MBeanRegistrationException;
 import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
+import org.glassfish.external.amx.AMX;
 import org.glassfish.gmbal.GmbalMBean;
 import org.glassfish.gmbal.generic.MethodMonitor;
 import org.glassfish.gmbal.generic.MethodMonitorFactory;
@@ -123,9 +124,9 @@ public class MBeanTree {
     }
 
     private String parentPath( final ObjectName rootParentName ) {
-        final String pp = rootParentName.getKeyProperty("pp") ;
-        final String type = rootParentName.getKeyProperty("type") ;
-        final String name = rootParentName.getKeyProperty("name") ;
+        final String pp = rootParentName.getKeyProperty( AMX.PARENT_PATH_KEY ) ;
+        final String type = rootParentName.getKeyProperty( AMX.TYPE_KEY ) ;
+        final String name = rootParentName.getKeyProperty( AMX.NAME_KEY ) ;
 
         if (pp == null) {
             Exceptions.self.ppNullInRootParent() ;
@@ -163,10 +164,11 @@ public class MBeanTree {
         this.rootParentName = rootParentName ;
         if (rootParentName == null) {
             rootParentPrefix = null ;
-            nullParentsParentPath =  "pp=/," ;
+            nullParentsParentPath =  AMX.PARENT_PATH_KEY + "=/," ;
         } else {
             rootParentPrefix = parentPath( rootParentName ) ;
-            nullParentsParentPath = "pp=" + rootParentPrefix + "," ;
+            nullParentsParentPath = AMX.PARENT_PATH_KEY + "="
+                + rootParentPrefix + "," ;
         }
 
         this.typeString = typeString ;
@@ -300,7 +302,7 @@ public class MBeanTree {
             // name: this is not a good candidate for caching
             if (name.length() > 0) {
                 result.append( ',') ;
-                result.append( "name" ) ;
+                result.append( AMX.NAME_KEY ) ;
                 result.append( "=" ) ;
                 result.append( getQuotedName( name ) ) ;
             }

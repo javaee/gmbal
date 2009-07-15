@@ -390,6 +390,10 @@ public interface Exceptions {
     @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 10 )
     public IllegalArgumentException noAnnotationFound(String name, String cls );
 
+    @Message( "Cannot add null annotation to {0}" )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 11 )
+    public IllegalArgumentException cannotAddNullAnnotation(AnnotatedElement element);
+
 // TypeConverterImpl
     static final int TYPE_CONVERTER_IMPL_START =
         MANAGED_OBJECT_MANAGER_IMPL_START + EXCEPTIONS_PER_CLASS ;

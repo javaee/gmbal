@@ -38,7 +38,6 @@
 package org.glassfish.gmbal.impl;
 
 import org.glassfish.gmbal.*;
-import org.glassfish.gmbal.AMX;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -58,18 +57,18 @@ import javax.management.ReflectionException;
 import javax.management.RuntimeOperationsException;
 import javax.management.modelmbean.ModelMBeanInfo;
 
-/** This class implements a generic AMX MBean which is connected to a possibly
+/** This class implements a generic AMXMBeanInterface MBean which is connected to a possibly
  * remote MBeanServerConnection (note that MBeanServer isA MBeanServerConnection,
  * so we can actually create an AMXClientImpl simply by using the MBeanServer
  * from the mom: this is useful for testing).
  * <P>
- * Note that this version of the AMX API provides a generic get/set API that
+ * Note that this version of the AMXMBeanInterface API provides a generic get/set API that
  * is identical to DynamicMBean, except that it only throws unchecked exceptions.
  * This is far more convenient in practice than the JMX-standard checked exceptions.
  *
  * @author ken
  */
-public class AMXClient implements AMX {
+public class AMXClient implements AMXMBeanInterface {
     private MBeanServerConnection server ;
     private ObjectName oname ;
 
@@ -156,19 +155,19 @@ public class AMXClient implements AMX {
         }
     }
 
-    public AMX getParent() {
+    public AMXMBeanInterface getParent() {
         ObjectName res  = fetchAttribute( "Parent", ObjectName.class ) ;
         return makeAMX( res ) ;
     }
 
-    public AMX[] getChildren() {
+    public AMXMBeanInterface[] getChildren() {
         ObjectName[] onames = fetchAttribute( "Children",
             ObjectName[].class ) ;
         return makeAMXArray( onames ) ;
     }
 
-    private AMX[] makeAMXArray( ObjectName[] onames ) {
-        AMX[] result = new AMX[onames.length] ;
+    private AMXMBeanInterface[] makeAMXArray( ObjectName[] onames ) {
+        AMXMBeanInterface[] result = new AMXMBeanInterface[onames.length] ;
         int ctr=0 ;
         for (ObjectName on : onames ) {
             result[ctr++] = makeAMX( on ) ;
