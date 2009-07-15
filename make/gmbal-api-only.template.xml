@@ -1,6 +1,11 @@
 <project>
     @HEADER@
     <dependencies>
+        <dependency>
+            <groupId>org.glassfish.external</groupId>
+            <artifactId>management-api</artifactId>
+            <version>3.0.0-b001</version>
+        </dependency>
     </dependencies>
 </project>
 

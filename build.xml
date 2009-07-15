@@ -242,11 +242,6 @@
                 <include name="org/glassfish/gmbal/**/*.java"/>
             </fileset>
         </jar>
-        <jar jarfile="dist/bundles/gfprobe-provider-client-source.jar" duplicate="fail">
-            <fileset dir="src">
-                <include name="org/glassfish/probe/**/*.java"/>
-            </fileset>
-        </jar>
     </target>
 
     <target name="make-bnd-properties">
@@ -257,7 +252,6 @@
     <target name="make-bundles" depends="gmbal-init,make-source-bundle,make-bnd-properties">
         <make-bundle file="gmbal-api-only"/>
         <make-bundle file="gmbal"/>
-        <make-bundle file="gfprobe-provider-client"/>
     </target>
 
 <target name="bootstrap" 
@@ -386,32 +380,6 @@ The modules             (and their dependencies):
     <push-to-maven module="gmbal-api-only" description="gmbal API" repo="${local.url}"/>
     <push-to-maven module="gmbal" description="gmbal implementation" repo="${local.url}"/>
     <push-to-maven module="gmbal-source" description="gmbal source code" repo="${local.url}"/>
-</target>
-
-<macrodef name="push-probe-to-maven">
-    <attribute name="repo"/>
-    <sequential>
-        <artifact:pom id="gfprobe.source.project" file="make/gfprobe-provider-client-source.pom.xml"/>
-        <artifact:deploy file="dist/bundles/gfprobe-provider-client-source.jar">
-            <remoteRepository url="@{repo}">
-            </remoteRepository>
-            <pom refId="gfprobe.source.project"/>
-        </artifact:deploy>
-        <artifact:pom id="gfprobe.project" file="make/gfprobe-provider-client.pom.xml"/>
-        <artifact:deploy file="dist/bundles/gfprobe-provider-client.jar">
-            <remoteRepository url="@{repo}">
-            </remoteRepository>
-            <pom refId="gfprobe.project"/>
-        </artifact:deploy>
-    </sequential>
-</macrodef>
-
-<target name="release-probe" depends="mavenize">
-    <push-probe-to-maven repo="${repo.url}"/>
-</target>
-
-<target name="release-probe-local" depends="mavenize">
-    <push-probe-to-maven repo="${local.url}"/>
 </target>
 
 <target name="hudson-job" depends="clean,jar,emma-instr,test,javadoc,test-report,findbugs-xml,emma-report,make-bundles"/>
