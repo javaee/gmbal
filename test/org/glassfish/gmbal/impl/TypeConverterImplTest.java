@@ -41,6 +41,8 @@
 
 package org.glassfish.gmbal.impl;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import junit.framework.TestCase;
 import org.glassfish.gmbal.ManagedObjectManagerFactory;
 
@@ -89,7 +91,13 @@ public class TypeConverterImplTest extends TestCase {
      */
 
     public void testData1() {
-        TypeConverterTestData.Data1TestData.test( mom ) ;
+        Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl") ;
+        logger.setLevel(Level.OFF ) ;
+        try {
+            TypeConverterTestData.Data1TestData.test( mom ) ;
+        } finally {
+            logger.setLevel(Level.INFO ) ;
+        }
     }
 
     public void testData2() {
@@ -97,6 +105,12 @@ public class TypeConverterImplTest extends TestCase {
     }
 
     public void testDoubleIndexData() {
-        TypeConverterTestData.Data3TestData.test( mom ) ;
+        Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl") ;
+        logger.setLevel(Level.OFF ) ;
+        try {
+            TypeConverterTestData.Data3TestData.test( mom ) ;
+        } finally {
+            logger.setLevel(Level.INFO ) ;
+        }
     }
 }

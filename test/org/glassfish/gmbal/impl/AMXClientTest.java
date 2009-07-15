@@ -453,7 +453,7 @@ public class AMXClientTest extends TestCase {
         System.out.println("getMBeanInfo");
         AMXClient root = getAMX( mtype, 0) ;
         ModelMBeanInfo mbi = (ModelMBeanInfo)root.getMBeanInfo() ;
-        System.out.println( "MBeanInfo = " + 
-            ObjectUtility.defaultObjectToString(mbi) ) ;
+        // System.out.println( "MBeanInfo = " + 
+            // ObjectUtility.defaultObjectToString(mbi) ) ;
     }
 }

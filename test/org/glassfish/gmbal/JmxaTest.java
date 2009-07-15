@@ -246,8 +246,8 @@ public class JmxaTest extends TestCase {
         EvaluatedClassAnalyzer ca = getCA( I.class ) ;
         List<EvaluatedClassDeclaration> res = ca.findClasses(
             Algorithms.TRUE( EvaluatedClassDeclaration.class ) ) ;
-	System.out.println( "Inheritance chain for class " + I.class.getName() 
-	    + " is " + res ) ;
+	// System.out.println( "Inheritance chain for class " + I.class.getName() 
+	    // + " is " + res ) ;
 
 	Map<EvaluatedClassDeclaration,Integer> positions =
             new HashMap<EvaluatedClassDeclaration,Integer>() ;
@@ -1095,7 +1095,7 @@ public class JmxaTest extends TestCase {
             
             MBeanServer server = mom.getMBeanServer() ;
             MBeanInfo mbi = server.getMBeanInfo( oname ) ;
-            System.out.println( mbi ) ;
+            // System.out.println( mbi ) ;
             
             CompositeData person = (CompositeData) server.getAttribute( oname, 
                 "Person" ) ;
@@ -1338,7 +1338,15 @@ public class JmxaTest extends TestCase {
     }
 
     public void testMethodSequence() {
-        (new MOMSequenceTester()).doTest() ;
+        Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
+        try {
+            // Turn off logging for this test, since we expect to see
+            // many exceptions.
+            logger.setLevel(Level.OFF) ;
+            (new MOMSequenceTester()).doTest() ;
+        } finally {
+            logger.setLevel(Level.INFO) ;
+        }
     }
 
     @ManagedObject
@@ -1365,10 +1373,11 @@ public class JmxaTest extends TestCase {
         Object obj = new TestClass( str ) ;
         mom.registerAtRoot(obj) ;
         ObjectName oname = mom.getObjectName(obj) ;
-        System.out.println( "ObjectName is " + oname ) ;
+        System.out.println( "\tObjectName is " + oname ) ;
     }
 
     public void testQuotedName() throws IOException {
+        System.out.println( "testQuotedName") ;
 	final ManagedObjectManager mom =
            ManagedObjectManagerFactory.createStandalone( "test" ) ;
         mom.stripPackagePrefix() ;
@@ -1385,7 +1394,7 @@ public class JmxaTest extends TestCase {
             Object child = new TestClass( "Another[Annoying:String]") ;
             mom.register( parent, child ) ;
             ObjectName oname = mom.getObjectName(child) ;
-            System.out.println( "ObjectName is " + oname);
+            System.out.println( "\tObjectName is " + oname);
             // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
         } finally {
             mom.close() ;
@@ -1643,18 +1652,19 @@ public class JmxaTest extends TestCase {
     }
 
     public void testLloydExample() throws MalformedObjectNameException {
+        System.out.println( "TestLloydExample" ) ;
         ObjectName pname = new ObjectName( "test:pp=/,type=Foo") ;
         GmbalMOM mom = new GmbalMOM(pname) ;
         mom.registerChildren() ;
         ObjectName childName = mom.getChildName() ;
-        System.out.println( "childName = " + childName ) ;
+        System.out.println( "\tchildName = " + childName ) ;
         AMXClient client = new AMXClient( mom.getMOM().getMBeanServer(),
             childName ) ;
-        System.out.println( "client = " + client ) ;
+        System.out.println( "\tclient = " + client ) ;
         AMXMBeanInterface parent = client.getParent() ;
-        System.out.println( "parent = " + parent ) ;
+        System.out.println( "\tparent = " + parent ) ;
         AMXMBeanInterface[] children = parent.getChildren() ;
-        System.out.println( "children = " + Arrays.asList( children )) ;
+        System.out.println( "\tchildren = " + Arrays.asList( children )) ;
     }
 
     // An illegal definition
@@ -1694,8 +1704,9 @@ public class JmxaTest extends TestCase {
     public void testIllegalAttribute() throws IOException {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             "test" ) ;
-
+        Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
         try {
+            logger.setLevel(Level.OFF) ;
             mom.createRoot() ;
             Object obj = new Bar() ;
             mom.registerAtRoot( obj ) ;
@@ -1705,6 +1716,8 @@ public class JmxaTest extends TestCase {
         } catch (Throwable thr) {
             fail( "Unexpected exception " + thr ) ;
         } finally {
+            logger.setLevel(Level.INFO) ;
+
             mom.close() ;
         }
     }
@@ -1769,7 +1782,7 @@ public class JmxaTest extends TestCase {
 
             Object obj = res.getAttribute("MDO") ;
 
-            System.out.println( "Contents of " + on + ": " + obj ) ;
+            // System.out.println( "Contents of " + on + ": " + obj ) ;
             assertTrue( obj instanceof CompositeData ) ;
 
             CompositeData cd = (CompositeData)obj ;
@@ -1831,12 +1844,14 @@ public class JmxaTest extends TestCase {
     public void testSingletonMBean() throws IOException {
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             "test" );
+        Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
 
         SingletonMBean smb = new SingletonMBean() ;
         NonSingletonMBean nsmb = new NonSingletonMBean() ;
         UnnamedNonSingletonMBean unsmb = new UnnamedNonSingletonMBean() ;
 
         try {
+            logger.setLevel(Level.OFF );
             mom.stripPackagePrefix();
             mom.createRoot() ;
 
@@ -1848,6 +1863,7 @@ public class JmxaTest extends TestCase {
             doRegisterAtRoot( mom, nsmb, "foo", false ) ;
             doRegisterAtRoot( mom, unsmb, "foo", false ) ;
         } finally {
+            logger.setLevel(Level.INFO );
             mom.close() ;
         }
     }
@@ -1901,6 +1917,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testQuotes() throws IOException {
+        System.out.println( "testQuotes" ) ;
         ManagedObjectManager mom = null ;
 
         QuoteTestBean root = new QuoteTestBean("needs=quote") ;
@@ -1912,15 +1929,15 @@ public class JmxaTest extends TestCase {
             mom.stripPackagePrefix();
             mom.createRoot( root ) ;
             ObjectName rootName = mom.getObjectName(root) ;
-            System.out.println( "rootName=" + rootName ) ;
+            System.out.println( "\trootName=" + rootName ) ;
 
             mom.registerAtRoot( child1 ) ;
             ObjectName child1Name = mom.getObjectName(child1) ;
-            System.out.println( "child1Name=" + child1Name ) ;
+            System.out.println( "\tchild1Name=" + child1Name ) ;
 
             mom.registerAtRoot( child2 ) ;
             ObjectName child2Name = mom.getObjectName(child2) ;
-            System.out.println( "child2Name=" + child2Name ) ;
+            System.out.println( "\tchild2Name=" + child2Name ) ;
         } finally {
             if (mom != null) {
                 mom.close() ;
@@ -1973,7 +1990,7 @@ public class JmxaTest extends TestCase {
 
     public void testBoundedRangeStatistic() throws IOException,
         AttributeNotFoundException, MBeanException, ReflectionException {
-
+        System.out.println( "testBoundedRangeStatistic" ) ;
         ManagedObjectManager mom = null ;
 
         BRMBean root = new BRMBean() ;
@@ -1983,7 +2000,7 @@ public class JmxaTest extends TestCase {
             mom.stripPackagePrefix();
             GmbalMBean gmb = mom.createRoot( root ) ;
             ObjectName rootName = mom.getObjectName(root) ;
-            System.out.println( "rootName=" + rootName ) ;
+            System.out.println( "\trootName=" + rootName ) ;
 
             Object data = gmb.getAttribute( "Stat" ) ;
             assertTrue( data instanceof CompositeData) ;
