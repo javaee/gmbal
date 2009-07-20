@@ -36,9 +36,9 @@ import org.glassfish.gmbal.generic.Pair;
 public class AMXClientTest extends TestCase {
     private static final String EXTERNAL_ROOT = "test:pp=/,type=FOO" ;
 
-    private ManagedObjectManager standaloneMom ;
-    private ManagedObjectManager federatedMom ;
-    private ObjectName externalRootName ;
+    private ManagedObjectManager standaloneMom = null ;
+    private ManagedObjectManager federatedMom = null ;
+    private ObjectName externalRootName = null ;
 
     @ManagedObject
     @Description( "A simple class for generating MBeans" )
@@ -163,7 +163,7 @@ public class AMXClientTest extends TestCase {
         for (TestData td : tdata) {
             MyManagedClass mmc = new MyManagedClass(
                 td.id(), td.name(), td.attr() ) ;
-            GmbalMBean gmb = null ;
+            GmbalMBean gmb ;
             int parentIndex = td.parentIndex() ;
             if (parentIndex == -1) {
                 gmb = mom.createRoot( mmc ) ;
@@ -453,7 +453,7 @@ public class AMXClientTest extends TestCase {
         System.out.println("getMBeanInfo");
         AMXClient root = getAMX( mtype, 0) ;
         ModelMBeanInfo mbi = (ModelMBeanInfo)root.getMBeanInfo() ;
-        // System.out.println( "MBeanInfo = " + 
-            // ObjectUtility.defaultObjectToString(mbi) ) ;
+        System.out.println( "\tMBeanInfo = " +
+            ObjectUtility.defaultObjectToString(mbi) ) ;
     }
 }

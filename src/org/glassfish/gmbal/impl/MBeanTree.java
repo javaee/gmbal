@@ -129,11 +129,11 @@ public class MBeanTree {
         final String name = rootParentName.getKeyProperty( AMX.NAME_KEY ) ;
 
         if (pp == null) {
-            Exceptions.self.ppNullInRootParent() ;
+            throw Exceptions.self.ppNullInRootParent() ;
         }
 
         if (type == null) {
-            Exceptions.self.typeNullInRootParent() ;
+            throw Exceptions.self.typeNullInRootParent() ;
         }
 
         String prefix ;

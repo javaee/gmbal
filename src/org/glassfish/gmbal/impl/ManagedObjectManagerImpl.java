@@ -379,7 +379,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         mm.clear() ;
         checkRootNotCreated( "createRoot" ) ;
 
-        GmbalMBean result = null ;
+        GmbalMBean result ;
 
         try {
             // Assume successful create, so that AMXMBeanInterface checks that

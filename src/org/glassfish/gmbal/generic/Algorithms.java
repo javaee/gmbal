@@ -37,6 +37,7 @@
 package org.glassfish.gmbal.generic ;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List ;
 import java.util.Map ;
@@ -350,20 +351,27 @@ public final class Algorithms {
         for (Method m : ann.getClass().getDeclaredMethods()) {
             String name = m.getName() ;
             if (!annotationMethods.contains( name ) ) {
+                Object value = null ;
+                // Note: the following invoke should never fail
                 try {
-                    Object value = m.invoke(ann);
-                    Class valueClass = value.getClass() ;
-                    if (valueClass.isAnnotation()) {
-                        value = getAnnotationValues( (Annotation)value,
-                            convertArraysToLists ) ;
-                    } else if (convertArraysToLists && valueClass.isArray()) {
-                        value = convertToList(value) ;
-                    }
-                    result.put( name, value ) ;
-                } catch (Exception ex) {
-                    Logger.getLogger(Algorithms.class.getName()).log(
-                        Level.SEVERE, null, ex);
+                    value = m.invoke(ann);
+                } catch (IllegalAccessException ex) {
+                    Logger.getLogger(Algorithms.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IllegalArgumentException ex) {
+                    Logger.getLogger(Algorithms.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (InvocationTargetException ex) {
+                    Logger.getLogger(Algorithms.class.getName()).log(Level.SEVERE, null, ex);
                 }
+
+                Class valueClass = value.getClass() ;
+                if (valueClass.isAnnotation()) {
+                    value = getAnnotationValues( (Annotation)value,
+                        convertArraysToLists ) ;
+                } else if (convertArraysToLists && valueClass.isArray()) {
+                    value = convertToList(value) ;
+                }
+
+                result.put( name, value ) ;
             }
         }
 

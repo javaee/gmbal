@@ -44,6 +44,7 @@ package org.glassfish.gmbal.logex;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ResourceBundle;
@@ -187,14 +188,22 @@ public class WrapperGenerator {
 
     private static Exception makeException( Class<?> rtype, String msg ) {
         try {
-            Constructor cons = rtype.getConstructor(String.class) ;
-            return (Exception)cons.newInstance(msg) ;
-        } catch (Exception exc) {
-            // ignore findbugs: lots of exceptions with same handler.
-            throw new RuntimeException( exc ) ;
+            Constructor cons = rtype.getConstructor(String.class);
+            return (Exception) cons.newInstance(msg);
+        } catch (InstantiationException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (IllegalAccessException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (InvocationTargetException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (NoSuchMethodException ex) {
+            throw new RuntimeException( ex ) ;
+        } catch (SecurityException ex) {
+            throw new RuntimeException( ex ) ;
         }
     }
-
 
     private static String handleMessageOnly( Method method, Logger logger,
         Object[] messageParams ) {

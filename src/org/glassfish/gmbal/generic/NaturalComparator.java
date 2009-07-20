@@ -33,7 +33,7 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package com.sun.corba.se.spi.orbutil.generic ;
+package org.glassfish.gmbal.generic ;
 
 import java.util.Comparator ;
 

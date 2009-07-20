@@ -37,6 +37,8 @@
 
 package org.glassfish.gmbal;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.glassfish.gmbal.generic.ObjectWriter;
 import java.util.Map;
 
@@ -73,9 +75,9 @@ public class OpenMBeanTools {
     @SuppressWarnings("unchecked")
     public static ArrayType array( int dim, OpenType ot ) {
         try {
-            return new ArrayType( dim, ot ) ;
-        } catch (Exception exc) {
-            throw new IllegalArgumentException( exc ) ;
+            return new ArrayType(dim, ot);
+        } catch (OpenDataException ex) {
+            throw new IllegalArgumentException( ex ) ;
         }
     }
 
@@ -112,20 +114,18 @@ public class OpenMBeanTools {
         }
 
         try {
-            return new CompositeType( typeName, desc, itemNames, itemDescs, 
-                itemTypes ) ;
-        } catch (Exception exc) {
-            throw new IllegalArgumentException( exc ) ;
+            return new CompositeType(typeName, desc, itemNames, itemDescs, itemTypes);
+        } catch (OpenDataException ex) {
+            throw new IllegalArgumentException( ex ) ;
         }
     }
     
     public static TabularType tab( String typeName, String desc, 
         CompositeType rowType, String... indexNames ) {
-
         try {
-            return new TabularType( typeName, desc, rowType, indexNames ) ;
-        } catch (Exception exc) {
-            throw new IllegalArgumentException( exc ) ;
+            return new TabularType(typeName, desc, rowType, indexNames);
+        } catch (OpenDataException ex) {
+            throw new IllegalArgumentException( ex ) ;
         }
     }
     

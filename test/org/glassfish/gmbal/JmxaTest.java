@@ -1094,7 +1094,7 @@ public class JmxaTest extends TestCase {
             assertEquals( expectedObjectName, oname ) ;
             
             MBeanServer server = mom.getMBeanServer() ;
-            MBeanInfo mbi = server.getMBeanInfo( oname ) ;
+            // MBeanInfo mbi = server.getMBeanInfo( oname ) ;
             // System.out.println( mbi ) ;
             
             CompositeData person = (CompositeData) server.getAttribute( oname, 
@@ -1592,7 +1592,7 @@ public class JmxaTest extends TestCase {
 // Lloyd's example
     @ManagedObject
     @Description( "A test MBean for Gmbal" )
-    public final class GmbalMOM {
+    public final static class GmbalMOM {
         private final ManagedObjectManager mMOM;
         private ObjectName childName ;
 
@@ -1600,12 +1600,12 @@ public class JmxaTest extends TestCase {
             mMOM = ManagedObjectManagerFactory.createFederated( parent );
             // mMOM.setMBeanServer(server);
             mMOM.stripPackagePrefix();
-            final GmbalMBean root = mMOM.createRoot();
+            mMOM.createRoot();
         }
 
         public void registerChildren() {
             final Gmbal1 test = new Gmbal1();
-            final GmbalMBean test1 = mMOM.registerAtRoot( test );
+            mMOM.registerAtRoot( test );
             childName = mMOM.getObjectName(test);
         }
 
@@ -1669,7 +1669,7 @@ public class JmxaTest extends TestCase {
 
     // An illegal definition
     @ManagedData
-    class Foo {
+    public final static class Foo {
         private String name = "foo" ;
 
         @Override
@@ -1778,10 +1778,9 @@ public class JmxaTest extends TestCase {
 
             GmbalMBean res = mom.registerAtRoot( mdob ) ;
 
-            ObjectName on = mom.getObjectName(mdob) ;
-
             Object obj = res.getAttribute("MDO") ;
 
+            // ObjectName on = mom.getObjectName(mdob) ;
             // System.out.println( "Contents of " + on + ": " + obj ) ;
             assertTrue( obj instanceof CompositeData ) ;
 
