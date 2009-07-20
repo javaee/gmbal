@@ -363,12 +363,14 @@ public final class Algorithms {
                     Logger.getLogger(Algorithms.class.getName()).log(Level.SEVERE, null, ex);
                 }
 
-                Class valueClass = value.getClass() ;
-                if (valueClass.isAnnotation()) {
-                    value = getAnnotationValues( (Annotation)value,
-                        convertArraysToLists ) ;
-                } else if (convertArraysToLists && valueClass.isArray()) {
-                    value = convertToList(value) ;
+                if (value != null) {
+                    Class valueClass = value.getClass() ;
+                    if (valueClass.isAnnotation()) {
+                        value = getAnnotationValues( (Annotation)value,
+                            convertArraysToLists ) ;
+                    } else if (convertArraysToLists && valueClass.isArray()) {
+                        value = convertToList(value) ;
+                    }
                 }
 
                 result.put( name, value ) ;

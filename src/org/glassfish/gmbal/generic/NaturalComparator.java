@@ -35,9 +35,12 @@
  */
 package org.glassfish.gmbal.generic ;
 
+import java.io.Serializable;
 import java.util.Comparator ;
 
-public class NaturalComparator<T> implements Comparator<T> {
+public class NaturalComparator<T> implements Serializable, Comparator<T> {
+    private static final long serialVersionUID = -6702229623606444679L;
+
     public int compare( T obj1, T obj2 )
     {
 	return ((Comparable<T>)obj1).compareTo( obj2 ) ;

@@ -226,8 +226,8 @@ public class JmxaTest extends TestCase {
     public interface E {}
     public interface F extends A, E {}
     public interface G extends F, D {}
-    public class H implements F {} 
-    public class I extends H implements G {}
+    public static class H implements F {}
+    public static class I extends H implements G {}
 
     private static final Class[] cdata =  {
 	Object.class, 
@@ -702,7 +702,7 @@ public class JmxaTest extends TestCase {
 	}
     }
 
-    public class ManagedObjectExampleDerived extends ManagedObjectExample {
+    public static class ManagedObjectExampleDerived extends ManagedObjectExample {
         public ManagedObjectExampleDerived( int num, String name ) {
             super( num, name ) ;
         }
@@ -1685,7 +1685,7 @@ public class JmxaTest extends TestCase {
     }
 
     @ManagedObject
-    class Bar {
+    public static class Bar {
         private String name = "bar" ;
 
         @Override
@@ -1793,21 +1793,21 @@ public class JmxaTest extends TestCase {
     }
 
     @ManagedObject
-    public class MBeanBase {
+    public static class MBeanBase {
         @ManagedAttribute
         public int value() { return 42 ; }
     }
 
     @AMXMetadata( isSingleton=true )
-    public class SingletonMBean extends MBeanBase {
+    public static class SingletonMBean extends MBeanBase {
     }
 
-    public class NonSingletonMBean extends MBeanBase {
+    public static class NonSingletonMBean extends MBeanBase {
         @NameValue
         String name() { return "me" ; }
     }
 
-    public class UnnamedNonSingletonMBean extends MBeanBase {
+    public static class UnnamedNonSingletonMBean extends MBeanBase {
     }
 
     private void doRegisterAtRoot( ManagedObjectManager mom, Object obj,
