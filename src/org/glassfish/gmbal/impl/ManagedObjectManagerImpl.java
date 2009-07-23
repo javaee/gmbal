@@ -82,8 +82,11 @@ import org.glassfish.gmbal.generic.FacetAccessor ;
 import org.glassfish.gmbal.generic.FacetAccessorImpl;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import javax.management.MBeanAttributeInfo;
 import org.glassfish.external.statistics.BoundaryStatistic;
 import org.glassfish.external.statistics.BoundedRangeStatistic;
 import org.glassfish.external.statistics.CountStatistic;
@@ -111,10 +114,10 @@ import static org.glassfish.gmbal.generic.Algorithms.* ;
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     @AMXMetadata
-    private static class DefaultMBeanTypeHolder { }
+    private static class DefaultAMXMetadataHolder { }
 
     private static final AMXMetadata DEFAULT_AMX_METADATA =
-	DefaultMBeanTypeHolder.class.getAnnotation(AMXMetadata.class);
+	DefaultAMXMetadataHolder.class.getAnnotation(AMXMetadata.class);
 
     private static ObjectUtility myObjectUtil =
         new ObjectUtility(true, 0, 4)
@@ -139,6 +142,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final Map<EvaluatedType,TypeConverter> typeConverterMap ;
     private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
     private final MBeanSkeleton amxSkeleton ;
+    private final Set<String> amxAttributeNames ;
 
     // All non-finals should be initialized in this order in the init() method.
     private boolean rootCreated ;
@@ -166,7 +170,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         final EvaluatedClassDeclaration ecd =
             (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(
                 AMXMBeanInterface.class ) ;
+        this.amxAttributeNames = new HashSet<String>() ;
         this.amxSkeleton = getSkeleton( ecd ) ;
+        for (MBeanAttributeInfo mbi : amxSkeleton.getMBeanInfo().getAttributes()) {
+            amxAttributeNames.add( mbi.getName() ) ;
+        }
     }
 
     @ManagedData
@@ -1158,5 +1166,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     public AMXMetadata getDefaultAMXMetadata() {
         return DEFAULT_AMX_METADATA ;
+    }
+
+    public boolean isAMXAttributeName( String name ) {
+        return amxAttributeNames.contains( name ) ;
     }
 }

@@ -593,7 +593,7 @@ public class JmxaTest extends TestCase {
     public static final String MDE_ATTR_DESC_NAME = "Description of ManagedDataExample name attribute" ;
     public static final String MDE_ATTR_DESC_DATE = "Description of ManagedDataExample date attribute" ;
     public static final String MDE_ATTR_DESC_GET_STRING = "Description of ManagedDataExample string attribute" ;
-    public static final String MDE_ATTR_ID_NAME = "name" ;
+    public static final String MDE_ATTR_ID_NAME = "theName" ;
     public static final String MDE_ATTR_ID_DATE = "currentDate" ;
     public static final String MDE_ATTR_ID_GET_STRING = "string" ;
 
@@ -610,7 +610,7 @@ public class JmxaTest extends TestCase {
 
 	@ManagedAttribute( id=MDE_ATTR_ID_NAME )
         @Description( MDE_ATTR_DESC_NAME ) 
-	public String name() {
+	public String theName() {
 	    return name ;
 	}
 
@@ -669,7 +669,7 @@ public class JmxaTest extends TestCase {
 
 	@ManagedAttribute
         @Description( MOE_ATTR_DESC_NAME )
-	public String getName() {
+	public String getTheName() {
 	    return name ;
 	}
 
@@ -756,11 +756,11 @@ public class JmxaTest extends TestCase {
 	    // Validate attributes
 	    assertEquals( mbs.getAttribute( moeName, "Num" ),
                 Integer.valueOf( num ) ) ;
-	    assertEquals( mbs.getAttribute( moeName, "Name" ), name ) ;
+	    assertEquals( mbs.getAttribute( moeName, "TheName" ), name ) ;
 	    Object obj = mbs.getAttribute( moeName, "Mde" ) ;
 	    assertTrue( obj instanceof CompositeData ) ;
 	    CompositeData compData = (CompositeData)obj ;
-	    assertEquals( root.getMde().name(), compData.get(
+	    assertEquals( root.getMde().theName(), compData.get(
                 MDE_ATTR_ID_NAME ) ) ;
 	    assertEquals( root.getMde().date(), compData.get( 
                 MDE_ATTR_ID_DATE ) ) ;
@@ -819,7 +819,8 @@ public class JmxaTest extends TestCase {
             assertTrue( managed instanceof CompositeData ) ;
             CompositeData compData = (CompositeData)managed ;
             assertEquals( compData.getCompositeType(), ctype ) ;
-            assertEquals( value.name(), (String)compData.get( MDE_ATTR_ID_NAME ) ) ;
+            assertEquals( value.theName(),
+                (String)compData.get( MDE_ATTR_ID_NAME ) ) ;
             assertEquals( value.date(), (Date)compData.get( MDE_ATTR_ID_DATE ) ) ;
         } finally {
             try {
@@ -1364,7 +1365,7 @@ public class JmxaTest extends TestCase {
         }
 
         @NameValue
-        String name() {
+        String theName() {
             return name ;
         }
     }
@@ -1731,7 +1732,7 @@ public class JmxaTest extends TestCase {
             this.value = value ;
         }
 
-        public String name() {
+        public String theName() {
             return name ;
         }
 
@@ -1742,7 +1743,7 @@ public class JmxaTest extends TestCase {
 
     @ManagedData
     @InheritedAttributes( {
-        @InheritedAttribute( methodName="name" , description="The name" ),
+        @InheritedAttribute( methodName="theName" , description="The name" ),
         @InheritedAttribute( methodName="value" , description="The value" )
     } )
     public interface MyDataObjectDummy {}
@@ -1756,7 +1757,7 @@ public class JmxaTest extends TestCase {
         MyDataObject getMDO() { return md ; }
 
         @NameValue
-        String name() {
+        String theName() {
             return "MyDataObjectBeanTest" ;
         }
     }
@@ -1785,7 +1786,7 @@ public class JmxaTest extends TestCase {
             assertTrue( obj instanceof CompositeData ) ;
 
             CompositeData cd = (CompositeData)obj ;
-            assertEquals( cd.get( "name" ), mdob.getMDO().name() ) ;
+            assertEquals( cd.get( "theName" ), mdob.getMDO().theName() ) ;
             assertEquals( cd.get( "value" ), mdob.getMDO().value() ) ;
         } finally {
             mom.close() ;
@@ -1804,7 +1805,7 @@ public class JmxaTest extends TestCase {
 
     public static class NonSingletonMBean extends MBeanBase {
         @NameValue
-        String name() { return "me" ; }
+        String theName() { return "me" ; }
     }
 
     public static class UnnamedNonSingletonMBean extends MBeanBase {
@@ -1870,7 +1871,7 @@ public class JmxaTest extends TestCase {
     @ManagedObject 
     @Description( "Test for @ManagedAttribute field")
     public static class TestFieldAttribute {
-        @NameValue String name() { return "name" ; }
+        @NameValue String theName() { return "name" ; }
 
         @ManagedAttribute
         private final int value = 42 ;
@@ -1910,7 +1911,7 @@ public class JmxaTest extends TestCase {
         int getNumber() { return 42 ; }
 
         @NameValue
-        String name() {
+        String theName() {
             return name ;
         }
     }
@@ -1984,7 +1985,7 @@ public class JmxaTest extends TestCase {
         }
 
         @NameValue
-        String name() { return "TestBean" ; }
+        String theName() { return "TestBean" ; }
     }
 
     public void testBoundedRangeStatistic() throws IOException,

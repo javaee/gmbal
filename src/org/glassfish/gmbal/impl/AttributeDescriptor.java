@@ -346,6 +346,11 @@ public class AttributeDescriptor {
         String actualId = empty(extId) ? 
             getDerivedId( decl.name(), ainfo, adt ) : extId ;
 
+        if (mom.isAMXAttributeName(actualId)) {
+            throw Exceptions.self.duplicateAMXFieldName(
+                actualId, decl.name(), decl.containingClass().name() ) ;
+        }
+
         return new AttributeDescriptor( mom, decl, actualId, description,
             ainfo.first(), ainfo.second() ) ;
     }

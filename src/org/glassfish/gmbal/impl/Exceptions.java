@@ -110,6 +110,12 @@ public interface Exceptions {
     @Log( id=ATTRIBUTE_DESCRIPTOR_START + 4 )
     IllegalArgumentException unknownDeclarationType( EvaluatedDeclaration decl ) ;
 
+    @Message( "Attribute id {0} in method {1} in class {2} is illegal becase "
+        + "it is a reserved Attribute id for AMX" )
+    @Log( id=ATTRIBUTE_DESCRIPTOR_START + 5 )
+    IllegalArgumentException duplicateAMXFieldName(String actualId,
+        String methodName, String className );
+
 // DescriptorIntrospector
     static final int DESCRIPTOR_INTROSPECTOR_START =
         ATTRIBUTE_DESCRIPTOR_START + EXCEPTIONS_PER_CLASS ;

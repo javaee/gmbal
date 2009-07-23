@@ -130,4 +130,6 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
 
     <T extends Annotation> T getFirstAnnotationOnClass(
         EvaluatedClassDeclaration element, Class<T> type ) ;
+
+    boolean isAMXAttributeName( String name ) ;
 }

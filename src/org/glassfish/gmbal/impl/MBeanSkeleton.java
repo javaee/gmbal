@@ -395,7 +395,7 @@ public class MBeanSkeleton {
 		annotatedMethod);
 
 	    nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
-		mom, annotatedMethod, "Name",
+		mom, annotatedMethod, "NameValue",
 		Exceptions.self.nameOfManagedObject(),
 		ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR);
 	    } finally {

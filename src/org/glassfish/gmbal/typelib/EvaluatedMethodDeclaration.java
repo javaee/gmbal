@@ -47,8 +47,6 @@ public interface EvaluatedMethodDeclaration extends EvaluatedAccessibleDeclarati
     List<EvaluatedType> parameterTypes() ;
 
     EvaluatedType returnType() ;
-
-    EvaluatedClassDeclaration containingClass() ;
     
     java.lang.reflect.Method method() ;
 }

@@ -45,4 +45,6 @@ import java.lang.reflect.AccessibleObject;
  */
 public interface EvaluatedAccessibleDeclaration extends EvaluatedDeclaration {
     AccessibleObject accessible() ;
+
+    EvaluatedClassDeclaration containingClass();
 }

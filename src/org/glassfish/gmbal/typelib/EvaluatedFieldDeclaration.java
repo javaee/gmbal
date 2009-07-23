@@ -44,7 +44,5 @@ package org.glassfish.gmbal.typelib;
 public interface EvaluatedFieldDeclaration extends EvaluatedAccessibleDeclaration {
     EvaluatedType fieldType() ;
 
-    EvaluatedClassDeclaration containingClass() ;
-    
     java.lang.reflect.Field field() ;
 }
