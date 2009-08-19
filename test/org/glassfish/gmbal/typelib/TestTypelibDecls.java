@@ -47,6 +47,7 @@ package org.glassfish.gmbal.typelib ;
 import java.util.List;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TestTypelibDecls {
     public static class Prototypes<T extends List<T>> {
@@ -95,6 +96,18 @@ public class TestTypelibDecls {
         List<T> getRecursiveType()  { return null ; }
         public static final EvaluatedType RECURSIVE_TYPE =
             getMethod( "getRecursiveType" ).returnType() ;
+    }
+
+    public static class Prototypes2 {
+        ConcurrentHashMap<String,String> getConcurrentHashMap() { return null ; }
+        public static final EvaluatedType CONCURRENT_HASH_MAP_TYPE = 
+            getMethod( "getConcurrentHashMap" ).returnType() ;
+    }
+
+    public static EvaluatedType getCHM() {
+        EvaluatedType chm = TypeEvaluator.getEvaluatedType( Prototypes2.class ) ;
+        return getMethod( (EvaluatedClassDeclaration)chm, 
+            "getConcurrentHashMap" ).returnType() ;
     }
 
     public static EvaluatedMethodDeclaration getMethod(
