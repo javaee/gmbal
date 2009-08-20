@@ -72,6 +72,7 @@ public class MBeanTree {
     private ManagedObjectManagerInternal mom ;
     private MethodMonitor mm ;
     private JMXRegistrationManager jrm ;
+    private boolean suppressReport = false ;
     
     private void addToObjectMaps( MBeanImpl mbean ) {
         ObjectName oname = mbean.objectName() ;
@@ -105,15 +106,24 @@ public class MBeanTree {
         addToObjectMaps( rootMB ) ;
         this.root = root ;
         rootEntity = rootMB ;
-        
+        boolean success = false ;
+
         try {
             rootMB.register();
-        } catch (JMException ex) {
-            removeFromObjectMaps(rootMB);
-            this.root = null ;
-            rootEntity = null ;
-
+            success = true ;
+        } catch (InstanceAlreadyExistsException ex) {
+            if (suppressReport)
+                return null ;
+            else
+                throw Exceptions.self.rootRegisterFail( ex ) ;
+        } catch (Exception ex) {
             throw Exceptions.self.rootRegisterFail( ex ) ;
+        } finally {
+            if (!success) {
+                removeFromObjectMaps(rootMB);
+                this.root = null ;
+                rootEntity = null ;
+            }
         }
         
         return rootMB ;
@@ -436,5 +446,9 @@ public class MBeanTree {
 
     public ObjectName getRootParentName() {
         return rootParentName ;
+    }
+
+    void setSuppressDuplicateSetRootReport(boolean suppressReport) {
+        this.suppressReport = suppressReport ;
     }
 }

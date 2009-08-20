@@ -2019,4 +2019,36 @@ public class JmxaTest extends TestCase {
         }
 
     }
+
+    public void testSuppressDuplicateRoot() {
+        System.out.println( "testSuppressDuplicateRoot" ) ;
+
+        final ManagedObjectManager mom1 = 
+            ManagedObjectManagerFactory.createStandalone("test") ;
+        final Object root1 = new RootObject(1) ;
+        mom1.stripPackagePrefix();
+
+        final ManagedObjectManager mom2 = 
+            ManagedObjectManagerFactory.createStandalone("test") ;
+        final Object root2 = new RootObject(2) ;
+        mom2.stripPackagePrefix();
+
+        mom1.createRoot( root1, "A" ) ;
+
+        // suppress true
+        mom2.suppressDuplicateRootReport(true) ;
+        GmbalMBean gmb = mom2.createRoot( root2, "A" ) ;
+        assertEquals( null, gmb ) ;
+
+        // suppress false 
+        mom2.suppressDuplicateRootReport(false);
+        try {
+            gmb = mom2.createRoot( root2, "A" ) ;
+            fail( "Unexpected successful completion") ;
+        } catch (IllegalArgumentException exc) {
+            // this is the expected result
+        } catch (Exception exc) {
+           fail( "Unexpected exception: " + exc ) ;
+        }
+    }
 }

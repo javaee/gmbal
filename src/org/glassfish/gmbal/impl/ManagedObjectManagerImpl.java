@@ -394,6 +394,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             // back through getRootParentName will succeed.
             rootCreated = true ;
             result = tree.setRoot( root, name ) ;
+            if (result == null) {
+                rootCreated = false ;
+            }
         } catch (RuntimeException exc) {
             rootCreated = false ;
             throw exc ;
@@ -1170,5 +1173,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     public boolean isAMXAttributeName( String name ) {
         return amxAttributeNames.contains( name ) ;
+    }
+
+    public void suppressDuplicateRootReport(boolean suppressReport) {
+        checkRootNotCreated("suppressDuplicateRootReport");
+        tree.setSuppressDuplicateSetRootReport( suppressReport ) ;
     }
 }

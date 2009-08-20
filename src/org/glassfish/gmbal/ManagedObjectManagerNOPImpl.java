@@ -166,4 +166,8 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     public void stripPackagePrefix() {
         // NOP
     }
+
+    public void suppressDuplicateRootReport(boolean suppressReport) {
+        // NOP
+    }
 }

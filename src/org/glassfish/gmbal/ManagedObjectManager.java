@@ -345,4 +345,14 @@ public interface ManagedObjectManager extends Closeable {
      */
     String dumpSkeleton( Object obj ) ;
 
+    /** Suppress reporting of a duplicate root name.  If this option is enabled,
+     * createRoot( Object ) and createRoot( Object, String ) will return null
+     * for a duplicate root name, otherwise a Gmbal error will be reported.
+     * Note that this applies ONLY to createRoot: the register methods are
+     * unaffected.  Also note that any other errors that might occur on
+     * createRoot will be reported normally.
+     * <p>
+     * Must be called before a successful call to a createRoot method.
+     */
+    void suppressDuplicateRootReport( boolean suppressReport ) ;
 }

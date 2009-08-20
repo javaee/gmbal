@@ -72,17 +72,31 @@ import javax.management.ObjectName;
  * @author ken
  */
 public class TypeEvaluator {
+    private TypeEvaluator() {}
+
     private static boolean DEBUG = false ;
     private static boolean DEBUG_EVALUATE = false ;
     private static final MethodMonitor mm = MethodMonitorFactory.makeStandard(
 	TypeEvaluator.class ) ;
+
+    private static Map<Class<?>,EvaluatedType> immutableTypes =
+        new HashMap<Class<?>,EvaluatedType>() ;
+
+    /** Return the EvaluatedType corresponding to cls if cls represents an
+     * immutable type, otherwise return null.
+     * @param cls
+     * @return an EvaluatedType, if cls is on the immutable list; otherwise null.
+     */
+    private static EvaluatedType getImmutableEvaluatedType( Class<?> cls ) {
+        return immutableTypes.get( cls ) ;
+    }
 
     public static void setDebugLevel( int level ) {
         DEBUG = level > 1 ;
         DEBUG_EVALUATE = level >= 1 ;
     }
 
-    public static class EvalMapKey extends Pair<Class<?>,List<EvaluatedType>> {
+    private static class EvalMapKey extends Pair<Class<?>,List<EvaluatedType>> {
         public EvalMapKey( Class<?> cls, List<EvaluatedType> decls ) {
             super( cls, decls ) ;
         }
@@ -111,6 +125,7 @@ public class TypeEvaluator {
     private static void mapPut( EvaluatedClassDeclaration ecd, 
         Class cls ) {
         mm.enter( DEBUG, "mapPut", ecd, cls ) ;
+        immutableTypes.put( cls, ecd ) ;
 
         try {
             EvalMapKey key = new EvalMapKey( cls, emptyETList ) ;
@@ -195,6 +210,10 @@ public class TypeEvaluator {
         }
     }
 
+    public static int evalClassMapSize() {
+        return evalClassMap.size() ;
+    }
+
     public static void dumpEvalClassMap() {
         System.out.println( "TypeEvaluator: dumping eval class map") ;
         int numSystem = 0 ;
@@ -253,7 +272,7 @@ public class TypeEvaluator {
         private Map<Pair<Class<?>,List<Type>>,EvaluatedType> table =
             new HashMap<Pair<Class<?>,List<Type>>,EvaluatedType>() ;
 
-        Pair<Class<?>,List<Type>> getKey( Class cls ) {
+        private Pair<Class<?>,List<Type>> getKey( Class cls ) {
             List<Type> list = new ArrayList<Type>() ;
             for (TypeVariable tv : cls.getTypeParameters()) {
                 Type type ;
@@ -275,7 +294,7 @@ public class TypeEvaluator {
             return new Pair<Class<?>,List<Type>>( cls, list ) ;
         }
 
-        Pair<Class<?>,List<Type>> getKey( ParameterizedType pt ) {
+        private Pair<Class<?>,List<Type>> getKey( ParameterizedType pt ) {
             List<Type> list = new ArrayList<Type>() ;
             for (Type type : pt.getActualTypeArguments()) {
                 list.add(type) ;
@@ -443,16 +462,15 @@ public class TypeEvaluator {
                     return null ;
                 }
 
-                // Do a simpler type check, since we've seen getGenericType fail.
-                // But it is not the full type; so leave the full type case to the
-                // try block below.
-                Class fieldType = fld.getType() ;
-                EvaluatedType et = evaluateType( fieldType ) ;
-                if (!et.isImmutable()) {
+                // Only looking at immutable types.
+                // Note: do NOT use EvaluatedType.isImmutable here, as that
+                // requires first evaluating the type, which defeats the
+                // purpose of checking for immutable types in the first place!
+                final Class fieldType = fld.getType() ;
+                EvaluatedType ftype = getImmutableEvaluatedType( fieldType ) ;
+                if (ftype == null) {
                     return null ;
                 }
-
-                final EvaluatedType ftype = evaluateType( fld.getGenericType() ) ;
 
                 result = DeclarationFactory.efdecl(cdecl, fld.getModifiers(),
                     ftype, fld.getName(), fld ) ;
