@@ -2048,4 +2048,53 @@ public class JmxaTest extends TestCase {
            fail( "Unexpected exception: " + exc ) ;
         }
     }
+
+    @ManagedObject
+    @Description( "This is a boolean attribute test")
+    private static class BooleanAttributeTest {
+        // XXX This doesn't work here, but it should: @NameValue
+        private String name ;
+
+        @NameValue
+        public String name() { return name ; }
+
+        private boolean flag ;
+
+        public BooleanAttributeTest( final String name ) {
+            this.name = name ;
+            flag = false ;
+        }
+
+        @ManagedAttribute
+        public boolean getFlag() { return flag ; }
+
+        @ManagedAttribute
+        public void setFlag( final boolean flag ) { this.flag = flag ; }
+    }
+
+    public void testBooleanAttribute() throws IOException {
+        System.out.println( "testBooleanAttribute" ) ;
+
+        BooleanAttributeTest bat = new BooleanAttributeTest( "FOO" ) ;
+        ManagedObjectManager mom = null ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            GmbalMBean gmb = mom.createRoot( bat ) ;
+            ObjectName rootName = mom.getObjectName(bat) ;
+            System.out.println( "\trootName=" + rootName ) ;
+            AMXClient amxc = mom.getAMXClient( bat ) ;
+
+            assertEquals( Boolean.FALSE, amxc.getAttribute( "Flag") ) ;
+            amxc.setAttribute( "Flag", Boolean.TRUE );
+            assertEquals( Boolean.TRUE, amxc.getAttribute( "Flag") ) ;
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
 }
