@@ -37,6 +37,8 @@
 
 package org.glassfish.gmbal.impl ;
 
+import org.glassfish.gmbal.AMXMBeanInterface;
+import org.glassfish.gmbal.AMXClient;
 import java.util.ResourceBundle ;
 import java.util.Map ;
 import java.util.HashMap ;
@@ -692,6 +694,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
         
         return result ;
+    }
+
+    public AMXClient getAMXClient(Object obj) {
+        ObjectName oname = getObjectName( obj ) ;
+        if (oname == null) {
+            return null ;
+        }
+
+        return new AMXClient( server, oname ) ;
     }
 
     public synchronized Object getObject( ObjectName oname ) {

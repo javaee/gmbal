@@ -37,6 +37,8 @@
 
 package org.glassfish.gmbal.impl;
 
+import org.glassfish.gmbal.AMXMBeanInterface;
+import org.glassfish.gmbal.AMXClient;
 import javax.management.MBeanException;
 import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.UnaryFunction;

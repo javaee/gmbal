@@ -213,6 +213,15 @@ public interface ManagedObjectManager extends Closeable {
      */
     ObjectName getObjectName( Object obj ) ;
 
+    /** Get an AMXClient instance for the object obj, if obj is registered
+     * as an MBean in this mom.
+     * <p>
+     * Must be called after a successful createRoot call.
+     * @param obj The object corresponding to an MBean.
+     * @return An AMXClient that acts as a proxy for this MBean.
+     */
+    AMXClient getAMXClient( Object obj ) ;
+
     /** Get the Object that was registered with the given ObjectName.
      * Note that getObject and getObjectName are inverse operations.
      * <p>

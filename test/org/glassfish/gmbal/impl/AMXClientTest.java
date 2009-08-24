@@ -5,6 +5,8 @@
 
 package org.glassfish.gmbal.impl;
 
+import org.glassfish.gmbal.AMXMBeanInterface;
+import org.glassfish.gmbal.AMXClient;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;

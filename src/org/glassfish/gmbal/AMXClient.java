@@ -35,9 +35,8 @@
  * 
  */ 
 
-package org.glassfish.gmbal.impl;
+package org.glassfish.gmbal;
 
-import org.glassfish.gmbal.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -56,6 +55,8 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 import javax.management.RuntimeOperationsException;
 import javax.management.modelmbean.ModelMBeanInfo;
+import org.glassfish.gmbal.impl.TypeConverterImpl ;
+
 
 /** This class implements a generic AMXMBeanInterface MBean which is connected to a possibly
  * remote MBeanServerConnection (note that MBeanServer isA MBeanServerConnection,
@@ -155,19 +156,19 @@ public class AMXClient implements AMXMBeanInterface {
         }
     }
 
-    public AMXMBeanInterface getParent() {
+    public AMXClient getParent() {
         ObjectName res  = fetchAttribute( "Parent", ObjectName.class ) ;
         return makeAMX( res ) ;
     }
 
-    public AMXMBeanInterface[] getChildren() {
+    public AMXClient[] getChildren() {
         ObjectName[] onames = fetchAttribute( "Children",
             ObjectName[].class ) ;
         return makeAMXArray( onames ) ;
     }
 
-    private AMXMBeanInterface[] makeAMXArray( ObjectName[] onames ) {
-        AMXMBeanInterface[] result = new AMXMBeanInterface[onames.length] ;
+    private AMXClient[] makeAMXArray( ObjectName[] onames ) {
+        AMXClient[] result = new AMXClient[onames.length] ;
         int ctr=0 ;
         for (ObjectName on : onames ) {
             result[ctr++] = makeAMX( on ) ;
@@ -190,6 +191,11 @@ public class AMXClient implements AMXMBeanInterface {
         } catch (IOException ex) {
             throw new GmbalException( "Exception in getAttribute", ex ) ;
         }
+    }
+
+    public void setAttribute(String name, Object value ) {
+        Attribute attr = new Attribute( name, value ) ;
+        setAttribute( attr ) ;
     }
 
     public void setAttribute(Attribute attribute) {

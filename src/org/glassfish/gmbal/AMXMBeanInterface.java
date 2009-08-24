@@ -35,9 +35,8 @@
  * 
  */ 
 
-package org.glassfish.gmbal.impl;
+package org.glassfish.gmbal;
 
-import org.glassfish.gmbal.*;
 import java.util.Map;
 import org.glassfish.external.amx.AMX;
 

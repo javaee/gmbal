@@ -53,7 +53,7 @@ import org.glassfish.gmbal.ManagedObjectManager ;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.NameValue;
 import org.glassfish.gmbal.generic.Pair;
-import org.glassfish.gmbal.impl.AMXClient;
+import org.glassfish.gmbal.AMXClient;
 
 /**
  *

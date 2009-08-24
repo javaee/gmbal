@@ -315,7 +315,7 @@ public class MBeanSkeleton {
 	    TypeConverter tc = mom.getTypeConverter(nonNullDescriptor.type());
 
 	    ModelMBeanAttributeInfo ainfo = new ModelMBeanAttributeInfo(name,
-		description, tc.getManagedType().toString(),
+		tc.getManagedType().toString(), description,
 		getter != null, setter != null, false, desc);
 
 	    mm.info( mom.registrationFineDebug(), ainfo);

@@ -170,4 +170,8 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     public void suppressDuplicateRootReport(boolean suppressReport) {
         // NOP
     }
+
+    public AMXClient getAMXClient(Object obj) {
+        return null ;
+    }
 }

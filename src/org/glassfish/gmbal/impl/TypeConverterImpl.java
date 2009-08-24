@@ -333,7 +333,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
     }
 
     // Special object name used to represent a NULL objectName result.
-    static final ObjectName NULL_OBJECTNAME = makeObjectName(
+    public static final ObjectName NULL_OBJECTNAME = makeObjectName(
         "NULL:type=Null,name=Null" ) ;
 
     private static TypeConverter handleManagedObject(

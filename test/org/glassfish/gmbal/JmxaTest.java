@@ -37,7 +37,6 @@
 
 package org.glassfish.gmbal ;
 
-import org.glassfish.gmbal.impl.AMXMBeanInterface;
 import java.io.IOException;
 import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
@@ -83,14 +82,12 @@ import org.glassfish.gmbal.generic.Algorithms ;
 import org.glassfish.gmbal.impl.TypeConverter ;
 import org.glassfish.gmbal.impl.ManagedObjectManagerInternal ;
 
-import javax.management.MBeanInfo;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import org.glassfish.external.statistics.BoundedRangeStatistic;
 import org.glassfish.external.statistics.impl.BoundedRangeStatisticImpl;
 import org.glassfish.gmbal.generic.Pair;
-import org.glassfish.gmbal.impl.AMXClient;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
