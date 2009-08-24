@@ -1,6 +1,7 @@
 syntax:glob
 
 model/**
+make/bnd.properties
 coverage/**
 build/**
 dist/**
