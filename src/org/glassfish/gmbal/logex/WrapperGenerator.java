@@ -211,14 +211,16 @@ public class WrapperGenerator {
         // Just format the message: no exception ID or log level
         // This code is adapted from java.util.logging.Formatter.formatMessage
         String msg = (String)method.getAnnotation( Message.class ).value() ;
-        String transMsg ;
+        String transMsg = msg ;
         ResourceBundle catalog = logger.getResourceBundle() ;
-        try {
-            transMsg = catalog.getString( msg ) ;
-        } catch (Exception exc) {
-            // Ignore exc: hard to report here.
-            // Ignore findbugs: regardless of exception, just use msg as result.
-            transMsg = msg ;
+
+        if (catalog != null) {
+            try {
+                transMsg = catalog.getString( msg ) ;
+            } catch (Exception exc) {
+                // Ignore exc: hard to report here.
+                // Ignore findbugs: regardless of exception, just use msg as result.
+            }
         }
 
         String result ;

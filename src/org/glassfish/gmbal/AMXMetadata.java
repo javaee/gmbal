@@ -86,7 +86,7 @@ public @interface AMXMetadata {
      * XXX Do we really want a direct dependency on a GFv3 classname here?
      */
     @DescriptorKey( AMX.DESC_GENERIC_INTERFACE_NAME )
-    String genericInterfaceName() default "org.glassfish.admin.amx.core.proxy" ;
+    String genericInterfaceName() default "org.glassfish.admin.amx.core.AMXProxy" ;
 
     /** True if the MBeanInfo is invariant, that is, has the same
      * value for the lifetime of the MBean.  This may be used as a hint

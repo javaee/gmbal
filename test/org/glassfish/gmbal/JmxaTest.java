@@ -44,6 +44,7 @@ import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
 
 
+import java.lang.reflect.Array;
 import java.util.Iterator ;
 import java.util.Map ;
 import java.util.HashMap ;
@@ -93,6 +94,8 @@ import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
+
+import static org.glassfish.gmbal.typelib.EvaluatedType.* ;
 
 import static org.glassfish.gmbal.generic.Algorithms.* ;
 
@@ -553,6 +556,10 @@ public class JmxaTest extends TestCase {
 	{ String.class, SimpleType.STRING, "foo" } 
     } ;
 
+    private static final Set<EvaluatedType> notIdentity = new HashSet<EvaluatedType>(
+        Arrays.asList( EBYTE, EBOOLEAN, ECHAR, EINT, ESHORT, ELONG,
+            EFLOAT, EDOUBLE ) ) ;
+
     public void testPrimitiveTypeConverter() {
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
@@ -568,7 +575,8 @@ public class JmxaTest extends TestCase {
 
                 assertTrue( tc.getDataType() == ecd ) ;
                 assertTrue( tc.getManagedType() == st ) ;
-                assertTrue( tc.isIdentity() ) ;
+                assertTrue( tc.isIdentity() ==
+                    !notIdentity.contains( tc.getDataType() ) ) ;
 
                 Object managed = tc.toManagedEntity( value ) ;
                 Object value2 = tc.fromManagedEntity( managed ) ;
@@ -801,7 +809,7 @@ public class JmxaTest extends TestCase {
             assertEquals( SimpleType.STRING, ctype.getType( MDE_ATTR_ID_NAME ) ) ;
             assertEquals( SimpleType.DATE, ctype.getType( MDE_ATTR_ID_DATE ) ) ;
 
-            Set<String> keys = new HashSet() ;
+            Set<String> keys = new HashSet<String>() ;
             keys.add( MDE_ATTR_ID_NAME ) ;
             keys.add( MDE_ATTR_ID_DATE ) ;
             keys.add( MDE_ATTR_ID_GET_STRING ) ;
@@ -2089,6 +2097,130 @@ public class JmxaTest extends TestCase {
             assertEquals( Boolean.FALSE, amxc.getAttribute( "Flag") ) ;
             amxc.setAttribute( "Flag", Boolean.TRUE );
             assertEquals( Boolean.TRUE, amxc.getAttribute( "Flag") ) ;
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    @ManagedData
+    @Description( "Some test data for arrays of primitives")
+    private static class ContainsPrimitives {
+        private static final boolean[] booleanArray = { true, false, true, false } ;
+        private static final byte[] byteArray = { 1, 2, 3, 4 } ;
+        private static final short[] shortArray = { 1, 2, 3, 4 } ;
+        private static final int[] intArray = { 1, 2, 3, 4 } ;
+        private static final char[] charArray = { 'A', 'B', 'C', 'D' } ;
+        private static final long[] longArray = { 1, 2, 3, 4 } ;
+        private static final float[] floatArray = { 1.0F, 2.0F, 3.0F, 4.0F } ;
+        private static final double[] doubleArray = { 1.0, 2.0, 3.0, 4.0 } ;
+
+        @ManagedAttribute
+        boolean[] getBooleanArray() { return booleanArray ; }
+
+        @ManagedAttribute
+        byte[] getByteArray() { return byteArray ; }
+
+        @ManagedAttribute
+        short[] getShortArray() { return shortArray ; }
+
+        @ManagedAttribute
+        int[] getIntArray() { return intArray ; }
+
+        @ManagedAttribute
+        char[] getCharArray() { return charArray ; }
+
+        @ManagedAttribute
+        long[] getLongArray() { return longArray ; }
+
+        @ManagedAttribute
+        float[] getFloatArray() { return floatArray ; }
+
+        @ManagedAttribute
+        double[] getDoubleArray() { return doubleArray ; }
+
+        public static final Set<String> ATTRIBUTES = new HashSet<String>(
+            Arrays.asList( "booleanArray", "byteArray", "shortArray",
+                "intArray", "charArray", "longArray", "floatArray",
+                "doubleArray" ) ) ;
+
+        public static final Map<String,Object[]> RESULTS = new
+            HashMap<String,Object[]>() ;
+
+        static {
+            RESULTS.put( "booleanArray", convert( booleanArray )) ;
+            RESULTS.put( "byteArray", convert( byteArray )) ;
+            RESULTS.put( "charArray", convert( charArray )) ;
+            RESULTS.put( "shortArray", convert( shortArray )) ;
+            RESULTS.put( "intArray", convert( intArray )) ;
+            RESULTS.put( "longArray", convert( longArray )) ;
+            RESULTS.put( "floatArray", convert( floatArray )) ;
+            RESULTS.put( "doubleArray", convert( doubleArray )) ;
+        }
+    }
+
+    static Object[] convert( Object obj ) {
+        Class<?> cls = obj.getClass() ;
+        if (cls.isArray()) {
+            Class<?> ccls = cls.getComponentType() ;
+            if (ccls.isPrimitive()) {
+                int len = Array.getLength(obj) ;
+                Object[] result = new Object[len] ;
+                for (int ctr=0; ctr<len; ctr++) {
+                    Object elem = Array.get( obj, ctr ) ;
+                    Array.set( result, ctr, elem ) ;
+                }
+                return result ;
+            } else {
+                return (Object[])obj ;
+            }
+        } else {
+            return new Object[] { obj } ;
+        }
+    }
+
+    @ManagedObject
+    @Description( "Test for ContainsPrimtives")
+    private static class ContainsPrimitivesBean {
+        ContainsPrimitives cp = new ContainsPrimitives() ;
+
+        @NameValue
+        public String myName() { return "ContainsPrimitiveBean" ; }
+
+        @ManagedAttribute
+        public ContainsPrimitives getArrays() { return cp ; }
+    }
+
+    public void testContainsPrimitives() throws IOException {
+        System.out.println( "testContainsPrimitives" ) ;
+
+        ContainsPrimitivesBean cpb = new ContainsPrimitivesBean() ;
+        ManagedObjectManager mom = null ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            GmbalMBean gmb = mom.createRoot( cpb ) ;
+            ObjectName rootName = mom.getObjectName(cpb) ;
+            System.out.println( "\trootName=" + rootName ) ;
+            AMXClient amxc = mom.getAMXClient( cpb ) ;
+
+            Object result = amxc.getAttribute( "Arrays") ;
+            assertTrue("Result is not a CompositeData, it is " + result,
+                result instanceof CompositeData ) ;
+            CompositeData compres = (CompositeData)result ;
+            CompositeType ctype = compres.getCompositeType() ;
+            Set<String> keys = ctype.keySet() ;
+            assertEquals( ContainsPrimitives.ATTRIBUTES, keys ) ;
+
+            for (String key : keys) {
+                Object attr = compres.get(key) ;
+                Object[] expected = ContainsPrimitives.RESULTS.get( key ) ;
+                assertTrue( Arrays.deepEquals( expected, (Object[])attr )) ;
+            }
         } catch (GmbalException exc) {
             fail( "Exception: " + exc ) ;
         } finally {

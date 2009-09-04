@@ -83,6 +83,8 @@ import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 
+import static org.glassfish.gmbal.typelib.EvaluatedType.* ;
+
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
  * ObjectName, TabularData, or CompositeData.
  */
@@ -94,44 +96,36 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static final MethodMonitor mm = MethodMonitorFactory.makeStandard(
         TypeConverterImpl.class ) ;
 
-    private static void initMaps( final EvaluatedClassDeclaration type, final OpenType otype ) {
-	simpleTypeMap.put( type, otype ) ;
-	simpleOpenTypeMap.put( otype, type ) ;
+    // Map each type in types to otype in simpleTypeMap.
+    // Map otype to the first type in types in simpleOpenTypeMap.
+    private static void initMaps( final OpenType otype, 
+        final EvaluatedClassDeclaration... types ) {
+        boolean first = true ;
+        for (EvaluatedClassDeclaration type : types) {
+            simpleTypeMap.put( type, otype ) ;
+            if (first) {
+                first = false ;
+                simpleOpenTypeMap.put( otype, type ) ;
+            }
+        }
     }
 
     static {
-	initMaps( EvaluatedType.EBOOLEAN, SimpleType.BOOLEAN ) ;
-	initMaps( EvaluatedType.EBOOLEANW, SimpleType.BOOLEAN ) ;
+        initMaps( SimpleType.BOOLEAN, EBOOLEANW, EBOOLEAN ) ;
+        initMaps( SimpleType.CHARACTER, ECHARW, ECHAR ) ;
+        initMaps( SimpleType.INTEGER, EINTW, EINT ) ;
+        initMaps( SimpleType.SHORT, ESHORTW, ESHORT ) ;
+        initMaps( SimpleType.LONG, ELONGW, ELONG ) ;
+        initMaps( SimpleType.BYTE, EBYTEW, EBYTE ) ;
+        initMaps( SimpleType.FLOAT, EFLOATW, EFLOAT ) ;
+        initMaps( SimpleType.DOUBLE, EDOUBLEW, EDOUBLE ) ;
 
-	initMaps( EvaluatedType.ECHAR, SimpleType.CHARACTER ) ;
-	initMaps( EvaluatedType.ECHARW, SimpleType.CHARACTER ) ;
-
-	initMaps( EvaluatedType.EBYTE, SimpleType.BYTE ) ;
-	initMaps( EvaluatedType.EBYTEW, SimpleType.BYTE ) ;
-
-	initMaps( EvaluatedType.ESHORT, SimpleType.SHORT ) ;
-	initMaps( EvaluatedType.ESHORTW, SimpleType.SHORT ) ;
-
-	initMaps( EvaluatedType.EINT, SimpleType.INTEGER ) ;
-	initMaps( EvaluatedType.EINTW, SimpleType.INTEGER ) ;
-
-	initMaps( EvaluatedType.ELONG, SimpleType.LONG ) ;
-	initMaps( EvaluatedType.ELONGW, SimpleType.LONG ) ;
-
-	initMaps( EvaluatedType.EFLOAT, SimpleType.FLOAT ) ;
-	initMaps( EvaluatedType.EFLOATW, SimpleType.FLOAT ) ;
-
-	initMaps( EvaluatedType.EDOUBLE, SimpleType.DOUBLE ) ;
-	initMaps( EvaluatedType.EDOUBLEW, SimpleType.DOUBLE ) ;
-
-	initMaps( EvaluatedType.ESTRING, SimpleType.STRING ) ;
-	initMaps( EvaluatedType.EVOID, SimpleType.VOID ) ;
-
-	initMaps( EvaluatedType.EDATE, SimpleType.DATE ) ;
-	initMaps( EvaluatedType.EOBJECT_NAME, SimpleType.OBJECTNAME ) ;
-
-	initMaps( EvaluatedType.EBIG_DECIMAL, SimpleType.BIGDECIMAL ) ;
-	initMaps( EvaluatedType.EBIG_INTEGER, SimpleType.BIGINTEGER ) ;
+	initMaps( SimpleType.STRING, ESTRING ) ;
+	initMaps( SimpleType.VOID, EVOID ) ;
+	initMaps( SimpleType.DATE, EDATE ) ;
+	initMaps( SimpleType.OBJECTNAME, EOBJECT_NAME ) ;
+	initMaps( SimpleType.BIGDECIMAL, EBIG_DECIMAL ) ;
+	initMaps( SimpleType.BIGINTEGER, EBIG_INTEGER ) ;
     }
 
     public static Class getJavaClass( final OpenType ot ) {
@@ -159,13 +153,24 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	}
     }
 
+    // Make sure that EINT is replaced with EINTW, etc.
+    // We only want wrapped types for primitives.
+    private static EvaluatedType canonicalType( EvaluatedType et ) {
+        OpenType ot = simpleTypeMap.get( et ) ;
+        if (ot == null) {
+            return et ;
+        } else {
+            return simpleOpenTypeMap.get( ot ) ;
+        }
+    }
+
     public static Class getJavaClass( final EvaluatedType type ) {
         if (type instanceof EvaluatedClassDeclaration) {
 	    return ((EvaluatedClassDeclaration)type).cls() ;
 	} else if (type instanceof EvaluatedArrayType) {
 	    // Same trick as above.
 	    final EvaluatedArrayType gat = (EvaluatedArrayType)type ;
-	    final EvaluatedType ctype = gat.componentType() ;
+	    final EvaluatedType ctype = canonicalType( gat.componentType() ) ;
 	    final Class cclass = getJavaClass( ctype ) ;
 	    final Object temp = Array.newInstance( cclass, 0 ) ;
 	    return temp.getClass() ;
@@ -307,6 +312,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static TypeConverter handleSimpleType( final EvaluatedType type,
 	final OpenType stype ) {
 
+        final EvaluatedType canType = canonicalType( type ) ;
+
 	return new TypeConverterImpl( type, stype ) {
 	    public Object toManagedEntity( final Object obj ) {
 		return obj ;
@@ -319,7 +326,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             @Override
 	    public boolean isIdentity() {
-		return true ;
+		return canType.equals( type ) ;
 	    }
 	} ;
     }
