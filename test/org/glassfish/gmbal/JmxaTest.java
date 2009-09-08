@@ -60,6 +60,7 @@ import java.util.Date ;
 import java.math.BigInteger ;
 import java.math.BigDecimal ;
 
+import java.util.Dictionary;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.management.AttributeNotFoundException;
@@ -74,6 +75,8 @@ import javax.management.openmbean.SimpleType ;
 import javax.management.openmbean.OpenType ;
 import javax.management.openmbean.CompositeData ;
 import javax.management.openmbean.CompositeType ;
+import javax.management.openmbean.TabularType ;
+import javax.management.openmbean.TabularData ;
 
 import org.glassfish.gmbal.generic.UnaryFunction ;
 import org.glassfish.gmbal.generic.Predicate ;
@@ -2228,5 +2231,99 @@ public class JmxaTest extends TestCase {
                 mom.close() ;
             }
         }
+    }
+
+    @ManagedObject
+    @Description( "Test for TabularData" )
+    public static class TabularDataBean {
+        public Set<String> keys ;
+        public Map<String,Integer> map ;
+        public Dictionary<String,Integer> dictionary ;
+
+        @NameValue String myName() { return "TabularDataBean" ; }
+
+        public TabularDataBean() {
+            keys = new HashSet<String>( Arrays.asList( "red",
+                "orange", "yellow", "green", "blue" , "indigo", "violet" ) ) ;
+            map = new HashMap<String,Integer>() ;
+            for (String key : keys) {
+                map.put( key, key.length()) ;
+            }
+            dictionary = new Hashtable<String,Integer>( map ) ;
+        }
+
+        @ManagedAttribute
+        @Description( "Value as a Map")
+        Map<String,Integer> getMap() {
+            return map ;
+        }
+
+        @ManagedAttribute
+        @Description( "Value as a Dictionary")
+        Dictionary<String,Integer> getDictionary() {
+            return dictionary ;
+        }
+    }
+
+    private static final List<String> ttNames = Arrays.asList( "key" ) ;
+    private static final Set<String> ttAll = new HashSet<String>(
+            Arrays.asList("key", "value") ) ;
+
+    public void testTabularDataBean() throws IOException {
+        System.out.println( "testTabularDataBean" ) ;
+
+        TabularDataBean tdb = new TabularDataBean() ;
+        ManagedObjectManager mom = null ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot( tdb ) ;
+            ObjectName rootName = mom.getObjectName(tdb) ;
+            System.out.println( "\trootName=" + rootName ) ;
+            AMXClient amxc = mom.getAMXClient( tdb ) ;
+
+            checkTabularContents( amxc, tdb, "Map" ) ;
+            checkTabularContents( amxc, tdb, "Dictionary" ) ;
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    private void checkTabularContents( AMXClient amxc, 
+        TabularDataBean tdb, String attrName ) {
+        Object result = amxc.getAttribute( attrName ) ;
+        assertTrue("Result is not a TabularData, it is " + result,
+            result instanceof TabularData ) ;
+        TabularData tres = (TabularData)result ;
+        TabularType ttype = tres.getTabularType() ;
+        List<String> indexNames = ttype.getIndexNames();
+        assertEquals( ttNames, indexNames ) ;
+
+        CompositeType ctype = ttype.getRowType() ;
+        assertEquals( ttAll, ctype.keySet() ) ;
+
+        Map<String,Integer> contents = new HashMap<String, Integer>() ;
+        for (Object row : tres.keySet()) {
+            List<?> lrow = (List<?>)row ;
+            Object[] key = lrow.toArray(new Object[lrow.size()]) ;
+            CompositeData cd = tres.get( key ) ;
+
+            Object val = cd.get( "key" ) ;
+            assertTrue( val instanceof String ) ;
+            String cdkey = (String)val ;
+
+            val = cd.get( "value" ) ;
+            assertTrue( val instanceof Integer ) ;
+            Integer cdval = (Integer)val ;
+
+            contents.put( cdkey, cdval ) ;
+        }
+
+        assertEquals( tdb.map, contents ) ;
     }
 }

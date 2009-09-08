@@ -939,7 +939,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
         @SuppressWarnings("unchecked")
         public Iterator<K> iterator() {
-            return new EnumerationAdapter( dict.elements() ) ;
+            return new EnumerationAdapter( dict.keys() ) ;
         }
 
         public V get( final K key ) {
