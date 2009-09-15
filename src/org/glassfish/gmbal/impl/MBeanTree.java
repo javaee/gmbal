@@ -43,7 +43,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
-import javax.management.JMException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
@@ -109,7 +108,7 @@ public class MBeanTree {
         boolean success = false ;
 
         try {
-            rootMB.register();
+            jrm.register( rootMB ) ;
             success = true ;
         } catch (InstanceAlreadyExistsException ex) {
             if (suppressReport)
@@ -433,9 +432,9 @@ public class MBeanTree {
             try {
                 unregister(root);
             } catch (InstanceNotFoundException ex) {
-                throw Exceptions.self.shouldNotHappen( ex ) ;
+                Exceptions.self.shouldNotHappen( ex ) ;
             } catch (MBeanRegistrationException ex) {
-                throw Exceptions.self.shouldNotHappen( ex ) ;
+                Exceptions.self.shouldNotHappen( ex ) ;
             }
         }
         

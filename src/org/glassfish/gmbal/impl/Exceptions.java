@@ -309,8 +309,8 @@ public interface Exceptions {
     IllegalArgumentException objectAlreadyRegistered( Object obj, MBeanImpl oldMbi ) ;
 
     @Message( "Should not happen" )
-    @Log( id=MBEAN_TREE_START + 9 )
-    IllegalStateException shouldNotHappen( @Chain Exception ex ) ;
+    @Log( id=MBEAN_TREE_START + 9, level=LogLevel.FINE )
+    void shouldNotHappen( @Chain Exception ex ) ;
 
     @Message( "Object {0} not found")
     @Log( id=MBEAN_TREE_START + 10 )

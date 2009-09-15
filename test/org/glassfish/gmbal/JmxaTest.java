@@ -97,6 +97,7 @@ import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
+import org.glassfish.gmbal.impl.TypeConverterImpl ;
 
 import static org.glassfish.gmbal.typelib.EvaluatedType.* ;
 
@@ -2325,5 +2326,51 @@ public class JmxaTest extends TestCase {
         }
 
         assertEquals( tdb.map, contents ) ;
+    }
+
+    enum Color { RED, BLUE, GREEN }
+
+    @ManagedObject
+    @Description( "Test for Enums" )
+    public static class EnumBean {
+        private Color color = null ;
+
+        @NameValue String myName() { return "EnumBean" ; }
+
+        @ManagedAttribute
+        @Description( "Enum value")
+        Color getColor() { return color ; }
+
+        void setColor( Color color ) { this.color = color ; }
+    }
+
+    public void testEnumBean() throws IOException {
+        System.out.println( "testEnumBean" ) ;
+
+        EnumBean tdb = new EnumBean() ;
+        ManagedObjectManager mom = null ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot( tdb ) ;
+            ObjectName rootName = mom.getObjectName(tdb) ;
+            System.out.println( "\trootName=" + rootName ) ;
+            AMXClient amxc = mom.getAMXClient( tdb ) ;
+
+            Object value = amxc.getAttribute( "Color" ) ;
+            assertEquals( TypeConverterImpl.NULL_STRING, value ) ;
+
+            Color color = Color.BLUE ;
+            tdb.setColor( color ) ;
+            value = amxc.getAttribute( "Color" ) ;
+            assertEquals( color.toString(), value ) ;
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
     }
 }

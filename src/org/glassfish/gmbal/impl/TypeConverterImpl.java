@@ -339,9 +339,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
         }
     }
 
+    public static final String NULL_STRING = "<NULL>" ;
+
     // Special object name used to represent a NULL objectName result.
     public static final ObjectName NULL_OBJECTNAME = makeObjectName(
-        "NULL:type=Null,name=Null" ) ;
+        "null:type=Null,name=Null" ) ;
 
     private static TypeConverter handleManagedObject(
         final EvaluatedClassDeclaration type,
@@ -523,12 +525,19 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
 	return new TypeConverterImpl( cls, SimpleType.STRING ) {
 	    public Object toManagedEntity( final Object obj ) {
-		return obj.toString() ;
+                if (obj == null)
+                    return NULL_STRING ;
+                else
+                    return obj.toString() ;
 	    }
 
             @Override
             @SuppressWarnings("unchecked")
 	    public Object fromManagedEntity( final Object entity ) {
+                if (NULL_STRING.equals(entity)) {
+                    return null ; 
+                }
+
 		if (!(entity instanceof String)) {
                     throw Exceptions.self.notAString(entity) ;
                 }
@@ -577,7 +586,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
                         return obj ;
                     } else {
                         final Class cclass = getJavaClass( cotype ) ;
-                        final int length = Array.getLength( obj ) ;
+                        final int length = 
+                            obj == null ? 0 : Array.getLength( obj ) ;
                         final Object result = Array.newInstance( cclass, length ) ;
                         for (int ctr=0; ctr<length; ctr++) {
                             mm.enter( mom.runtimeDebug(),
@@ -602,7 +612,8 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     } else {
                         final Class cclass = getJavaClass( ctype ) ;
 
-                        final int length = Array.getLength( entity ) ;
+                        final int length = 
+                            entity == null ? 0 : Array.getLength( entity ) ;
                         final Object result = Array.newInstance( cclass, length ) ;
                         for (int ctr=0; ctr<length; ctr++) {
                             mm.enter( mom.runtimeDebug(),
@@ -680,6 +691,25 @@ public abstract class TypeConverterImpl implements TypeConverter {
         }
     }
 
+    private static Table emptyTable() {
+        return new Table() {
+
+            public Object get(Object key) {
+                return null ;
+            }
+
+            public Iterator iterator() {
+                return emptyIterator() ;
+            }
+        
+        } ;
+    }
+
+    private static Iterator emptyIterator() {
+        List list = new ArrayList() ;
+        return list.iterator() ;
+    }
+
     private static TypeConverter handleClass( 
         final EvaluatedClassDeclaration type,
         final ManagedObjectManagerInternal mom ) {
@@ -706,7 +736,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             result = new TypeConverterListBase( type, tc ) {
                 protected Iterator getIterator( Object obj ) {
-                    return ((Iterable)obj).iterator() ;
+                    if (obj == null) {
+                        return emptyIterator() ;
+                    } else {
+                        return ((Iterable)obj).iterator() ;
+                    }
                 }
             } ;
         } else if (Collection.class.isAssignableFrom(type.cls())) {
@@ -717,7 +751,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             result = new TypeConverterListBase( type, tc ) {
                 protected Iterator getIterator( Object obj ) {
-                    return ((Iterable)obj).iterator() ;
+                    if (obj == null) {
+                        return emptyIterator() ;
+                    } else {
+                        return ((Iterable)obj).iterator() ;
+                    }
                 }
             } ;
         } else if (Iterator.class.isAssignableFrom(type.cls())) {
@@ -726,7 +764,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             result = new TypeConverterListBase( type, tc ) {
                 protected Iterator getIterator( Object obj ) {
-                    return (Iterator)obj ;
+                    if (obj == null) {
+                        return emptyIterator() ;
+                    } else {
+                        return (Iterator)obj ;
+                    }
                 }
             } ;
         } else if (Enumeration.class.isAssignableFrom(type.cls())) {
@@ -736,7 +778,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
             result = new TypeConverterListBase( type, tc ) {
                 @SuppressWarnings("unchecked")
                 protected Iterator getIterator( Object obj ) {
-                    return new EnumerationAdapter( (Enumeration)obj ) ;
+                    if (obj == null) {
+                        return emptyIterator() ;
+                    } else {
+                        return new EnumerationAdapter( (Enumeration)obj ) ;
+                    }
                 }
             } ;
         } else if (Map.class.isAssignableFrom(type.cls())) {
@@ -748,7 +794,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
             result = new TypeConverterMapBase( type, firstTc, secondTc ) {
                 @SuppressWarnings("unchecked")
                 protected Table getTable( Object obj ) {
-                    return new TableMapImpl( (Map)obj ) ;
+                    if (obj == null) {
+                        return emptyTable() ;
+                    } else {
+                        return new TableMapImpl( (Map)obj ) ;
+                    }
                 }
             } ;
         } else if (Dictionary.class.isAssignableFrom(type.cls())) {
@@ -760,7 +810,11 @@ public abstract class TypeConverterImpl implements TypeConverter {
             result = new TypeConverterMapBase( type, firstTc, secondTc ) {
                 @SuppressWarnings("unchecked")
                 protected Table getTable( Object obj ) {
-                    return new TableDictionaryImpl( (Dictionary)obj ) ;
+                    if (obj == null) {
+                        return emptyTable() ;
+                    } else {
+                        return new TableDictionaryImpl( (Dictionary)obj ) ;
+                    }
                 }
             } ;
         } else {
@@ -792,7 +846,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	return new TypeConverterImpl( cls, SimpleType.STRING ) {
 	    public Object toManagedEntity( Object obj ) {
                 if (obj == null) {
-                    return "*NULL*" ;
+                    return NULL_STRING ;
                 } else {
                     return obj.toString() ;
                 }
@@ -800,6 +854,10 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
             @Override
 	    public Object fromManagedEntity( final Object entity ) {
+                if (entity == null) {
+                    return null ;
+                }
+
 		if (cons == null) {
                     throw Exceptions.self.noStringConstructor(cls.cls());
                 }
