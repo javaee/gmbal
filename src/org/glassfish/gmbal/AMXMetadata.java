@@ -62,7 +62,7 @@ public @interface AMXMetadata {
     /** True if only one MBean of this type may be created inside the same
      * parent container
      *
-     * @return
+     * @return whether or not this MBean must be the only one of its type.
      */
     @DescriptorKey( AMX.DESC_IS_SINGLETON )
     boolean isSingleton() default false ;
@@ -83,7 +83,6 @@ public @interface AMXMetadata {
 
     /** Return the generic AMXMBeanInterface interface to be used.
      * @return name of interface to use.
-     * XXX Do we really want a direct dependency on a GFv3 classname here?
      */
     @DescriptorKey( AMX.DESC_GENERIC_INTERFACE_NAME )
     String genericInterfaceName() default "org.glassfish.admin.amx.core.AMXProxy" ;
@@ -99,7 +98,7 @@ public @interface AMXMetadata {
 
     /** Defines the name of the interface to use when generating a proxy
      * for this class.  Defaults to a generic interface.
-     * @return
+     * @return The interface class name for a proxy.
      */
     @DescriptorKey( AMX.DESC_STD_INTERFACE_NAME )
     String interfaceClassName() default "" ;

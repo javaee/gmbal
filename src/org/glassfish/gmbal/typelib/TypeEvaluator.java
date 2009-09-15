@@ -247,7 +247,7 @@ public class TypeEvaluator {
     /** Given any generic java type, evaluate all of its type bounds and
      * return an evaluated type.
      * 
-     * @param jtype The java type to evaluate
+     * @param cls The java type to evaluate
      * @return The evaluated type
      */
     public static synchronized EvaluatedType getEvaluatedType( Class cls ) {

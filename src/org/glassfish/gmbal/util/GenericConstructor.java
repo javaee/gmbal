@@ -93,8 +93,8 @@ public class GenericConstructor<T> {
      * used for the same types of arguments.  If a call fails,
      * a check is made to see if a different constructor could 
      * be used.
-     * @param args
-     * @return 
+     * @param args The constructor arguments.
+     * @return A new instance of the object.
      */
     public synchronized T create( Object... args ) {
         T result = null ;

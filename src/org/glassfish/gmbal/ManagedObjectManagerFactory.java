@@ -63,10 +63,11 @@ public final class ManagedObjectManagerFactory {
 
     /** Convenience method for getting access to a method through reflection.
      * Same as Class.getDeclaredMethod, but only throws RuntimeExceptions.
-     * @param cls The class to 
-     * @param name
-     * @param types
-     * @return
+     * @param cls The class to search for a method.
+     * @param name The method name.
+     * @param types The array of argument types.
+     * @return The Method if found.
+     * @throws GmbalException if no such method is found.
      */
     public static Method getMethod( final Class<?> cls, String name, 
         Class<?>... types ) {        

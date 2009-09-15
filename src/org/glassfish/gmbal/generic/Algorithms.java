@@ -221,11 +221,11 @@ public final class Algorithms {
 
     /** Return the first element of the list, or invoke handleEmptyList if
      * list is empty.
-     * @param <T>
+     * @param <T> The type of the list element.
      * @param list The list 
      * @param handleEmptyList A runnable to call when the list is empty. Typically 
      * throws an exception.
-     * @return
+     * @return The first element of the list, if any.
      */
     public static <T> T getFirst( Collection<T> list, Runnable handleEmptyList ) {
         for (T element : list) {
@@ -238,9 +238,6 @@ public final class Algorithms {
 
     /** Converts obj from an Array to a List, if obj is an array.
      * Otherwise just returns a List containing obj.
-     *
-     * @param obj
-     * @return
      */
     public static List convertToList( Object arg ) {
         List result = new ArrayList() ;
