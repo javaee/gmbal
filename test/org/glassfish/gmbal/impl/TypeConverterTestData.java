@@ -215,7 +215,7 @@ public class TypeConverterTestData {
     @ManagedData( name=DOUBLE_INDEX_NAME )
     @Description( DOUBLE_INDEX_DESC )
     public static class DoubleIndexData {
-        public static final String[][] data = {
+        private static final String[][] data = {
             { "R", "G", "B" },
             { "1", "2", "3", "4", "5" }
         } ;

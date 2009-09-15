@@ -447,7 +447,7 @@ public class MBeanTree {
         return rootParentName ;
     }
 
-    void setSuppressDuplicateSetRootReport(boolean suppressReport) {
+    synchronized void setSuppressDuplicateSetRootReport(boolean suppressReport) {
         this.suppressReport = suppressReport ;
     }
 }

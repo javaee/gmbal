@@ -1883,7 +1883,11 @@ public class JmxaTest extends TestCase {
         @NameValue String theName() { return "name" ; }
 
         @ManagedAttribute
-        private final int value = 42 ;
+        private final int value ;
+
+        TestFieldAttribute() {
+            value = 42 ;
+        }
     }
 
     public void testFieldAttribute() throws IOException,
@@ -2052,7 +2056,7 @@ public class JmxaTest extends TestCase {
         // suppress false 
         mom2.suppressDuplicateRootReport(false);
         try {
-            gmb = mom2.createRoot( root2, "A" ) ;
+            mom2.createRoot( root2, "A" ) ;
             fail( "Unexpected successful completion") ;
         } catch (IllegalArgumentException exc) {
             // this is the expected result
