@@ -37,18 +37,22 @@
 
 package org.glassfish.gmbal.impl ;
 
-import org.glassfish.gmbal.AMXMBeanInterface;
-import org.glassfish.gmbal.AMXClient;
 import java.util.ResourceBundle ;
 import java.util.Map ;
 import java.util.HashMap ;
 import java.util.WeakHashMap ;
 import java.util.List ;
 import java.util.ArrayList ;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import java.io.IOException ;
-
 import java.io.Serializable;
+
 import java.lang.annotation.Annotation ;
 
 import java.lang.management.ManagementFactory ;
@@ -56,15 +60,17 @@ import java.lang.management.ManagementFactory ;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
+import javax.management.MBeanAttributeInfo;
 
-import org.glassfish.gmbal.generic.Pair ;
-import org.glassfish.gmbal.generic.Algorithms ;
-
+import org.glassfish.gmbal.AMXMBeanInterface;
+import org.glassfish.gmbal.AMXClient;
 import org.glassfish.gmbal.GmbalMBean ;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.Description ;
@@ -74,6 +80,10 @@ import org.glassfish.gmbal.InheritedAttributes ;
 import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.ManagedAttribute;
 import org.glassfish.gmbal.ManagedObjectManager;
+import org.glassfish.gmbal.ManagedData;
+
+import org.glassfish.gmbal.generic.Pair ;
+import org.glassfish.gmbal.generic.Algorithms ;
 import org.glassfish.gmbal.generic.MethodMonitor;
 import org.glassfish.gmbal.generic.MethodMonitorFactory;
 import org.glassfish.gmbal.generic.DumpIgnore;
@@ -82,20 +92,8 @@ import org.glassfish.gmbal.generic.Predicate;
 import org.glassfish.gmbal.generic.UnaryFunction;
 import org.glassfish.gmbal.generic.FacetAccessor ;
 import org.glassfish.gmbal.generic.FacetAccessorImpl;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import javax.management.MBeanAttributeInfo;
-import org.glassfish.external.statistics.BoundaryStatistic;
-import org.glassfish.external.statistics.BoundedRangeStatistic;
-import org.glassfish.external.statistics.CountStatistic;
-import org.glassfish.external.statistics.RangeStatistic;
-import org.glassfish.external.statistics.Statistic;
-import org.glassfish.gmbal.ManagedData;
 import org.glassfish.gmbal.generic.DelayedObjectToString;
+
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
@@ -104,10 +102,17 @@ import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 import org.glassfish.gmbal.typelib.TypeEvaluator;
 
-import org.glassfish.external.statistics.StringStatistic;
 import org.glassfish.external.amx.AMX;
 
+import org.glassfish.external.statistics.AverageRangeStatistic ;
+import org.glassfish.external.statistics.BoundaryStatistic;
+import org.glassfish.external.statistics.BoundedRangeStatistic;
+import org.glassfish.external.statistics.CountStatistic;
+import org.glassfish.external.statistics.RangeStatistic;
+import org.glassfish.external.statistics.Statistic;
 import org.glassfish.external.statistics.TimeStatistic;
+import org.glassfish.external.statistics.StringStatistic;
+
 import static org.glassfish.gmbal.generic.Algorithms.* ;
 
 /* Implementation notes:
@@ -159,7 +164,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         REV_COMP ) ;
     private boolean stripPackagePrefix = false ;
 
-    private ManagedObjectManagerImpl( final String domain, final ObjectName rootParentName ) {
+    private ManagedObjectManagerImpl( final String domain,
+        final ObjectName rootParentName ) {
+
 	this.mm = MethodMonitorFactory.makeStandard( getClass() ) ;
         this.domain = domain ;
         this.tree = new MBeanTree( this, domain, rootParentName, AMX.TYPE_KEY ) ;
@@ -216,7 +223,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public interface DummyTimeStatistic extends DummyStatistic { }
 
     @ManagedData
-    @Description( "Specifies standard measurements of the upper and lower limits of the value of an attribute" )
+    @Description( "Specifies standard measurements of the upper and lower "
+        + "limits of the value of an attribute" )
     @InheritedAttributes( {
         @InheritedAttribute( methodName = "getUpperBound",
             description = "The upper limit of the value of this attribute" ),
@@ -249,8 +257,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public interface DummyRangeStatistic {}
 
     @ManagedData
+    @Description( "Adds an average to the range statistic")
+    @InheritedAttributes( {
+        @InheritedAttribute( methodName = "getAverage",
+            description = 
+                "The average value of this attribute since its last reset")
+    })
+    public interface DummyAverageRangeStatistic {}
+
+    @ManagedData
     @Description( "Provides standard measurements of a range that has fixed limits" ) 
-    public interface DummyBoundedRangeStatistic extends DummyBoundaryStatistic, DummyRangeStatistic {}
+    public interface DummyBoundedRangeStatistic extends
+        DummyBoundaryStatistic, DummyRangeStatistic {}
 
     @ManagedData
     @Description( "Custom statistic type whose value is a string")
@@ -262,13 +280,29 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public interface DummyStringStatistic extends DummyStatistic { }
 
     List<Pair<Class,Class>> statsData = list(
-        pair( (Class)DummyStringStatistic.class, (Class)StringStatistic.class ),
-        pair( (Class)DummyTimeStatistic.class, (Class)TimeStatistic.class ),
-        pair( (Class)DummyStatistic.class, (Class)Statistic.class ),
-        pair( (Class)DummyBoundaryStatistic.class, (Class)BoundaryStatistic.class ),
-        pair( (Class)DummyBoundedRangeStatistic.class, (Class)BoundedRangeStatistic.class ),
-        pair( (Class)DummyCountStatistic.class, (Class)CountStatistic.class ),
-        pair( (Class)DummyRangeStatistic.class, (Class)RangeStatistic.class )
+        pair( (Class)DummyStringStatistic.class,
+            (Class)StringStatistic.class ),
+
+        pair( (Class)DummyTimeStatistic.class,
+            (Class)TimeStatistic.class ),
+
+        pair( (Class)DummyStatistic.class,
+            (Class)Statistic.class ),
+
+        pair( (Class)DummyBoundaryStatistic.class,
+            (Class)BoundaryStatistic.class ),
+
+        pair( (Class)DummyBoundedRangeStatistic.class,
+            (Class)BoundedRangeStatistic.class ),
+
+        pair( (Class)DummyCountStatistic.class,
+            (Class)CountStatistic.class ),
+
+        pair( (Class)DummyRangeStatistic.class,
+            (Class)RangeStatistic.class ),
+
+        pair( (Class)DummyAverageRangeStatistic.class,
+            (Class)AverageRangeStatistic.class )
     ) ;
 
     private void addAnnotationIfNotNull( AnnotatedElement elemement,
