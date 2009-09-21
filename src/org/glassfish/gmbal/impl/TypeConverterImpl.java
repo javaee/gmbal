@@ -68,6 +68,7 @@ import javax.management.openmbean.CompositeDataSupport ;
 import javax.management.openmbean.TabularData ;
 import javax.management.openmbean.TabularDataSupport ;
 
+import org.glassfish.gmbal.AMXClient;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.ManagedData ;
 import org.glassfish.gmbal.generic.Algorithms;
@@ -331,19 +332,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
 	} ;
     }
 
-    private static ObjectName makeObjectName( String str ) {
-        try {
-            return new ObjectName(str);
-        } catch (MalformedObjectNameException ex) {
-            return null ;
-        }
-    }
-
     public static final String NULL_STRING = "<NULL>" ;
-
-    // Special object name used to represent a NULL objectName result.
-    public static final ObjectName NULL_OBJECTNAME = makeObjectName(
-        "null:type=Null,name=Null" ) ;
 
     private static TypeConverter handleManagedObject(
         final EvaluatedClassDeclaration type,
@@ -357,7 +346,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
             result = new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
                 public Object toManagedEntity( Object obj ) {
                     if (obj == null) {
-                        return NULL_OBJECTNAME ;
+                        return AMXClient.NULL_OBJECTNAME ;
                     } else {
                         return mom.getObjectName( obj ) ;
                     }
@@ -370,7 +359,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
                     }
 
                     final ObjectName oname = (ObjectName)entity ;
-                    if (oname.equals( NULL_OBJECTNAME )) {
+                    if (oname.equals( AMXClient.NULL_OBJECTNAME )) {
                         return null ;
                     } else {
                         return mom.getObject( oname ) ;

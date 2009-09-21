@@ -51,11 +51,11 @@ import javax.management.JMException;
 import javax.management.MBeanException;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 import javax.management.RuntimeOperationsException;
 import javax.management.modelmbean.ModelMBeanInfo;
-import org.glassfish.gmbal.impl.TypeConverterImpl ;
 
 
 /** This class implements a generic AMXMBeanInterface MBean which is connected to a possibly
@@ -70,6 +70,19 @@ import org.glassfish.gmbal.impl.TypeConverterImpl ;
  * @author ken
  */
 public class AMXClient implements AMXMBeanInterface {
+    private static ObjectName makeObjectName( String str ) {
+        try {
+            return new ObjectName(str);
+        } catch (MalformedObjectNameException ex) {
+            return null ;
+        }
+    }
+
+    /** Special object name used to represent a NULL objectName result.
+     */
+    public static final ObjectName NULL_OBJECTNAME = makeObjectName(
+        "null:type=Null,name=Null" ) ;
+
     private MBeanServerConnection server ;
     private ObjectName oname ;
 
@@ -103,7 +116,7 @@ public class AMXClient implements AMXMBeanInterface {
     private <T> T fetchAttribute( String name, Class<T> type ) {
         try {
             Object obj = server.getAttribute( oname, name ) ;
-            if (TypeConverterImpl.NULL_OBJECTNAME.equals( obj )) {
+            if (NULL_OBJECTNAME.equals( obj )) {
                 return null ;
             } else {
                 return type.cast( obj ) ;
