@@ -62,8 +62,8 @@ import org.glassfish.gmbal.generic.UnaryVoidFunction;
  */
 public class JMXRegistrationManager {
     private int suspendCount = 0 ;
-    private ManagedObjectManagerInternal mom ;
-    private ObjectName rootParentName ;
+    private final ManagedObjectManagerInternal mom ;
+    private final ObjectName rootParentName ;
     private final LinkedHashSet<MBeanImpl> deferredRegistrations ;
 
     // used in inner classes
@@ -71,7 +71,7 @@ public class JMXRegistrationManager {
     boolean isJMXRegistrationEnabled = false ;
     final Object lock = new Object() ;
 
-    // Used if rootParentName version of constructor is used
+    // Used if rootParentName is not null.
     private RootParentListener callback = null ;
     private MBeanListener rpListener = null ;
 
@@ -129,8 +129,11 @@ public class JMXRegistrationManager {
     }
 
     /** Decrement the suspended registration count.
-     * If the count goes to zer0. all registrations that occurred while
-     * suspendCount > 0 are registered with the JMX server.
+     * If the count goes to zero. all registrations that occurred while
+     * suspendCount > 0 are registered with the JMX server, UNLESS
+     * isJMXRegistrationEnabled is false, in which case we simply clear the
+     * deferredRegistrations list, because all MBean will be registered once the
+     * root is available.
      */
     public void resumeRegistration() {
         synchronized (lock) {
@@ -138,7 +141,9 @@ public class JMXRegistrationManager {
             if (suspendCount == 0) {
                 for (MBeanImpl mb : deferredRegistrations) {
                     try {
-                        mb.register();
+                        if (isJMXRegistrationEnabled) {
+                            mb.register();
+                        }
                         mb.suspended( false ) ;
                     } catch (JMException ex) {
                         Exceptions.self.deferredRegistrationException( ex, mb ) ;
@@ -190,14 +195,15 @@ public class JMXRegistrationManager {
         throws InstanceNotFoundException, MBeanRegistrationException {
 
         synchronized (lock) {
-            if (suspendCount>0) {
+            boolean wasSuspended = mb.suspended() ;
+
+            if (wasSuspended) {
                 deferredRegistrations.remove(mb) ;
                 mb.suspended( false ) ;
-            }
-
-            // Always unregister
-            if (isJMXRegistrationEnabled) {
-                mb.unregister() ;
+            } else {
+                if (isJMXRegistrationEnabled) {
+                    mb.unregister() ;
+                }
             }
         }
     }
@@ -205,7 +211,7 @@ public class JMXRegistrationManager {
     // Class used to listen for the registration and deregistration of the rootParent
     // (if a rootParent is used).
     private class RootParentListener implements MBeanListener.Callback {
-        private void depthFirst( MBeanImpl mb, UnaryVoidFunction<MBeanImpl> pre,
+        private void traverse( MBeanImpl mb, UnaryVoidFunction<MBeanImpl> pre,
             UnaryVoidFunction<MBeanImpl> post ) {
 
             if (pre != null) {
@@ -214,7 +220,7 @@ public class JMXRegistrationManager {
 
             for (Map<String,MBeanImpl> nameToMBean : mb.children().values() ) {
                 for (MBeanImpl child : nameToMBean.values() ) {
-                    depthFirst( child, pre, post ) ;
+                    traverse( child, pre, post ) ;
                 }
             }
 
@@ -242,7 +248,7 @@ public class JMXRegistrationManager {
                     isJMXRegistrationEnabled = true ;
 
                     if (root != null) {
-                        depthFirst( root, REGISTER_FUNC, null );
+                        traverse( root, REGISTER_FUNC, null );
                     }
                 }
             }
@@ -267,7 +273,7 @@ public class JMXRegistrationManager {
                     isJMXRegistrationEnabled = false ;
 
                     if (root != null) {
-                        depthFirst( root, null, UNREGISTER_FUNC );
+                        traverse( root, null, UNREGISTER_FUNC );
                     }
                 }
             }
