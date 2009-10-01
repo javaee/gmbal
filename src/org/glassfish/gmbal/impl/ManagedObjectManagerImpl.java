@@ -157,6 +157,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private MBeanServer server ;
     private ManagedObjectManager.RegistrationDebugLevel regDebugLevel ;
     private boolean runDebugFlag ;
+    private boolean jmxRegistrationDebugFlag ;
 
     // Maintain the list of typePrefixes in reversed sorted order, so that
     // we strip the longest prefix first.
@@ -321,19 +322,21 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             addAnnotationIfNotNull( real, dummy.getAnnotation( InheritedAttributes.class ) ) ;
         }
     }
-    
+
     private void init() {
+        this.server = ManagementFactory.getPlatformMBeanServer() ;
+        rootCreated = false ;
+        resourceBundle = null ;
+        regDebugLevel = ManagedObjectManager.RegistrationDebugLevel.NONE ;
+        runDebugFlag = false ;
+        jmxRegistrationDebugFlag = false ;
+
         tree.clear() ;
         skeletonMap.clear() ;
         typeConverterMap.clear() ;
         addedAnnotations.clear() ;
         mm.clear() ;
 
-        rootCreated = false ;
-        resourceBundle = null ;
-        this.server = ManagementFactory.getPlatformMBeanServer() ;
-        regDebugLevel = ManagedObjectManager.RegistrationDebugLevel.NONE ;
-        runDebugFlag = false ;
         initializeStatisticsSupport() ;
     }
     
@@ -422,6 +425,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized GmbalMBean createRoot(Object root, String name) {
         mm.clear() ;
         checkRootNotCreated( "createRoot" ) ;
+
 
         GmbalMBean result ;
 
@@ -1153,6 +1157,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         // can be called anytime
         regDebugLevel = level ;
     }
+
+    public void setJMXRegistrationDebug(boolean flag) {
+        jmxRegistrationDebugFlag = flag ;
+    }
     
     public synchronized void setRuntimeDebug( boolean flag ) {
         // can be called anytime
@@ -1191,6 +1199,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized boolean runtimeDebug() {
         // can be called anytime
         return runDebugFlag ;
+    }
+
+    public synchronized boolean jmxRegistrationDebug() {
+        return jmxRegistrationDebugFlag ;
     }
     
     public synchronized void stripPrefix( String... args ) {

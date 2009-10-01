@@ -1663,8 +1663,12 @@ public class JmxaTest extends TestCase {
 
     public void testLloydExample() throws MalformedObjectNameException {
         System.out.println( "TestLloydExample" ) ;
-        ObjectName pname = new ObjectName( "test:pp=/,type=Foo") ;
-        GmbalMOM mom = new GmbalMOM(pname) ;
+        ManagedObjectManager rmom = 
+            ManagedObjectManagerFactory.createStandalone("root") ;
+        rmom.createRoot() ;
+        ObjectName rname = rmom.getObjectName(rmom.getRoot()) ;
+
+        GmbalMOM mom = new GmbalMOM(rname) ;
         mom.registerChildren() ;
         ObjectName childName = mom.getChildName() ;
         System.out.println( "\tchildName = " + childName ) ;

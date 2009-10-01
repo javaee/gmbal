@@ -45,6 +45,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.Set;
 import javax.management.AttributeNotFoundException;
+import javax.management.InstanceAlreadyExistsException;
 import javax.management.JMException;
 import javax.management.MBeanException;
 import javax.management.ObjectName;
@@ -204,6 +205,22 @@ public interface Exceptions {
     public IllegalArgumentException childMustBeSingleton(ObjectName pname, String ctype,
 	ObjectName cname);
 
+    @Message( "tried to register MBean {0} that is already registered" )
+    @Log( id = MBEAN_IMPL_START + 3 )
+    void registerMBeanRegistered(ObjectName oname);
+
+    @Message( "tried to unregister MBean {0} that is not registered" )
+    @Log( id = MBEAN_IMPL_START + 4 )
+    void unregisterMBeanNotRegistered(ObjectName oname);
+
+    @Message( "registering MBean {0}")
+    @Log( id = MBEAN_IMPL_START + 5, level=LogLevel.INFO )
+    public void registeringMBean(ObjectName oname);
+
+    @Message( "unregistering MBean {0}")
+    @Log( id = MBEAN_IMPL_START + 6, level=LogLevel.INFO )
+    public void unregisteringMBean(ObjectName oname);
+
 // MBeanSkeleton
     static final int MBEAN_SKELETON_START =
         MBEAN_IMPL_START + EXCEPTIONS_PER_CLASS ;
@@ -280,9 +297,10 @@ public interface Exceptions {
     @Log( id=MBEAN_TREE_START + 1 )
     IllegalArgumentException noRootObjectName( @Chain Exception ex ) ;
 
-    @Message( "Could not register root" )
+    @Message( "Could not register root with ObjectName {0}" )
     @Log( id=MBEAN_TREE_START + 2 )
-    IllegalArgumentException rootRegisterFail( @Chain Exception ex ) ;
+    IllegalArgumentException rootRegisterFail(
+        @Chain Exception ex, ObjectName rootName);
 
     @Message( "Root has not been set" )
     @Log( id=MBEAN_TREE_START + 3 )
@@ -510,5 +528,6 @@ public interface Exceptions {
     @Log( id=JMX_REGISTRATION_MANAGER_START + 0 )
     void deferredRegistrationException( @Chain JMException exc,
         MBeanImpl mbean ) ;
+
 
 }

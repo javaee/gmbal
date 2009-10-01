@@ -42,11 +42,16 @@
 package org.glassfish.gmbal.impl;
 
 import java.util.LinkedHashSet;
+import java.util.Map;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
 import javax.management.JMException;
 import javax.management.MBeanRegistrationException;
 import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
+import org.glassfish.external.amx.MBeanListener;
+import org.glassfish.gmbal.GmbalException;
+import org.glassfish.gmbal.generic.UnaryVoidFunction;
 
 /** A simple class that implements deferred registration.
  * When registration is suspended, mbean registrations are
@@ -56,48 +61,216 @@ import javax.management.NotCompliantMBeanException;
  * @author ken
  */
 public class JMXRegistrationManager {
-    int suspendCount = 0 ;
-    private LinkedHashSet<MBeanImpl> deferredRegistrations =
-        new LinkedHashSet<MBeanImpl>() ;
+    private int suspendCount = 0 ;
+    private ManagedObjectManagerInternal mom ;
+    private ObjectName rootParentName ;
+    private final LinkedHashSet<MBeanImpl> deferredRegistrations ;
 
-    public synchronized void suspendRegistration() {
-        suspendCount++ ;
+    // used in inner classes
+    MBeanImpl root ;
+    boolean isJMXRegistrationEnabled = false ;
+    final Object lock = new Object() ;
+
+    // Used if rootParentName version of constructor is used
+    private RootParentListener callback = null ;
+    private MBeanListener rpListener = null ;
+
+    public JMXRegistrationManager(ManagedObjectManagerInternal mom,
+        ObjectName rootParentName) {
+
+        suspendCount = 0 ;
+        this.root = null ;
+        deferredRegistrations = new LinkedHashSet<MBeanImpl>() ;
+        this.mom = mom ;
+        this.rootParentName = rootParentName ;
     }
 
-    public synchronized void resumeRegistration() {
-        suspendCount-- ;
-        if (suspendCount == 0) {
-            for (MBeanImpl mb : deferredRegistrations) {
-                try {
-                    mb.register();
-                } catch (JMException ex) {
-                    Exceptions.self.deferredRegistrationException( ex, mb ) ;
-                }
-            }
-
-            deferredRegistrations.clear() ;
-        }
-    }
-
-    public synchronized void register( MBeanImpl mb )
+    /** Set the MBeanImpl that is the root of this MBean tree.
+     * Must be set before other methods are called (but this is not
+     * enforced).
+     * 
+     * @param root The root of the tree.
+     */
+    public void setRoot( MBeanImpl root ) 
         throws InstanceAlreadyExistsException, MBeanRegistrationException,
         NotCompliantMBeanException {
 
-        if (suspendCount>0) {
-            deferredRegistrations.add( mb ) ;
+        this.root = root ;
+        if (rootParentName == null) {
+            synchronized (lock) {
+                isJMXRegistrationEnabled = true ;
+            }
         } else {
-            mb.register() ;
+            // Set up an MBeanListener so that we don't register MBeans unless
+            // rootParentName actually refers to a registered MBean.
+            callback = new RootParentListener() ;
+            rpListener = new MBeanListener( mom.getMBeanServer(),
+                rootParentName, callback ) ;
+            rpListener.startListening() ;
+        }
+        register( root ) ;
+    }
+
+    void clear() {
+        if (rpListener != null) {
+            rpListener.stopListening() ;
+        }
+        rpListener = null ;
+        callback = null ;
+    }
+
+    /** Increment the suspended registration count.
+     * All registrations with JMX are suspended while suspendCount > 0.
+     */
+    public void suspendRegistration() {
+        synchronized (lock) {
+            suspendCount++ ;
         }
     }
 
-    public synchronized void unregister( MBeanImpl mb )
+    /** Decrement the suspended registration count.
+     * If the count goes to zer0. all registrations that occurred while
+     * suspendCount > 0 are registered with the JMX server.
+     */
+    public void resumeRegistration() {
+        synchronized (lock) {
+            suspendCount-- ;
+            if (suspendCount == 0) {
+                for (MBeanImpl mb : deferredRegistrations) {
+                    try {
+                        mb.register();
+                        mb.suspended( false ) ;
+                    } catch (JMException ex) {
+                        Exceptions.self.deferredRegistrationException( ex, mb ) ;
+                    }
+                }
+
+                deferredRegistrations.clear() ;
+            }
+        }
+    }
+
+    /** Handle registration of this MBean.  If we are suspended, 
+     * simply add to the deferredRegistrationList and mark the MBean as
+     * suspended.  If we are not suspended, then register if JMX
+     * registration is enabled.
+     * 
+     * @param mb The MBeanImpl to register
+     * @throws InstanceAlreadyExistsException
+     * @throws MBeanRegistrationException
+     * @throws NotCompliantMBeanException
+     */
+    public void register( MBeanImpl mb )
+        throws InstanceAlreadyExistsException, MBeanRegistrationException,
+        NotCompliantMBeanException {
+
+        synchronized (lock) {
+            if (suspendCount>0) {
+                deferredRegistrations.add( mb ) ;
+                mb.suspended( true ) ;
+            } else {
+                if (isJMXRegistrationEnabled) {
+                    mb.register() ;
+                }
+            }
+        }
+    }
+
+    /** Unregister the MBean.  If we are suspended, remove from the
+     * deferredRegistrations list and mark suspended false.  In any case,
+     * we unregister from JMX if JMX registration is enabled.
+     * Note that we may call unregister on an unregistered object if 
+     * suspendCount > 0, but that's OK, because MBean.unregister does
+     * nothing if mb is not registered.
+     * @param mb The MBean to unregister.
+     * @throws InstanceNotFoundException
+     * @throws MBeanRegistrationException
+     */
+    public void unregister( MBeanImpl mb )
         throws InstanceNotFoundException, MBeanRegistrationException {
 
-        if (suspendCount>0) {
-            deferredRegistrations.remove(mb) ;
+        synchronized (lock) {
+            if (suspendCount>0) {
+                deferredRegistrations.remove(mb) ;
+                mb.suspended( false ) ;
+            }
+
+            // Always unregister
+            if (isJMXRegistrationEnabled) {
+                mb.unregister() ;
+            }
+        }
+    }
+
+    // Class used to listen for the registration and deregistration of the rootParent
+    // (if a rootParent is used).
+    private class RootParentListener implements MBeanListener.Callback {
+        private void depthFirst( MBeanImpl mb, UnaryVoidFunction<MBeanImpl> pre,
+            UnaryVoidFunction<MBeanImpl> post ) {
+
+            if (pre != null) {
+                pre.evaluate( mb ) ;
+            }
+
+            for (Map<String,MBeanImpl> nameToMBean : mb.children().values() ) {
+                for (MBeanImpl child : nameToMBean.values() ) {
+                    depthFirst( child, pre, post ) ;
+                }
+            }
+
+            if (post != null) {
+                post.evaluate( mb ) ;
+            }
         }
 
-        // Always unregister
-        mb.unregister() ;
+        private final UnaryVoidFunction<MBeanImpl> REGISTER_FUNC =
+            new UnaryVoidFunction<MBeanImpl>() {
+                public void evaluate( MBeanImpl arg ) {
+                    if (!arg.suspended()) {
+                        try {
+                            arg.register();
+                        } catch (Exception ex) {
+                            throw new GmbalException("Registration exception", ex ) ;
+                        }
+                    }
+                }
+            } ;
+
+        public void mbeanRegistered(ObjectName arg0, MBeanListener arg1) {
+            synchronized (lock) {
+                if (!isJMXRegistrationEnabled) {
+                    isJMXRegistrationEnabled = true ;
+
+                    if (root != null) {
+                        depthFirst( root, REGISTER_FUNC, null );
+                    }
+                }
+            }
+        }
+
+        private final UnaryVoidFunction<MBeanImpl> UNREGISTER_FUNC =
+            new UnaryVoidFunction<MBeanImpl>() {
+                public void evaluate( MBeanImpl arg ) {
+                    if (!arg.suspended()) {
+                        try {
+                            arg.unregister();
+                        } catch (Exception ex) {
+                            throw new GmbalException("Registration exception", ex ) ;
+                        }
+                    }
+                }
+            } ;
+
+        public void mbeanUnregistered(ObjectName arg0, MBeanListener arg1) {
+            synchronized (lock) {
+                if (isJMXRegistrationEnabled) {
+                    isJMXRegistrationEnabled = false ;
+
+                    if (root != null) {
+                        depthFirst( root, null, UNREGISTER_FUNC );
+                    }
+                }
+            }
+        }
     }
 }

@@ -108,15 +108,15 @@ public class MBeanTree {
         boolean success = false ;
 
         try {
-            jrm.register( rootMB ) ;
+            jrm.setRoot( rootMB )  ;
             success = true ;
         } catch (InstanceAlreadyExistsException ex) {
             if (suppressReport)
                 return null ;
             else
-                throw Exceptions.self.rootRegisterFail( ex ) ;
+                throw Exceptions.self.rootRegisterFail( ex, oname ) ;
         } catch (Exception ex) {
-            throw Exceptions.self.rootRegisterFail( ex ) ;
+            throw Exceptions.self.rootRegisterFail( ex, oname ) ;
         } finally {
             if (!success) {
                 removeFromObjectMaps(rootMB);
@@ -124,7 +124,7 @@ public class MBeanTree {
                 rootEntity = null ;
             }
         }
-        
+
         return rootMB ;
     }
     
@@ -184,7 +184,7 @@ public class MBeanTree {
         objectMap = new HashMap<Object,MBeanImpl>() ;
         objectNameMap = new HashMap<ObjectName,Object>() ;
         mm = MethodMonitorFactory.makeStandard( getClass() ) ;
-        jrm = new JMXRegistrationManager() ;
+        jrm = new JMXRegistrationManager( mom, rootParentName ) ;
     }
 
     synchronized void suspendRegistration() {
@@ -441,6 +441,7 @@ public class MBeanTree {
         objectMap.clear() ;
         objectNameMap.clear() ;
         rootEntity = null ;
+        jrm.clear() ;
     }
 
     public ObjectName getRootParentName() {

@@ -124,6 +124,8 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     
     boolean registrationFineDebug() ;
     
+    boolean jmxRegistrationDebug() ;
+
     boolean runtimeDebug() ;
 
     AMXMetadata getDefaultAMXMetadata() ;

@@ -174,4 +174,8 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     public AMXClient getAMXClient(Object obj) {
         return null ;
     }
+
+    public void setJMXRegistrationDebug(boolean flag) {
+        // NOP
+    }
 }

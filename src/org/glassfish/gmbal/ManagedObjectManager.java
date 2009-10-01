@@ -344,6 +344,13 @@ public interface ManagedObjectManager extends Closeable {
      */
     void setTypelibDebug( int level ) ;
 
+    /** Set debugging for JMX registrations.  If true, all registrations and
+     * deregistrations with the MBeanServer are traced.
+     *
+     * @param flag True to enalbed registration tracing.
+     */
+    void setJMXRegistrationDebug( boolean flag ) ;
+
     /** Dump the skeleton used in the implementation of the MBean for obj.
      * Obj must be currently registered.
      * <p>

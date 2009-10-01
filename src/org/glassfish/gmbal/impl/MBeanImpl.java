@@ -86,6 +86,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     private Object target ;
     private MBeanServer server ;
     private String parentPathForObjectName;
+    private boolean suspended;
     
     public MBeanImpl( final MBeanSkeleton skel, 
         final Object obj, final MBeanServer server,
@@ -115,6 +116,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         // This will also be important for dealing with multiple upper bounds.
         this.server = server ;
         this.parentPathForObjectName = null ;
+        this.suspended = false ;
     }
         
     @Override
@@ -285,12 +287,25 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         return parentPathForObjectName ;
     }
  
+    public synchronized boolean suspended() {
+        return suspended ;
+    }
+
+    public synchronized void suspended( boolean flag ) {
+        suspended = flag ;
+    }
+
     public synchronized void register() throws InstanceAlreadyExistsException, 
         MBeanRegistrationException, NotCompliantMBeanException {
         
         if (!registered) {
+            if (skeleton().mom().jmxRegistrationDebug()) {
+                Exceptions.self.registeringMBean( oname ) ;
+            }
             server.registerMBean( this, oname ) ;
             registered = true ;
+        } else {
+            Exceptions.self.registerMBeanRegistered( oname ) ;
         }
     }
     
@@ -298,8 +313,13 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         MBeanRegistrationException {
         
         if (registered) {
+            if (skeleton().mom().jmxRegistrationDebug()) {
+                Exceptions.self.unregisteringMBean( oname ) ;
+            }
             server.unregisterMBean( oname );
             registered = false ;
+        } else {
+            Exceptions.self.unregisterMBeanNotRegistered( oname ) ;
         }
     }
     

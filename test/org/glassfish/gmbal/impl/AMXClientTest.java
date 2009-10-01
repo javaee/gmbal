@@ -28,7 +28,6 @@ import org.glassfish.gmbal.ManagedObjectManagerFactory;
 import org.glassfish.gmbal.ManagedOperation;
 import org.glassfish.gmbal.NameValue;
 import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.ObjectUtility;
 import org.glassfish.gmbal.generic.Pair;
 
 /**
@@ -36,8 +35,7 @@ import org.glassfish.gmbal.generic.Pair;
  * @author ken
  */
 public class AMXClientTest extends TestCase {
-    private static final String EXTERNAL_ROOT = "test:pp=/,type=FOO" ;
-
+    private ManagedObjectManager rootMom = null ;
     private ManagedObjectManager standaloneMom = null ;
     private ManagedObjectManager federatedMom = null ;
     private ObjectName externalRootName = null ;
@@ -147,11 +145,18 @@ public class AMXClientTest extends TestCase {
     protected void setUp() throws Exception {
         super.setUp();
         standaloneMom = ManagedObjectManagerFactory.createStandalone("test") ;
-        externalRootName = new ObjectName( EXTERNAL_ROOT ) ;
+        standaloneMom.setJMXRegistrationDebug(true) ;
+        initializeMom( MomType.STANDALONE, standaloneMom ) ;
+
+        rootMom = ManagedObjectManagerFactory.createStandalone("extern") ;
+        rootMom.setJMXRegistrationDebug(true) ;
+        rootMom.createRoot() ;
+
+        externalRootName = rootMom.getObjectName( rootMom.getRoot() ) ;
+
         federatedMom = ManagedObjectManagerFactory.createFederated(
             externalRootName ) ;
-
-        initializeMom( MomType.STANDALONE, standaloneMom ) ;
+        federatedMom.setJMXRegistrationDebug(true) ;
         initializeMom( MomType.FEDERATED, federatedMom ) ;
     }
 
@@ -189,8 +194,9 @@ public class AMXClientTest extends TestCase {
 
     @Override
     protected void tearDown() throws Exception {
-        standaloneMom.close() ;
         federatedMom.close() ;
+        rootMom.close() ;
+        standaloneMom.close() ;
         super.tearDown();
     }
 
