@@ -47,6 +47,8 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
@@ -125,32 +127,58 @@ public class WrapperGenerator {
         }
     }
 
-    private static String getMessage( Method method, int numParams, 
-        String idPrefix, int logId ) {
+    private static ResourceBundle rb = null ;
+    
+    static {
+        final String rbname = 
+            "org.glassfish.gmbal.logex.LogStrings" ;
 
-        final Message message = method.getAnnotation( Message.class ) ;
-        final StringBuilder sb = new StringBuilder() ;
-        sb.append( idPrefix ) ;
-        sb.append( logId ) ;
-        sb.append( ": " ) ;
-                    
-        if (message == null) {
-            sb.append( method.getName() ) ;
-            sb.append( ' ' ) ;
-            for (int ctr=0; ctr<numParams; ctr++) {
-                if (ctr>0) {
-                    sb.append( ", " ) ;
-                }
+        try {
+            rb = ResourceBundle.getBundle( rbname ) ;
+        } catch (Exception exc) {
+            System.out.println( "Could not load resource bundle "
+                + rb ) ;
+            exc.printStackTrace() ;
+        }
+    }
 
-                sb.append( "arg" ) ;
-                sb.append( ctr ) ;
-                sb.append( "={" + ctr + "}" ) ;
-            }
-        } else {
-            sb.append( message.value() ) ;
+    private static String getMessage( Logger logger, Method method,
+        int numParams, String idPrefix, int logId ) {
+
+        String msg = null ;
+
+        if (rb != null) {
+            msg = getTranslatedMessage(logger, method) ;
         }
 
-        return sb.toString() ;
+        if (msg == null) {
+            final Message message = method.getAnnotation( Message.class ) ;
+            final StringBuilder sb = new StringBuilder() ;
+
+            sb.append( idPrefix ) ;
+            sb.append( logId ) ;
+            sb.append( ": " ) ;
+
+            if (message == null) {
+                sb.append( method.getName() ) ;
+                sb.append( ' ' ) ;
+                for (int ctr=0; ctr<numParams; ctr++) {
+                    if (ctr>0) {
+                        sb.append( ", " ) ;
+                    }
+
+                    sb.append( "arg" ) ;
+                    sb.append( ctr ) ;
+                    sb.append( "={" + ctr + "}" ) ;
+                }
+            } else {
+                sb.append( message.value() ) ;
+            }
+
+            msg = sb.toString() ;
+        }
+
+        return msg ;
     }
 
     private static void inferCaller( LogRecord lrec ) {
@@ -205,22 +233,32 @@ public class WrapperGenerator {
         }
     }
 
+    private static String getTranslatedMessage( Logger logger, Method method ) {
+        // Check to see if we should fetch a possibly translated message from
+        // a ResourceBundle
+        String result = null ;
+
+        if (rb != null) {
+            try {
+                String key = logger.getName() + "." + method.getName() ;
+                result = rb.getString( key ) ;
+            } catch (Exception exc) {
+                // XXX log this?
+            }
+        }
+
+        return result ;
+    }
+
     private static String handleMessageOnly( Method method, Logger logger,
         Object[] messageParams ) {
 
         // Just format the message: no exception ID or log level
         // This code is adapted from java.util.logging.Formatter.formatMessage
         String msg = (String)method.getAnnotation( Message.class ).value() ;
-        String transMsg = msg ;
-        ResourceBundle catalog = logger.getResourceBundle() ;
-
-        if (catalog != null) {
-            try {
-                transMsg = catalog.getString( msg ) ;
-            } catch (Exception exc) {
-                // Ignore exc: hard to report here.
-                // Ignore findbugs: regardless of exception, just use msg as result.
-            }
+        String transMsg = getTranslatedMessage( logger, method ) ;
+        if (transMsg == null) {
+            transMsg = msg ;
         }
 
         String result ;
@@ -288,7 +326,8 @@ public class WrapperGenerator {
         final Level level = log.level().getLevel() ;
         final ReturnType rtype = classifyReturnType( method ) ;
         final int len = messageParams == null ? 0 : messageParams.length ;
-        final String msgString = getMessage( method, len, idPrefix, log.id() ) ;
+        final String msgString = getMessage( logger, method, len, idPrefix,
+            log.id() ) ;
         final LogRecord lrec = makeLogRecord( level, msgString,
             messageParams, logger ) ;
         final String message = formatter.format( lrec ) ;
@@ -322,6 +361,53 @@ public class WrapperGenerator {
         }
     }
 
+    public static List<String> getResources( final Class<?> cls ) {
+        // Check that cls is annotated with @ExceptionWrapper
+        // For each method of cls that is annotated with @Message
+        //     add a string of the form
+        //     <logger name>.<method name> = "<idPrefix><id> : <message text>"
+        //     to the output.
+        List<String> result = new ArrayList<String>() ;
+
+        ExceptionWrapper ew = cls.getAnnotation( ExceptionWrapper.class ) ;
+        if (ew != null) {
+            String prefix = ew.idPrefix() ;
+            String loggerName = getLoggerName( cls ) ;
+            for (Method m : cls.getDeclaredMethods()) {
+                final Log log = m.getAnnotation( Log.class ) ;
+                final String logId = (log == null) ? "" : "" + log.id() ;
+                final Message message = m.getAnnotation( Message.class ) ;
+                if (message == null) {
+                    System.out.println(
+                        "No @Message annotation found for method " + m ) ;
+                } else {
+                    final StringBuilder sb = new StringBuilder() ;
+                    sb.append( loggerName ) ;
+                    sb.append( "." ) ;
+                    sb.append( m.getName() ) ;
+                    sb.append( "=\"" ) ;
+                    sb.append( prefix ) ;
+                    sb.append( logId ) ;
+                    sb.append( ": " ) ;
+                    sb.append( message.value() ) ;
+                    sb.append( "\"" ) ;
+                    result.add( sb.toString() ) ;
+                }
+            }
+        }
+        
+        return result ;
+    }
+
+    private static String getLoggerName( Class<?> cls ) {
+        ExceptionWrapper ew = cls.getAnnotation( ExceptionWrapper.class ) ;
+        String str = ew.loggerName() ;
+        if (str.length() == 0) {
+            str = cls.getPackage().getName() ;
+        }
+        return str ;
+    }
+
     public static <T> T makeWrapper( final Class<T> cls ) {
         // Must have an interface to use a Proxy.
         if (!cls.isInterface()) {
@@ -331,11 +417,7 @@ public class WrapperGenerator {
 
         ExceptionWrapper ew = cls.getAnnotation( ExceptionWrapper.class ) ;
         final String idPrefix = ew.idPrefix() ;
-        String str = ew.loggerName() ;
-        if (str.length() == 0) {
-            str = cls.getPackage().getName() ;
-        }
-        final String name = str ;
+        final String name = getLoggerName( cls ) ;
 
         InvocationHandler inh = new InvocationHandler() {
             public Object invoke(Object proxy, Method method, Object[] args)

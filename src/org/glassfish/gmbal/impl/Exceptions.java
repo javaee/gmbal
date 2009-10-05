@@ -45,7 +45,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.Set;
 import javax.management.AttributeNotFoundException;
-import javax.management.InstanceAlreadyExistsException;
 import javax.management.JMException;
 import javax.management.MBeanException;
 import javax.management.ObjectName;
@@ -87,6 +86,7 @@ public interface Exceptions {
 // AMXImpl
     static final int AMX_IMPL_START = 1 ;
 
+
     @Message( "Exception in getMeta" ) 
     @Log( id = AMX_IMPL_START + 0 )
     GmbalException excForGetMeta( @Chain MBeanException ex ) ;
@@ -126,6 +126,7 @@ public interface Exceptions {
     IllegalArgumentException excForAddDescriptorFieldsToMap( String field ) ;
 
     @Log( id=DESCRIPTOR_INTROSPECTOR_START + 1 )
+    @Message( "Exception in addAnnotationFieldsToMap")
     UndeclaredThrowableException excForAddAnnotationFieldsToMap(
         @Chain Exception ex ) ;
 
@@ -519,6 +520,10 @@ public interface Exceptions {
     @Log( id=TYPE_CONVERTER_IMPL_START + 18, level=LogLevel.FINE )
     public void errorInConstructingOpenData(String name, String id,
         @Chain JMException ex);
+
+    @Message( "No <init>(String) constructor available for class {0}")
+    @Log( id=TYPE_CONVERTER_IMPL_START + 19, level=LogLevel.FINE )
+    void noStringConstructorAvailable( @Chain Exception exc, String name);
 
 // JMXRegistrationManager start
     static final int JMX_REGISTRATION_MANAGER_START =

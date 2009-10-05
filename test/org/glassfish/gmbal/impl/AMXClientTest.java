@@ -47,11 +47,13 @@ public class AMXClientTest extends TestCase {
 
         private final String name ;
         private final String attr ;
+        private boolean flag ;
 
         public MyManagedClass( int id, String name, String attr ) {
             this.id = id ;
             this.name = name ;
             this.attr = attr ;
+            this.flag = false ;
         }
 
         @ManagedAttribute
@@ -70,6 +72,18 @@ public class AMXClientTest extends TestCase {
         @Description( "Get the attr" )
         public String getAttr() {
             return attr ;
+        }
+
+        @ManagedAttribute
+        @Description( "Boolean attribute setter")
+        public void flag( boolean val ) {
+            this.flag = val ;
+        }
+
+        @ManagedAttribute
+        @Description( "Boolean attribute getter")
+        public boolean flag() {
+            return flag ;
         }
 
         @NameValue
@@ -343,6 +357,26 @@ public class AMXClientTest extends TestCase {
         result = root.getAttribute( "Id" ) ;
         assertTrue( result instanceof Integer ) ;
         assertEquals( Integer.valueOf( 84 ), result ) ;
+    }
+
+    public void testBooleanAttributeS() {
+        testBooleanAttribute( MomType.STANDALONE ) ;
+    }
+    public void testBooleanAttributeF() {
+        testBooleanAttribute( MomType.FEDERATED ) ;
+    }
+    private void testBooleanAttribute( MomType mtype ) {
+        System.out.println( "booleanAttribute" ) ;
+        AMXClient root = getAMX( mtype, 0 ) ;
+        Object result = root.getAttribute( "flag" ) ;
+        assertTrue( result instanceof Boolean ) ;
+        assertEquals( Boolean.FALSE, result ) ;
+
+        root.setAttribute( "flag", true ) ;
+
+        result = root.getAttribute( "flag" ) ;
+        assertTrue( result instanceof Boolean ) ;
+        assertEquals( Boolean.TRUE, result ) ;
     }
 
     private static String toString( Attribute attr ) {

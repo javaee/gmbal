@@ -44,6 +44,7 @@ import java.lang.reflect.Array ;
 import java.lang.reflect.Constructor ;
 import java.lang.reflect.InvocationTargetException;
 
+import java.security.PrivilegedAction;
 import java.util.Collection ;
 import java.util.List ;
 import java.util.ArrayList ;
@@ -821,16 +822,19 @@ public abstract class TypeConverterImpl implements TypeConverter {
     private static TypeConverter handleAsString( 
         final EvaluatedClassDeclaration cls ) {
 
-        Constructor cs = null ;
+        Constructor tcons ;
         try {
-            cs = cls.cls().getDeclaredConstructor(String.class);
-        } catch (NoSuchMethodException ex) {
-            // log message
-        } catch (SecurityException ex) {
-            // log message
+            tcons = Algorithms.doPrivileged(
+                new Algorithms.Action<Constructor>() {
+                    public Constructor run() throws Exception {
+                        return cls.cls().getDeclaredConstructor(String.class ) ;
+                    }
+                }) ;
+        } catch (Exception exc) {
+            Exceptions.self.noStringConstructorAvailable( exc, cls.name() ) ;
+            tcons = null ;
         }
-
-	final Constructor cons = cs ;
+        final Constructor cons = tcons ;
 
 	return new TypeConverterImpl( cls, SimpleType.STRING ) {
 	    public Object toManagedEntity( Object obj ) {

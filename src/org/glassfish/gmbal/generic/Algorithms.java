@@ -39,6 +39,8 @@ package org.glassfish.gmbal.generic ;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.List ;
 import java.util.Map ;
 import java.util.ArrayList ;
@@ -49,6 +51,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.sound.midi.SysexMessage;
 
 public final class Algorithms {
     private Algorithms() {}
@@ -375,5 +378,41 @@ public final class Algorithms {
         }
 
         return result ;
+    }
+
+    public static interface Action<T> {
+        T run() throws Exception ;
+    }
+
+    private static <T> PrivilegedAction<T> makePrivilegedAction(
+        final Action<T> act ) {
+
+        return new PrivilegedAction<T>() {
+            public T run() {
+                try {
+                    return act.run() ;
+                } catch (RuntimeException exc) {
+                    throw exc ;
+                } catch (Exception ex) {
+                    throw new RuntimeException( ex ) ;
+                }
+            }
+        } ;
+    }
+
+    public static <T> T doPrivileged( Action<T> func ) {
+        SecurityManager sman = System.getSecurityManager() ;
+        try {
+            if (sman == null) {
+                return func.run() ;
+            } else {
+                return AccessController.doPrivileged( makePrivilegedAction(
+                    func ) ) ;
+            }
+        } catch (RuntimeException rex) {
+            throw rex ;
+        } catch (Exception ex) {
+            throw new RuntimeException( ex ) ;
+        }
     }
 }
