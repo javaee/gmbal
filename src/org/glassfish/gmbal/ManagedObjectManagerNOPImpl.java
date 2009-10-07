@@ -71,6 +71,10 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
         // NOP
     }
 
+    public boolean isManagedObject( Object obj ) {
+        return false ;
+    }
+
     public GmbalMBean createRoot() {
         return gmb ;
     }

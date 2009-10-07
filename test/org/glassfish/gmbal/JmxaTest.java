@@ -756,7 +756,7 @@ public class JmxaTest extends TestCase {
 	    
 	    Hashtable expectedProperties = new Hashtable() ;
             expectedProperties.put( "pp", "/" ) ;
-	    expectedProperties.put( "type", ManagedObjectExample.class.getName() ) ;
+	    expectedProperties.put( "type", root.getClass().getName() ) ;
 	    
 	    assertEquals( expectedProperties, moeName.getKeyPropertyList() ) ;
 
@@ -2373,6 +2373,44 @@ public class JmxaTest extends TestCase {
             tdb.setColor( color ) ;
             value = amxc.getAttribute( "Color" ) ;
             assertEquals( color.toString(), value ) ;
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    @ManagedObject
+    public interface hasMO{}
+
+    @ManagedObject
+    public class aMO {}
+
+    public class inhMO implements hasMO {}
+
+    public void testIsManagedObject() throws IOException {
+        System.out.println( "testEnumBean" ) ;
+
+        ManagedObjectManager mom = null ;
+        Object obj = new Object() ;
+        Object mo = new aMO() ;
+        Object imo = new inhMO() ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+
+            assertTrue( !mom.isManagedObject(obj)) ;
+            assertTrue( mom.isManagedObject(mo));
+            assertTrue( mom.isManagedObject(imo));
+
+            mom.createRoot() ;
+            
+            assertTrue( !mom.isManagedObject(obj)) ;
+            assertTrue( mom.isManagedObject(mo));
+            assertTrue( mom.isManagedObject(imo));
         } catch (GmbalException exc) {
             fail( "Exception: " + exc ) ;
         } finally {

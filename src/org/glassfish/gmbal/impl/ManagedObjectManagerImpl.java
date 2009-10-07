@@ -458,30 +458,29 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         try {
             MBeanSkeleton result = skeletonMap.get( cls ) ;
 
-            boolean newSkeleton = false ;
-            if (result == null) {
+            boolean newSkeleton = result == null ;
+            if (newSkeleton) {
                 mm.info( registrationDebug(), "Skeleton not found" ) ;
                 
                 Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer> pair = 
                     getClassAnalyzer( cls, ManagedObject.class ) ;
-                EvaluatedClassDeclaration annotatedClass = pair.first() ;
                 EvaluatedClassAnalyzer ca = pair.second() ;
+
+                EvaluatedClassDeclaration annotatedClass = pair.first() ;
                 mm.info( registrationFineDebug(), "Annotated class for skeleton is",
                     annotatedClass ) ;
+                if (annotatedClass == null) {
+                    throw Exceptions.self.managedObjectAnnotationNotFound(
+                        cls.name() ) ;
+                }
 
-                result = skeletonMap.get( annotatedClass ) ;
+                MBeanSkeleton skel = new MBeanSkeleton( cls, ca, this ) ;
 
-                if (result == null) {
-                    newSkeleton = true ;
-                    MBeanSkeleton skel = new MBeanSkeleton( annotatedClass,
-                        ca, this ) ;
-
-                    if (amxSkeleton == null) {
-                        // Can't compose amxSkeleton with itself!
-                        result = skel ;
-                    } else {
-                        result = amxSkeleton.compose( skel ) ;
-                    }
+                if (amxSkeleton == null) {
+                    // Can't compose amxSkeleton with itself!
+                    result = skel ;
+                } else {
+                    result = amxSkeleton.compose( skel ) ;
                 }
 
                 skeletonMap.put( cls, result ) ;
@@ -598,6 +597,16 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         } else {
             return className ;
         }
+    }
+
+    public synchronized boolean isManagedObject( Object obj ) {
+        final EvaluatedClassDeclaration cdecl =
+            (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(
+                obj.getClass() ) ;
+        final ManagedObject mo = getFirstAnnotationOnClass( cdecl,
+            ManagedObject.class ) ;
+
+        return mo != null ;
     }
     
     public synchronized MBeanImpl constructMBean( MBeanImpl parentEntity,
@@ -906,10 +915,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             annotationClass ) ;
         
         try {
-            EvaluatedClassAnalyzer ca = new EvaluatedClassAnalyzer( cls ) ;
+            final EvaluatedClassAnalyzer clsca = new EvaluatedClassAnalyzer( cls ) ;
 
             final EvaluatedClassDeclaration annotatedClass = Algorithms.getFirst(
-                ca.findClasses( forAnnotation( annotationClass, 
+                clsca.findClasses( forAnnotation( annotationClass,
                     EvaluatedClassDeclaration.class ) ),
                 new Runnable() {
                     public void run() {
@@ -922,9 +931,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     
             final List<EvaluatedClassDeclaration> classes =
                 new ArrayList<EvaluatedClassDeclaration>() ;
-            classes.add( annotatedClass ) ;
+            classes.add( cls ) ;
+
+            // XXX Should we construct a union of all @IncludeSubclass contents?
             final IncludeSubclass incsub = getFirstAnnotationOnClass(
-                annotatedClass, IncludeSubclass.class ) ;
+                cls, IncludeSubclass.class ) ;
             if (incsub != null) {
                 for (Class<?> klass : incsub.value()) {
                     EvaluatedClassDeclaration ecd = 
@@ -934,11 +945,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 }
             }
 
-            if (classes.size() > 1) {
-	        mm.info( registrationDebug(),
-                    "Getting new EvaluatedClassAnalyzer for included subclasses" ) ;
-                ca = new EvaluatedClassAnalyzer( classes ) ;
-            }
+            EvaluatedClassAnalyzer ca = new EvaluatedClassAnalyzer( classes ) ;
 
             return new Pair<EvaluatedClassDeclaration,
                  EvaluatedClassAnalyzer>( annotatedClass, ca ) ;

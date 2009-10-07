@@ -86,6 +86,13 @@ public interface ManagedObjectManager extends Closeable {
      */
     void resumeJMXRegistration() ;
 
+    /** Return true if object is assignment compatible with a class or interface
+     * that has an @ManagedObject annotation, otherwise false.  Only such objects
+     * may be registered to create MBeans.
+     * May be called at any time.
+     */
+    boolean isManagedObject( Object obj ) ;
+
     /** Create a default root MBean.
      * One of the createRoot methods must be called before any of the registration
      * methods may be called.
