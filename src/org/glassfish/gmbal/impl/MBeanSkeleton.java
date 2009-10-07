@@ -315,7 +315,7 @@ public class MBeanSkeleton {
 	    TypeConverter tc = mom.getTypeConverter(nonNullDescriptor.type());
 
 	    ModelMBeanAttributeInfo ainfo = new ModelMBeanAttributeInfo(name,
-		tc.getManagedType().getTypeName(), description,
+		tc.getManagedType().getClassName(), description,
 		getter != null, setter != null, false, desc);
 
 	    mm.info( mom.registrationFineDebug(), ainfo);
@@ -506,7 +506,7 @@ public class MBeanSkeleton {
 
 	    final ModelMBeanOperationInfo operInfo =
 		new ModelMBeanOperationInfo(m.name(),
-		desc, paramInfo, rtc.getManagedType().getTypeName(),
+		desc, paramInfo, rtc.getManagedType().getClassName(),
 		mo.impact().ordinal(), modelDescriptor);
 
 	    mm.info(mom.registrationFineDebug(), "operInfo", operInfo);
@@ -609,7 +609,7 @@ public class MBeanSkeleton {
 		    sequenceNumber.incrementAndGet(),
 		    System.currentTimeMillis(),
 		    "Changed attribute " + name, name,
-		    setter.tc().getManagedType().getTypeName(),
+		    setter.tc().getManagedType().getClassName(),
 		    oldValue, value);
 
 	    mm.info( mom.runtimeDebug(), "sending notification ", notification);

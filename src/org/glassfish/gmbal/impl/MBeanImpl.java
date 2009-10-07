@@ -316,8 +316,9 @@ public class MBeanImpl extends NotificationBroadcasterSupport
             if (skeleton().mom().jmxRegistrationDebug()) {
                 Exceptions.self.unregisteringMBean( oname ) ;
             }
-            server.unregisterMBean( oname );
+
             registered = false ;
+            server.unregisterMBean( oname );
         } else {
             Exceptions.self.unregisterMBeanNotRegistered( oname ) ;
         }
