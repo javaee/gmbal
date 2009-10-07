@@ -48,7 +48,8 @@ import org.glassfish.gmbal.logex.WrapperGenerator;
  *
  * @author ken
  */
-@ExceptionWrapper( idPrefix="GMBALTLIB" )
+@ExceptionWrapper( idPrefix="GMBALTLIB",
+    resourceBundle = "org.glassfish.gmbal.logex.LogStrings" )
 public interface Exceptions {
     static final Exceptions self = WrapperGenerator.makeWrapper(
         Exceptions.class ) ;

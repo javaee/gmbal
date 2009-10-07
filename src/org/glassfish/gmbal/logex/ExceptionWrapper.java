@@ -69,4 +69,11 @@ public @interface ExceptionWrapper {
      * @return The logger name.
      */
     String loggerName() default "" ;
+
+    /** Return the name of the ResourceBundle to use for I18N support for
+     * exceptions in this class.
+     *
+     * @return The bundle name.
+     */
+    String resourceBundle() default "" ;
 }

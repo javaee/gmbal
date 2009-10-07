@@ -75,7 +75,8 @@ import org.glassfish.gmbal.typelib.EvaluatedType;
  *
  * @author ken
  */
-@ExceptionWrapper( idPrefix="GMBAL" )
+@ExceptionWrapper( idPrefix="GMBAL",
+    resourceBundle = "org.glassfish.gmbal.logex.LogStrings" )
 public interface Exceptions {
     static final Exceptions self = WrapperGenerator.makeWrapper(
         Exceptions.class ) ;

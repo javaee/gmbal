@@ -126,30 +126,27 @@ public class WrapperGenerator {
             return args ;
         }
     }
-
-    private static ResourceBundle rb = null ;
     
-    static {
-        final String rbname = 
-            "org.glassfish.gmbal.logex.LogStrings" ;
+    private static ResourceBundle getResourceBundle( String name ) {
+        ResourceBundle rb = null ;
 
-        try {
-            rb = ResourceBundle.getBundle( rbname ) ;
-        } catch (Exception exc) {
-            System.out.println( "Could not load resource bundle "
-                + rb ) ;
-            exc.printStackTrace() ;
+        if (name.length() > 0) {
+            try {
+                rb = ResourceBundle.getBundle( name ) ;
+            } catch (Exception exc) {
+                Logger.getLogger( "org.glassfish.gmbal.logex" )
+                    .fine( "Could not load resource bundle") ;
+            }
         }
+
+        return rb ;
     }
 
-    private static String getMessage( Logger logger, Method method,
+    private static String getMessage( ResourceBundle rb,
+        Logger logger, Method method,
         int numParams, String idPrefix, int logId ) {
 
-        String msg = null ;
-
-        if (rb != null) {
-            msg = getTranslatedMessage(logger, method) ;
-        }
+        String msg = getTranslatedMessage( rb, logger, method) ;
 
         if (msg == null) {
             final Message message = method.getAnnotation( Message.class ) ;
@@ -233,7 +230,8 @@ public class WrapperGenerator {
         }
     }
 
-    private static String getTranslatedMessage( Logger logger, Method method ) {
+    private static String getTranslatedMessage( ResourceBundle rb,
+        Logger logger, Method method ) {
         // Check to see if we should fetch a possibly translated message from
         // a ResourceBundle
         String result = null ;
@@ -250,13 +248,14 @@ public class WrapperGenerator {
         return result ;
     }
 
-    private static String handleMessageOnly( Method method, Logger logger,
+    private static String handleMessageOnly( ResourceBundle rb,
+        Method method, Logger logger,
         Object[] messageParams ) {
 
         // Just format the message: no exception ID or log level
         // This code is adapted from java.util.logging.Formatter.formatMessage
         String msg = (String)method.getAnnotation( Message.class ).value() ;
-        String transMsg = getTranslatedMessage( logger, method ) ;
+        String transMsg = getTranslatedMessage( rb, logger, method ) ;
         if (transMsg == null) {
             transMsg = msg ;
         }
@@ -320,13 +319,14 @@ public class WrapperGenerator {
 
     private final static ShortFormatter formatter = new ShortFormatter() ;
 
-    private static Object handleFullLogging( Log log, Method method, Logger logger,
+    private static Object handleFullLogging( ResourceBundle rb,
+        Log log, Method method, Logger logger,
         String idPrefix, Object[] messageParams, Throwable cause )  {
 
         final Level level = log.level().getLevel() ;
         final ReturnType rtype = classifyReturnType( method ) ;
         final int len = messageParams == null ? 0 : messageParams.length ;
-        final String msgString = getMessage( logger, method, len, idPrefix,
+        final String msgString = getMessage( rb, logger, method, len, idPrefix,
             log.id() ) ;
         final LogRecord lrec = makeLogRecord( level, msgString,
             messageParams, logger ) ;
@@ -418,7 +418,7 @@ public class WrapperGenerator {
         ExceptionWrapper ew = cls.getAnnotation( ExceptionWrapper.class ) ;
         final String idPrefix = ew.idPrefix() ;
         final String name = getLoggerName( cls ) ;
-
+        final ResourceBundle rb = getResourceBundle( ew.resourceBundle() ) ;
         InvocationHandler inh = new InvocationHandler() {
             public Object invoke(Object proxy, Method method, Object[] args)
                 throws Throwable {
@@ -443,9 +443,10 @@ public class WrapperGenerator {
                             + cls.getName() + "." + method.getName() ) ;
                     }
 
-                    return handleMessageOnly( method, logger, messageParams ) ;
+                    return handleMessageOnly( rb, method, logger,
+                        messageParams ) ;
                 } else {
-                    return handleFullLogging( log, method, logger, idPrefix,
+                    return handleFullLogging( rb, log, method, logger, idPrefix,
                         messageParams, cause ) ;
                 }
             }
