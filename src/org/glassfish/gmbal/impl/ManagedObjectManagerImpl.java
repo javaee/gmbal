@@ -1189,7 +1189,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         regDebugLevel = level ;
     }
 
-    public void setJMXRegistrationDebug(boolean flag) {
+    public synchronized void setJMXRegistrationDebug(boolean flag) {
         jmxRegistrationDebugFlag = flag ;
     }
     

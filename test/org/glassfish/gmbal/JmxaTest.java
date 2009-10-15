@@ -2390,17 +2390,17 @@ public class JmxaTest extends TestCase {
     public interface hasMO{}
 
     @ManagedObject
-    public class aMO {}
+    public static class AMO {}
 
-    public class inhMO implements hasMO {}
+    public static class InhMO implements hasMO {}
 
     public void testIsManagedObject() throws IOException {
         System.out.println( "testEnumBean" ) ;
 
         ManagedObjectManager mom = null ;
         Object obj = new Object() ;
-        Object mo = new aMO() ;
-        Object imo = new inhMO() ;
+        Object mo = new AMO() ;
+        Object imo = new InhMO() ;
 
         try {
             mom = ManagedObjectManagerFactory.createStandalone("test") ;

@@ -261,7 +261,11 @@ public class WrapperGenerator {
                 String key = logger.getName() + "." + method.getName() ;
                 result = rb.getString( key ) ;
             } catch (Exception exc) {
-                // XXX log this?
+                Logger.getLogger( "org.glassfish.gmbal.logex" )
+                    .fine(
+                        "Could not find translated message in bundle " + rb
+                        + " for logger " + logger
+                        + " and method " + method.getName() ) ;
             }
         }
 
