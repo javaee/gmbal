@@ -2572,11 +2572,13 @@ public class JmxaTest extends TestCase {
         msg( "\tconstructors:  " + getString( mbi.getConstructors() ) ) ;
         msg( "\tdescription:   " + getString( mbi.getDescription() ) ) ;
         msg( "\tdescriptor:    " ) ;
+        /* this only works on JDK 6!
         Descriptor desc = mbi.getDescriptor() ;
         for (String str : desc.getFieldNames()) {
             Object value = desc.getFieldValue(str) ;
             msg( "\t\tdesc[" + str + "]=" + getString( value ) ) ;
         }
+         */
         msg( "\tnotifications: " + getString( mbi.getNotifications() ) ) ;
         msg( "\toperations:    " + getString( mbi.getOperations() ) ) ;
     
