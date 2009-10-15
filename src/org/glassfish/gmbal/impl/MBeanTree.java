@@ -362,6 +362,12 @@ public class MBeanTree {
             ObjectName oname = objectName( parentEntity, mb.type(), 
                 mb.name() ) ;
             mb.objectName( oname ) ;
+
+            Object oldObj = objectNameMap.get( oname ) ;
+            if (oldObj != null) {
+                throw Exceptions.self.objectAlreadyRegistered( obj,
+                    objectMap.get( oldObj ) ) ;
+            }
         
             addToObjectMaps( mb ) ;
 

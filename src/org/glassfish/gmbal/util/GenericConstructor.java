@@ -38,6 +38,9 @@
 package org.glassfish.gmbal.util;
 
 import java.lang.reflect.Constructor ;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -78,7 +81,12 @@ public class GenericConstructor<T> {
 	if ((type == null) || (constructor == null)) {
             try {
                 type = (Class<T>)Class.forName( typeName ) ;
-                constructor = type.getDeclaredConstructor(signature);
+                constructor = AccessController.doPrivileged(
+                    new PrivilegedExceptionAction<Constructor>() {
+                        public Constructor run() throws Exception {
+                            return type.getDeclaredConstructor( signature ) ;
+                        }
+                    } ) ;
             } catch (Exception exc) {
                 // Catch all for several checked exceptions: ignore findbugs
                 Logger.getLogger( "org.glassfish.gmbal.util" ).log( Level.FINE,

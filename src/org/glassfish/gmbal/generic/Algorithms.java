@@ -325,10 +325,26 @@ public final class Algorithms {
         }
     }
 
+    private static List<Method> getDeclaredMethods( final Class<?> cls ) {
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return Arrays.asList( cls.getDeclaredMethods() ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedAction<List<Method>>() {
+                    public List<Method> run() {
+                        return Arrays.asList( cls.getDeclaredMethods() ) ;
+                    }
+                }
+            ) ;
+
+        }
+    }
+
     private static Set<String> annotationMethods ;
     static {
         annotationMethods = new HashSet<String>() ;
-        for (Method m : Annotation.class.getDeclaredMethods()) {
+        for (Method m : getDeclaredMethods( Annotation.class )) {
             annotationMethods.add( m.getName()) ;
         }
     }
@@ -348,7 +364,7 @@ public final class Algorithms {
         boolean convertArraysToLists ) {
         // We must ignore all of the methods defined in the java.lang.Annotation API.
         Map<String,Object> result = new HashMap<String,Object>() ;
-        for (Method m : ann.getClass().getDeclaredMethods()) {
+        for (Method m : getDeclaredMethods( ann.getClass() )) {
             String name = m.getName() ;
             if (!annotationMethods.contains( name ) ) {
                 Object value = null ;

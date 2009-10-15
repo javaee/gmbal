@@ -56,6 +56,7 @@ import org.glassfish.gmbal.logex.ExceptionWrapper;
 import org.glassfish.gmbal.logex.Log;
 import org.glassfish.gmbal.logex.LogLevel;
 import org.glassfish.gmbal.logex.Message;
+import org.glassfish.gmbal.logex.StackTrace;
 import org.glassfish.gmbal.logex.WrapperGenerator;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
@@ -215,10 +216,12 @@ public interface Exceptions {
     @Log( id = MBEAN_IMPL_START + 4 )
     void unregisterMBeanNotRegistered(ObjectName oname);
 
+    @StackTrace
     @Message( "registering MBean {0}")
     @Log( id = MBEAN_IMPL_START + 5, level=LogLevel.INFO )
     public void registeringMBean(ObjectName oname);
 
+    @StackTrace
     @Message( "unregistering MBean {0}")
     @Log( id = MBEAN_IMPL_START + 6, level=LogLevel.INFO )
     public void unregisteringMBean(ObjectName oname);

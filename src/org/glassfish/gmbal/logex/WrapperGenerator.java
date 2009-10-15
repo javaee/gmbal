@@ -47,8 +47,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.ResourceBundle;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
@@ -211,23 +209,45 @@ public class WrapperGenerator {
 	}
     }
 
-    private static Exception makeException( Class<?> rtype, String msg ) {
+    private static Exception makeException( ReturnType rtype, 
+        boolean forceStackTrace, Class<?> rclass, Throwable cause, String msg ) {
+
+        Exception exc = null ;
+
         try {
-            Constructor cons = rtype.getConstructor(String.class);
-            return (Exception) cons.newInstance(msg);
+            if (rtype == ReturnType.NULL) {
+                if (forceStackTrace) {
+                    exc = new RuntimeException( "StackTrace" ) ;
+                }
+            } else if (rtype ==ReturnType.EXCEPTION) {
+                Constructor cons = rclass.getConstructor(String.class);
+                exc = (Exception)cons.newInstance(msg);
+            }
         } catch (InstantiationException ex) {
-            throw new RuntimeException( ex ) ;
+            exc = new RuntimeException( "No <init>(String) constructor available in "
+                + rclass + ": "  + ex ) ;
         } catch (IllegalAccessException ex) {
-            throw new RuntimeException( ex ) ;
+            exc = new RuntimeException( "No <init>(String) constructor available in "
+                + rclass + ": "  + ex ) ;
         } catch (IllegalArgumentException ex) {
-            throw new RuntimeException( ex ) ;
+            exc = new RuntimeException( "No <init>(String) constructor available in "
+                + rclass + ": "  + ex ) ;
         } catch (InvocationTargetException ex) {
-            throw new RuntimeException( ex ) ;
+            exc = new RuntimeException( "No <init>(String) constructor available in "
+                + rclass + ": "  + ex ) ;
         } catch (NoSuchMethodException ex) {
-            throw new RuntimeException( ex ) ;
+            exc = new RuntimeException( "No <init>(String) constructor available in "
+                + rclass + ": "  + ex ) ;
         } catch (SecurityException ex) {
-            throw new RuntimeException( ex ) ;
+            exc = new RuntimeException( "No <init>(String) constructor available in "
+                + rclass + ": "  + ex ) ;
         }
+
+        if ((exc != null) && (cause != null)) {
+            exc.initCause( cause ) ;
+        }
+
+        return exc ;
     }
 
     private static String getTranslatedMessage( ResourceBundle rb,
@@ -287,7 +307,7 @@ public class WrapperGenerator {
     }
 
     private static LogRecord makeLogRecord( Level level, String key,
-        Object[] args, Logger logger ) {
+        Object[] args, boolean forceStackTrace, Logger logger ) {
         LogRecord result = new LogRecord( level, key ) ;
         if (args != null && args.length > 0) {
             result.setParameters( args ) ;
@@ -295,7 +315,7 @@ public class WrapperGenerator {
 
         result.setLoggerName( logger.getName() ) ;
         result.setResourceBundle( logger.getResourceBundle() ) ;
-        if (level != Level.INFO) {
+        if (forceStackTrace || level != Level.INFO) {
             inferCaller( result ) ;
         }
 
@@ -325,21 +345,20 @@ public class WrapperGenerator {
 
         final Level level = log.level().getLevel() ;
         final ReturnType rtype = classifyReturnType( method ) ;
+        final boolean forceStackTrace = method.isAnnotationPresent( 
+            StackTrace.class ) ;
         final int len = messageParams == null ? 0 : messageParams.length ;
         final String msgString = getMessage( rb, logger, method, len, idPrefix,
             log.id() ) ;
         final LogRecord lrec = makeLogRecord( level, msgString,
-            messageParams, logger ) ;
+            messageParams, forceStackTrace, logger ) ;
         final String message = formatter.format( lrec ) ;
 
-        Exception exc = null ;
-        if (rtype == ReturnType.EXCEPTION) {
-            exc = makeException( method.getReturnType(), message ) ;
-            if (cause != null) {
-                exc.initCause( cause ) ;
-            }
+        Exception exc = makeException( rtype, forceStackTrace,
+                method.getReturnType(), cause, message ) ;
 
-            if (level != Level.INFO) {
+        if (exc != null) {
+            if (forceStackTrace || (level != Level.INFO)) {
                 lrec.setThrown( exc ) ;
             }
         }
@@ -359,44 +378,6 @@ public class WrapperGenerator {
             case STRING : return message ;
             default : return null ;
         }
-    }
-
-    public static List<String> getResources( final Class<?> cls ) {
-        // Check that cls is annotated with @ExceptionWrapper
-        // For each method of cls that is annotated with @Message
-        //     add a string of the form
-        //     <logger name>.<method name> = "<idPrefix><id> : <message text>"
-        //     to the output.
-        List<String> result = new ArrayList<String>() ;
-
-        ExceptionWrapper ew = cls.getAnnotation( ExceptionWrapper.class ) ;
-        if (ew != null) {
-            String prefix = ew.idPrefix() ;
-            String loggerName = getLoggerName( cls ) ;
-            for (Method m : cls.getDeclaredMethods()) {
-                final Log log = m.getAnnotation( Log.class ) ;
-                final String logId = (log == null) ? "" : "" + log.id() ;
-                final Message message = m.getAnnotation( Message.class ) ;
-                if (message == null) {
-                    System.out.println(
-                        "No @Message annotation found for method " + m ) ;
-                } else {
-                    final StringBuilder sb = new StringBuilder() ;
-                    sb.append( loggerName ) ;
-                    sb.append( "." ) ;
-                    sb.append( m.getName() ) ;
-                    sb.append( "=\"" ) ;
-                    sb.append( prefix ) ;
-                    sb.append( logId ) ;
-                    sb.append( ": " ) ;
-                    sb.append( message.value() ) ;
-                    sb.append( "\"" ) ;
-                    result.add( sb.toString() ) ;
-                }
-            }
-        }
-        
-        return result ;
     }
 
     private static String getLoggerName( Class<?> cls ) {

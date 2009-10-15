@@ -61,28 +61,35 @@ import org.glassfish.gmbal.generic.UnaryVoidFunction;
  * @author ken
  */
 public class JMXRegistrationManager {
-    private int suspendCount = 0 ;
+    private int suspendCount ;
     private final ManagedObjectManagerInternal mom ;
     private final ObjectName rootParentName ;
-    private final LinkedHashSet<MBeanImpl> deferredRegistrations ;
 
-    // used in inner classes
-    MBeanImpl root ;
-    boolean isJMXRegistrationEnabled = false ;
+    // Lock used to protect several data members.
     final Object lock = new Object() ;
 
+    // Protected by lock.
+    private final LinkedHashSet<MBeanImpl> deferredRegistrations ;
+
+    // Used in inner classes.  Protected by lock.
+    MBeanImpl root ;
+    boolean isJMXRegistrationEnabled ;
+
     // Used if rootParentName is not null.
-    private RootParentListener callback = null ;
-    private MBeanListener rpListener = null ;
+    private RootParentListener callback ;
+    private MBeanListener rpListener ;
 
     public JMXRegistrationManager(ManagedObjectManagerInternal mom,
         ObjectName rootParentName) {
 
-        suspendCount = 0 ;
-        this.root = null ;
-        deferredRegistrations = new LinkedHashSet<MBeanImpl>() ;
+        this.suspendCount = 0 ;
         this.mom = mom ;
         this.rootParentName = rootParentName ;
+        this.deferredRegistrations = new LinkedHashSet<MBeanImpl>() ;
+        this.root = null ;
+        this.isJMXRegistrationEnabled = false ;
+        this.callback = null ;
+        this.rpListener = null ;
     }
 
     /** Set the MBeanImpl that is the root of this MBean tree.
@@ -95,28 +102,36 @@ public class JMXRegistrationManager {
         throws InstanceAlreadyExistsException, MBeanRegistrationException,
         NotCompliantMBeanException {
 
-        this.root = root ;
-        if (rootParentName == null) {
-            synchronized (lock) {
+        synchronized( lock ) {
+            this.root = root ;
+            if (rootParentName == null) {
                 isJMXRegistrationEnabled = true ;
+                register( root ) ;
+            } else {
+                // Set up an MBeanListener so that we don't register MBeans unless
+                // rootParentName actually refers to a registered MBean.
+                // Note that the listener will register the root either now,
+                // or once the root parent is available.
+                callback = new RootParentListener() ;
+                rpListener = new MBeanListener( mom.getMBeanServer(),
+                    rootParentName, callback ) ;
+                rpListener.startListening() ;
             }
-        } else {
-            // Set up an MBeanListener so that we don't register MBeans unless
-            // rootParentName actually refers to a registered MBean.
-            callback = new RootParentListener() ;
-            rpListener = new MBeanListener( mom.getMBeanServer(),
-                rootParentName, callback ) ;
-            rpListener.startListening() ;
         }
-        register( root ) ;
     }
 
+    // This should undo everything that setRoot does.
     void clear() {
-        if (rpListener != null) {
-            rpListener.stopListening() ;
+        synchronized (lock) {
+            root = null ;
+            isJMXRegistrationEnabled = false ;
+
+            if (rpListener != null) {
+                rpListener.stopListening() ;
+            }
+            rpListener = null ;
+            callback = null ;
         }
-        rpListener = null ;
-        callback = null ;
     }
 
     /** Increment the suspended registration count.

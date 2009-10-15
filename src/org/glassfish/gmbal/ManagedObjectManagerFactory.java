@@ -39,6 +39,11 @@ package org.glassfish.gmbal ;
 
 import java.lang.reflect.Method ;
 
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.glassfish.gmbal.util.GenericConstructor ;
 
 import javax.management.ObjectName;
@@ -69,13 +74,18 @@ public final class ManagedObjectManagerFactory {
      * @return The Method if found.
      * @throws GmbalException if no such method is found.
      */
-    public static Method getMethod( final Class<?> cls, String name, 
-        Class<?>... types ) {        
+    public static Method getMethod( final Class<?> cls, final String name, 
+        final Class<?>... types ) {        
         
         try {
-            return cls.getDeclaredMethod( name, types ) ;
-        } catch(NoSuchMethodException exc) {
-            throw new GmbalException( "Unexpected exception", exc ) ;
+            return AccessController.doPrivileged(
+                new PrivilegedExceptionAction<Method>() {
+                    public Method run() throws Exception {
+                        return cls.getDeclaredMethod(name, types);
+                    }
+                });
+        } catch (PrivilegedActionException ex) {
+            throw new GmbalException( "Unexpected exception", ex ) ;
         } catch (SecurityException exc) {
             throw new GmbalException( "Unexpected exception", exc ) ;
         }

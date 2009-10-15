@@ -43,6 +43,9 @@ import java.util.ArrayList ;
 
 import java.lang.reflect.Method ;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
     
@@ -138,12 +141,28 @@ public class ClassAnalyzer {
         return result ;
     }
 
+    private static List<Method> getDeclaredMethods( final Class<?> cls ) {
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return Arrays.asList( cls.getDeclaredMethods() ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedAction<List<Method>>() {
+                    public List<Method> run() {
+                        return Arrays.asList( cls.getDeclaredMethods() ) ;
+                    }
+                }
+            ) ;
+
+        }
+    }
+
     // Tested by testFindMethod
     // Tested by testGetAnnotatedMethods
     public List<Method> findMethods( Predicate<Method> pred ) {
 	final List<Method> result = new ArrayList<Method>() ;
 	for (Class<?> c : classInheritance) {
-	    for (Method m : c.getDeclaredMethods()) {
+	    for (Method m : getDeclaredMethods( c )) {
                 if (pred.evaluate( m )) {
                     result.add( m ) ;
                 }

@@ -69,7 +69,7 @@ import org.glassfish.gmbal.GmbalMBean;
 import org.glassfish.gmbal.generic.OperationTracer;
 
 public class MBeanImpl extends NotificationBroadcasterSupport 
-    implements FacetAccessor, GmbalMBean{
+    implements FacetAccessor, GmbalMBean {
     
     private boolean registered ;
     private final MBeanSkeleton skel ;

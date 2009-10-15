@@ -37,8 +37,6 @@
 
 package org.glassfish.gmbal;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.glassfish.gmbal.generic.ObjectWriter;
 import java.util.Map;
 

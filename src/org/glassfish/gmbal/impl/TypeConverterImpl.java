@@ -37,14 +37,12 @@
 
 package org.glassfish.gmbal.impl ;
 
-import javax.management.MalformedObjectNameException;
 import org.glassfish.gmbal.generic.DumpToString ;
 
 import java.lang.reflect.Array ;
 import java.lang.reflect.Constructor ;
 import java.lang.reflect.InvocationTargetException;
 
-import java.security.PrivilegedAction;
 import java.util.Collection ;
 import java.util.List ;
 import java.util.ArrayList ;
@@ -824,12 +822,17 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
         Constructor tcons ;
         try {
-            tcons = Algorithms.doPrivileged(
-                new Algorithms.Action<Constructor>() {
-                    public Constructor run() throws Exception {
-                        return cls.cls().getDeclaredConstructor(String.class ) ;
-                    }
-                }) ;
+            SecurityManager sman = System.getSecurityManager() ;
+            if (sman == null) {
+                tcons = cls.cls().getDeclaredConstructor(String.class) ;
+            } else {
+                tcons = Algorithms.doPrivileged(
+                    new Algorithms.Action<Constructor>() {
+                        public Constructor run() throws Exception {
+                            return cls.cls().getDeclaredConstructor(String.class ) ;
+                        }
+                    }) ;
+            }
         } catch (Exception exc) {
             Exceptions.self.noStringConstructorAvailable( exc, cls.name() ) ;
             tcons = null ;

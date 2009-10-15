@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import javax.management.Attribute;
 import javax.management.AttributeList;
+import javax.management.Descriptor;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfo;
 import junit.framework.TestCase;
@@ -257,7 +258,13 @@ public class AMXClientTest extends TestCase {
         expResult.put( "displayName", "AMXClientTest$MyManagedClass" ) ;
         expResult.put( "log", "F" ) ;
         expResult.put( "descriptorType", "mbean" ) ;
-        expResult.putAll( AMX_DEFAULTS );
+
+        Descriptor desc = DescriptorIntrospector.descriptorForElement(
+            ManagedObjectManagerImpl.DefaultAMXMetadataHolder.class ) ;
+        for (String fname : desc.getFieldNames()) {
+            Object value = desc.getFieldValue(fname) ;
+            expResult.put( fname, value ) ;
+        }
 
         Map result = instance.getMeta();
 

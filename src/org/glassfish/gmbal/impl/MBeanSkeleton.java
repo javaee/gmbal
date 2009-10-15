@@ -90,8 +90,9 @@ import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
 
 public class MBeanSkeleton {
-    // Object evaluate( Object, List<Object> )
-    // (or Result evaluate( Target, ArgList ))
+    private static Descriptor DEFAULT_AMX_DESCRIPTOR =
+        DescriptorIntrospector.descriptorForElement( 
+            ManagedObjectManagerImpl.DefaultAMXMetadataHolder.class ) ;
 
     public interface Operation
 	extends BinaryFunction<FacetAccessor, List<Object>, Object> {
@@ -131,29 +132,30 @@ public class MBeanSkeleton {
 	final EvaluatedClassAnalyzer ca,
 	final ManagedObjectManagerInternal mom) {
 
-        boolean isDefault = false ;
+        boolean isDefaultAMXMetadata = false ;
 	mbeanType = mom.getFirstAnnotationOnClass(annotatedClass, AMXMetadata.class);
 	if (mbeanType == null) {
-            isDefault = true ;
+            isDefaultAMXMetadata = true ;
 	    mbeanType = mom.getDefaultAMXMetadata() ;
 	}
 
 	type = mom.getTypeName(annotatedClass.cls(), "AMX_TYPE",
 		mbeanType.type());
 
-	descriptor = makeValidDescriptor(
-	    DescriptorIntrospector.descriptorForElement(
-	    annotatedClass.cls()), DescriptorType.mbean, type);
+	Descriptor ldesc = DescriptorIntrospector.descriptorForElement(
+	    annotatedClass.cls() ) ;
 
-        if (isDefault) {
-            final Map<String,Object> defaultMBeanTypeData =
-                Algorithms.getAnnotationValues(mom.getDefaultAMXMetadata(),
-                    false) ;
-
-            for (Map.Entry<String,Object> entry : defaultMBeanTypeData.entrySet()) {
-                descriptor.setField(entry.getKey(), entry.getValue());
-            }
+        if (isDefaultAMXMetadata) {
+            // We didn't have an @AMXMetadata annotation on annotatedClass,
+            // so we need to construct a new Descriptor that contains the
+            // default AMXMetadata values, as well as any other values that
+            // may be present from other metadata annotations.
+            ldesc = DescriptorUtility.union( DEFAULT_AMX_DESCRIPTOR, ldesc ) ;
         }
+
+        // Now fix up the descriptor so that the ModelMBean code won't
+        // complain.
+        descriptor = makeValidDescriptor( ldesc, DescriptorType.mbean, type);
 
 	sequenceNumber = new AtomicLong();
 
@@ -162,13 +164,9 @@ public class MBeanSkeleton {
 	mm = MethodMonitorFactory.makeStandard(getClass());
 
 	setters = new HashMap<String, AttributeDescriptor>();
-
 	getters = new HashMap<String, AttributeDescriptor>();
-
 	operations = new HashMap<String, Map<List<String>, Operation>>();
-
 	mbeanAttributeInfoList = new ArrayList<ModelMBeanAttributeInfo>();
-
 	mbeanOperationInfoList = new ArrayList<ModelMBeanOperationInfo>();
 
 	analyzeAttributes(ca);

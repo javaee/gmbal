@@ -64,6 +64,8 @@ import java.lang.reflect.Modifier;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -120,8 +122,9 @@ import static org.glassfish.gmbal.generic.Algorithms.* ;
  */
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
+    // Used in MBeanSkeleton
     @AMXMetadata
-    private static class DefaultAMXMetadataHolder { }
+    static class DefaultAMXMetadataHolder { }
 
     private static final AMXMetadata DEFAULT_AMX_METADATA =
 	DefaultAMXMetadataHolder.class.getAnnotation(AMXMetadata.class);
@@ -529,9 +532,28 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return result ;
     }
 
+    private static Field getDeclaredField( final Class<?> cls,
+        final String name )
+        throws PrivilegedActionException, NoSuchFieldException {
+
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return cls.getDeclaredField( name ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedExceptionAction<Field>() {
+                    public Field run() throws Exception {
+                        return cls.getDeclaredField( name ) ;
+                    }
+                }
+            ) ;
+        }
+    }
+
     private String getAMXTypeFromField( Class<?> cls, String fieldName ) {
         try {
-            final Field fld = cls.getDeclaredField(fieldName);
+            final Field fld = getDeclaredField(cls, fieldName);
+
             if (Modifier.isFinal(fld.getModifiers()) 
                 && Modifier.isStatic(fld.getModifiers())
                 && fld.getType().equals(String.class)) {
@@ -547,6 +569,8 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             } else {
                 return "";
             }
+        } catch (PrivilegedActionException ex) {
+            return "" ;
         } catch (IllegalArgumentException ex) {
             return "" ;
         } catch (IllegalAccessException ex) {

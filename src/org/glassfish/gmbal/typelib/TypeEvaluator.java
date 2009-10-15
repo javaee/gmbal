@@ -38,6 +38,7 @@
 package org.glassfish.gmbal.typelib;
 
 import java.lang.reflect.Field;
+import java.security.PrivilegedActionException;
 import org.glassfish.gmbal.generic.Algorithms;
 import org.glassfish.gmbal.generic.Display;
 import org.glassfish.gmbal.generic.MethodMonitor;
@@ -63,6 +64,9 @@ import java.lang.reflect.ParameterizedType ;
 import java.lang.reflect.TypeVariable ;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Date;
 import java.util.WeakHashMap;
 import javax.management.ObjectName;
@@ -135,6 +139,56 @@ public class TypeEvaluator {
         }
     }
 
+    private static List<Method> getDeclaredMethods( final Class<?> cls ) {
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return Arrays.asList( cls.getDeclaredMethods() ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedAction<List<Method>>() {
+                    public List<Method> run() {
+                        return Arrays.asList( cls.getDeclaredMethods() ) ;
+                    }
+                }
+            ) ;
+
+        }
+    }
+
+    private static List<Field> getDeclaredFields( final Class<?> cls ) {
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return Arrays.asList( cls.getDeclaredFields() ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedAction<List<Field>>() {
+                    public List<Field> run() {
+                        return Arrays.asList( cls.getDeclaredFields() ) ;
+                    }
+                }
+            ) ;
+
+        }
+    }
+
+    private static Method getDeclaredMethod( final Class<?> cls,
+        final String name, final Class<?>... sig )
+        throws NoSuchMethodException, PrivilegedActionException {
+
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return cls.getDeclaredMethod( name, sig ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedExceptionAction<Method>() {
+                    public Method run() throws Exception {
+                        return cls.getDeclaredMethod( name, sig ) ;
+                    }
+                }
+            ) ;
+        }
+    }
+
     // Initialize the map with a few key classes that we do NOT want to evaluate
     // (evaluating Object leads to a getClass method, which leads to all of the
     // reflection classes, which leads to, ... (450 classes later).
@@ -166,7 +220,7 @@ public class TypeEvaluator {
             final Class stringClass = String.class ;
             final Class voidClass = Void.class ;
 
-            final Method toStringMethod = objectClass.getDeclaredMethod(
+            final Method toStringMethod = getDeclaredMethod( objectClass,
                 "toString" ) ;
 
             // Introduce the EvaluatedClassDeclarations we need
@@ -655,7 +709,7 @@ public class TypeEvaluator {
                 newDecl.inheritance( inheritance ) ;
 
                 List<EvaluatedFieldDeclaration> newFields = Algorithms.map(
-                    Arrays.asList( decl.getDeclaredFields() ),
+                    getDeclaredFields( decl ),
                     new UnaryFunction<Field,EvaluatedFieldDeclaration>() {
                         public EvaluatedFieldDeclaration evaluate( Field fld ) {
                             return visitFieldDeclaration( newDecl, fld ) ;
@@ -664,7 +718,7 @@ public class TypeEvaluator {
                 newDecl.fields( newFields ) ;
 
                 List<EvaluatedMethodDeclaration> newMethods = Algorithms.map(
-                    Arrays.asList( decl.getDeclaredMethods() ),
+                    getDeclaredMethods( decl ),
                     new UnaryFunction<Method,EvaluatedMethodDeclaration>() {
                         public EvaluatedMethodDeclaration evaluate(
                             Method md ) {

@@ -42,7 +42,7 @@ import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
-
+import java.lang.annotation.Inherited ;
 
 import java.lang.reflect.Array;
 import java.util.Iterator ;
@@ -64,13 +64,17 @@ import java.util.Dictionary;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.management.AttributeNotFoundException;
+import javax.management.Descriptor;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.MBeanException;
+import javax.management.MBeanInfo;
 import javax.management.MalformedObjectNameException ;
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
 import javax.management.ReflectionException;
+import javax.management.RuntimeOperationsException;
+import javax.management.modelmbean.ModelMBeanInfo;
 import javax.management.openmbean.SimpleType ;
 import javax.management.openmbean.OpenType ;
 import javax.management.openmbean.CompositeData ;
@@ -2411,6 +2415,204 @@ public class JmxaTest extends TestCase {
             assertTrue( !mom.isManagedObject(obj)) ;
             assertTrue( mom.isManagedObject(mo));
             assertTrue( mom.isManagedObject(imo));
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    @ManagedObject
+    public class MultiTestClass {
+        private ManagedObjectManager mom ;
+        private String myName ;
+
+        public MultiTestClass( final ManagedObjectManager mom,
+            final String name ) {
+            
+            this.mom = mom ;
+            myName = name ;
+        }
+
+        public String toString() {
+            return "MultiTestClass[" + myName + "]" ;
+        }
+
+        @NameValue
+        public String myString() { return myName ; }
+
+        public void testRegister( boolean shouldComplete ) {
+            try {
+                mom.registerAtRoot( this );
+                if (!shouldComplete) {
+                    fail( "Register should not succeed for " + this ) ;
+                }
+            } catch (IllegalArgumentException exc) {
+                if (shouldComplete) {
+                    fail( "Register should not throw exception "
+                        + exc + " for " + this ) ;
+                }
+            } catch (Throwable thr) {
+                fail( "Unexpected exception " + thr
+                    + " for register of " + this ) ;
+            }
+        }
+
+        public void testUnregister( boolean shouldComplete ) {
+            try {
+                mom.unregister( this );
+                if (!shouldComplete) {
+                    fail( "Unregister should not succeed for " + this ) ;
+                }
+            } catch (IllegalArgumentException exc) {
+                if (shouldComplete) {
+                    fail( "Unregister should not throw exception "
+                        + exc + " for " + this ) ;
+                }
+            } catch (Throwable thr) {
+                fail( "Unexpected exception " + thr
+                    + " for unregister of " + this ) ;
+            }
+        }
+    }
+
+    public void testMultiRegistration() throws IOException {
+        System.out.println( "testMultiRegistration" ) ;
+
+        ManagedObjectManager mom = null ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+            MultiTestClass obj1 = new MultiTestClass( mom, "1" ) ;
+            MultiTestClass obj1too = new MultiTestClass( mom, "1" ) ;
+            MultiTestClass obj2 = new MultiTestClass( mom, "2" ) ;
+
+            obj1.testRegister( true ) ;
+            obj1.testRegister( false ) ;
+            obj1too.testRegister( false ) ;
+            obj2.testRegister( true ) ;
+
+            obj1.testUnregister( true ) ;
+            obj1.testUnregister( false ) ;
+            obj1too.testUnregister( false ) ;
+            obj2.testUnregister( true ) ;
+
+            obj1.testRegister( true ) ;
+            obj1.testRegister( false ) ;
+            obj1too.testRegister( false ) ;
+            obj2.testRegister( true ) ;
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    // Note that we require RUNTIME retentation, or Gmbal can't see the
+    // annotation.  Also, if the interface is not public, we get access
+    // errors.
+    @Inherited
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target( { ElementType.TYPE } )
+    public @interface Climate {
+        @DescriptorKey("rainfall")
+        double rainfall() default 0.0 ;
+        
+        @DescriptorKey("highTemp")
+        int highTemp() default 40 ;
+        
+        @DescriptorKey("lowTemp")
+        int lowTemp() default 0 ;
+    }
+
+    @Climate( rainfall=10.0, highTemp = 30, lowTemp = 0 )
+    @AMXMetadata( group="other", isSingleton=true, type="TestTheMetaData")
+    @ManagedObject
+    public class TestMDBean {
+        @ManagedAttribute
+        String data() { return "blue" ; }
+    }
+
+    String getString( Object obj ) {
+        if (obj instanceof byte[])
+            return Arrays.toString( (byte[])obj ) ;
+        else if (obj instanceof boolean[])
+            return Arrays.toString( (boolean[])obj ) ;
+        else if (obj instanceof short[])
+            return Arrays.toString( (short[])obj ) ;
+        else if (obj instanceof char[])
+            return Arrays.toString( (char[])obj ) ;
+        else if (obj instanceof int[])
+            return Arrays.toString( (int[])obj ) ;
+        else if (obj instanceof long[])
+            return Arrays.toString( (long[])obj ) ;
+        else if (obj instanceof float[])
+            return Arrays.toString( (float[])obj ) ;
+        else if (obj instanceof double[])
+            return Arrays.toString( (double[])obj ) ;
+        else if (obj instanceof Object[])
+            return Arrays.toString( (Object[])obj ) ;
+        else
+            return obj.toString() ;
+    }
+
+    public void msg( String str ) {
+        System.out.println( str ) ;
+    }
+
+    public void dumpMBeanInfo( MBeanInfo mbi ) {
+        msg( "\tclassName:     " + mbi.getClassName() ) ;
+        msg( "\tattributes:    " + getString( mbi.getAttributes() ) ) ;
+        msg( "\tconstructors:  " + getString( mbi.getConstructors() ) ) ;
+        msg( "\tdescription:   " + getString( mbi.getDescription() ) ) ;
+        msg( "\tdescriptor:    " ) ;
+        Descriptor desc = mbi.getDescriptor() ;
+        for (String str : desc.getFieldNames()) {
+            Object value = desc.getFieldValue(str) ;
+            msg( "\t\tdesc[" + str + "]=" + getString( value ) ) ;
+        }
+        msg( "\tnotifications: " + getString( mbi.getNotifications() ) ) ;
+        msg( "\toperations:    " + getString( mbi.getOperations() ) ) ;
+    
+        if (mbi instanceof ModelMBeanInfo) {
+            ModelMBeanInfo mmbi = (ModelMBeanInfo)mbi ;
+            try {
+                Descriptor[] mdesc = mmbi.getDescriptors("mbean");
+            } catch (MBeanException ex) {
+                Logger.getLogger(JmxaTest.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (RuntimeOperationsException ex) {
+                Logger.getLogger(JmxaTest.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    public void testDumpMetadata() throws IOException {
+                System.out.println( "testDumpMetadata" ) ;
+
+        ManagedObjectManager mom = null ;
+        Object obj = new TestMDBean() ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+            GmbalMBean mb = mom.registerAtRoot( obj ) ;
+            AMXClient amxc = mom.getAMXClient( obj ) ;
+
+
+            System.out.println( "MBeanInfo: " ) ;
+            dumpMBeanInfo( amxc.getMBeanInfo() ) ;
+            System.out.println( "getMeta: " ) ;
+            for (Map.Entry<String,?> entry : amxc.getMeta().entrySet()) {
+                System.out.println( "\t" + entry.getKey()
+                    + " => " + getString( entry.getValue() ) ) ;
+            }
         } catch (GmbalException exc) {
             fail( "Exception: " + exc ) ;
         } finally {
