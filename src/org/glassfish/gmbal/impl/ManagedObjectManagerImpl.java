@@ -60,12 +60,14 @@ import java.lang.management.ManagementFactory ;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Method;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 import javax.management.MBeanServer ;
 import javax.management.JMException ;
 import javax.management.ObjectName ;
@@ -115,6 +117,7 @@ import org.glassfish.external.statistics.Statistic;
 import org.glassfish.external.statistics.TimeStatistic;
 import org.glassfish.external.statistics.StringStatistic;
 
+import org.glassfish.gmbal.generic.ClassAnalyzer;
 import static org.glassfish.gmbal.generic.Algorithms.* ;
 
 /* Implementation notes:
@@ -834,7 +837,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             EvaluatedClassDeclaration ecd = (EvaluatedClassDeclaration)element;
             desc = getFirstAnnotationOnClass(ecd, Description.class ) ;
         } else {
-            desc = getAnnotation( element, Description.class ) ;
+            desc = getAnnotation( element.element(), Description.class ) ;
         }
 
         String result = "" ;
@@ -896,41 +899,110 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             forAnnotation(type, EvaluatedClassDeclaration.class) ) ;
 
         if (ecds.size() > 0) {
-            return getAnnotation( ecds.get(0), type ) ;
+            return getAnnotation( ecds.get(0).element(), type ) ;
         }  else {
             return null ;
         }
     }
 
+    private Map<AnnotatedElement,Map<Class,Annotation>> annotationCache =
+        new WeakHashMap<AnnotatedElement,Map<Class,Annotation>>() ;
+
+    private Map<Class,Annotation> getAllAnnotations( final Class cls ) {
+        Map<Class,Annotation> result = annotationCache.get( cls ) ;
+
+        if (result == null) {
+            final Map<Class,Annotation> res =
+                new HashMap<Class,Annotation>() ;
+
+            ClassAnalyzer ca = ClassAnalyzer.getClassAnalyzer(cls) ;
+            ca.findClasses( new Predicate<Class>() {
+                public boolean evaluate(Class arg) {
+                    // First, put in declared annotations if not already present.
+                    Annotation[] annots = arg.getDeclaredAnnotations() ;
+                    for (Annotation anno : annots) {
+                        putIfNotPresent( res, anno.annotationType(), anno ) ;
+                    }
+
+                    // Then, put in added annotations if not already present.
+                    Map<Class,Annotation> emap = addedAnnotations.get( arg ) ;
+                    if (emap != null) {
+                        for (Map.Entry<Class,Annotation> entry : emap.entrySet()) {
+                            putIfNotPresent( res, entry.getKey(),
+                                entry.getValue()) ;
+                        }
+                    }
+
+                    return true ; // evaluate everything
+                }
+            }) ;
+
+            annotationCache.put( cls, res ) ;
+            result = res ;
+        }
+
+        return result ;
+    }
+
     @SuppressWarnings({"unchecked"})
     public synchronized <T extends Annotation> T getAnnotation( 
-        EvaluatedDeclaration element, Class<T> type ) {
+        AnnotatedElement element, Class<T> type ) {
 
         // Can be called anytime
         mm.enter( registrationFineDebug(), "getAnnotation", element,
             type.getName() ) ;
         
         try {
-            T result = element.annotation( type ) ;
-            if (result == null) {
-	        mm.info( registrationFineDebug(),
-		    "No annotation on element: trying addedAnnotations map" ) ;
+            if (element instanceof Class) {
+                Class cls = (Class)element ;
+                Map<Class,Annotation> annos = getAllAnnotations(cls) ;
+                return (T)annos.get( type ) ;
+            } else {
+                T result = element.getAnnotation( type ) ;
+                if (result == null) {
+                    mm.info( registrationFineDebug(),
+                        "No annotation on element: trying addedAnnotations map" ) ;
 
-                Map<Class, Annotation> map = addedAnnotations.get( 
-                    element.element() );
-                if (map != null) {
-                    result = (T)map.get( type ) ;
-                } 
+                    Map<Class, Annotation> map = addedAnnotations.get(
+                        element );
+                    if (map != null) {
+                        result = (T)map.get( type ) ;
+                    }
+                }
+
+                mm.info( registrationFineDebug(), "result" + result ) ;
+
+                return result ;
             }
-
-            mm.info( registrationFineDebug(), "result" + result ) ;
-            
-            return result ;
         } finally {
             mm.exit( registrationFineDebug() ) ;
         }
     }
-    
+
+    public synchronized Collection<Annotation> getAnnotations(
+        AnnotatedElement elem ) {
+
+        // Can be called anytime
+        mm.enter( registrationFineDebug(), "getAnnotations", elem ) ;
+
+        try {
+            if (elem instanceof Class) {
+                Class cls = (Class)elem ;
+
+                return getAllAnnotations( cls ).values() ;
+            } else if (elem instanceof Method) {
+                return Arrays.asList( elem.getAnnotations() ) ;
+            } else if (elem instanceof Field) {
+                return Arrays.asList( elem.getAnnotations() ) ;
+            } else {
+                // error
+                throw Exceptions.self.annotationsNotSupported( elem ) ;
+            }
+        } finally {
+            mm.exit( registrationFineDebug() ) ;
+        }
+    }
+
     public synchronized Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer>
         getClassAnalyzer( final EvaluatedClassDeclaration cls,
         final Class<? extends Annotation> annotationClass ) {
@@ -1114,14 +1186,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             ca.findFields( new Predicate<EvaluatedFieldDeclaration>() {
                 public boolean evaluate( EvaluatedFieldDeclaration field ) {
-                    ManagedAttribute ma = getAnnotation( field,
+                    ManagedAttribute ma = getAnnotation( field.element(),
                         ManagedAttribute.class ) ;
                     if (ma == null) {
                         return false ;
                     } else {
                         checkFieldType( field ) ;
 
-                        Description desc = getAnnotation( field,
+                        Description desc = getAnnotation( field.element(),
                             Description.class ) ;
                         String description ;
                         if (desc == null) {
@@ -1144,14 +1216,14 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
             ca.findMethods( new Predicate<EvaluatedMethodDeclaration>() {
                 public boolean evaluate( EvaluatedMethodDeclaration method ) {
-                    ManagedAttribute ma = getAnnotation( method,
+                    ManagedAttribute ma = getAnnotation( method.element(),
                         ManagedAttribute.class ) ;
                     AttributeDescriptor ad ;
                     if (ma == null) {
                         ad = getAttributeDescriptorIfInherited( method, ias,
                             adt ) ;
                     } else {
-                        Description desc = getAnnotation( method,
+                        Description desc = getAnnotation( method.element(),
                             Description.class ) ;
                         String description ;
                         if (desc == null) {
@@ -1250,7 +1322,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
         return new Predicate<T>() {
             public boolean evaluate( T elem ) {
-                return getAnnotation( elem, annotation ) != null ;
+                return getAnnotation( elem.element(), annotation ) != null ;
             }
         } ;
     }

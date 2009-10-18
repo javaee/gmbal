@@ -91,7 +91,7 @@ import org.glassfish.gmbal.typelib.EvaluatedType;
 
 public class MBeanSkeleton {
     private static Descriptor DEFAULT_AMX_DESCRIPTOR =
-        DescriptorIntrospector.descriptorForElement( 
+        DescriptorIntrospector.descriptorForElement( null,
             ManagedObjectManagerImpl.DefaultAMXMetadataHolder.class ) ;
 
     public interface Operation
@@ -142,7 +142,7 @@ public class MBeanSkeleton {
 	type = mom.getTypeName(annotatedClass.cls(), "AMX_TYPE",
 		mbeanType.type());
 
-	Descriptor ldesc = DescriptorIntrospector.descriptorForElement(
+	Descriptor ldesc = DescriptorIntrospector.descriptorForElement( mom,
 	    annotatedClass.cls() ) ;
 
         if (isDefaultAMXMetadata) {
@@ -296,13 +296,13 @@ public class MBeanSkeleton {
 	    Descriptor desc = DescriptorUtility.EMPTY_DESCRIPTOR;
 	    if (getter != null) {
 		desc = DescriptorUtility.union(desc,
-		    DescriptorIntrospector.descriptorForElement(
+		    DescriptorIntrospector.descriptorForElement( mom,
 		    getter.accessible()));
 	    }
 
 	    if (setter != null) {
 		desc = DescriptorUtility.union(desc,
-		    DescriptorIntrospector.descriptorForElement(
+		    DescriptorIntrospector.descriptorForElement( mom,
 		    setter.accessible()));
 	    }
 
@@ -428,11 +428,11 @@ public class MBeanSkeleton {
 		rtype);
 	    final List<EvaluatedType> atypes = m.parameterTypes();
 	    final List<TypeConverter> atcs = new ArrayList<TypeConverter>();
-	    final ManagedOperation mo = mom.getAnnotation(m,
+	    final ManagedOperation mo = mom.getAnnotation(m.element(),
 		ManagedOperation.class);
 
 	    Descriptor modelDescriptor = makeValidDescriptor(
-		DescriptorIntrospector.descriptorForElement(m.element()),
+		DescriptorIntrospector.descriptorForElement(mom, m.element()),
 		DescriptorType.operation, m.name());
 
 	    for (EvaluatedType ltype : atypes) {
@@ -478,7 +478,7 @@ public class MBeanSkeleton {
 		}
 	    };
 
-	    final ParameterNames pna = mom.getAnnotation( m,
+	    final ParameterNames pna = mom.getAnnotation( m.element(),
                 ParameterNames.class);
 	    mm.info( mom.registrationFineDebug(), "pna", pna);
 
@@ -637,8 +637,10 @@ public class MBeanSkeleton {
 		// a blank entry in jconsole.  Do not let an error in fetching
 		// one attribute prevent fetching the others.
 
-		Attribute attr = new Attribute(str, value);
-		result.add(attr);
+                if (value != null) {
+                    Attribute attr = new Attribute(str, value);
+                    result.add(attr);
+                }
 	    }
 
 	    return result;

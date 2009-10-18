@@ -63,6 +63,8 @@ import java.math.BigDecimal ;
 import java.util.Dictionary;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.management.Attribute;
+import javax.management.AttributeList;
 import javax.management.AttributeNotFoundException;
 import javax.management.Descriptor;
 import javax.management.InstanceNotFoundException;
@@ -93,6 +95,7 @@ import org.glassfish.gmbal.impl.ManagedObjectManagerInternal ;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.glassfish.external.amx.AMX;
 import org.glassfish.external.statistics.BoundedRangeStatistic;
 import org.glassfish.external.statistics.impl.BoundedRangeStatisticImpl;
 import org.glassfish.gmbal.generic.Pair;
@@ -421,6 +424,8 @@ public class JmxaTest extends TestCase {
     public void testGetClassAnnotations() throws IOException {
         List<EvaluatedClassDeclaration> expectedResult =
             new ArrayList<EvaluatedClassDeclaration>() ;
+        expectedResult.add( getECD( DD.class ) ) ;
+        expectedResult.add( getECD( BB.class ) ) ;
         expectedResult.add( getECD( CC.class ) ) ;
         expectedResult.add( getECD( AA.class ) ) ;
         ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
@@ -2076,7 +2081,6 @@ public class JmxaTest extends TestCase {
     @ManagedObject
     @Description( "This is a boolean attribute test")
     private static class BooleanAttributeTest {
-        // XXX This doesn't work here, but it should: @NameValue
         private String name ;
 
         @NameValue
@@ -2425,7 +2429,7 @@ public class JmxaTest extends TestCase {
     }
 
     @ManagedObject
-    public class MultiTestClass {
+    public static class MultiTestClass {
         private ManagedObjectManager mom ;
         private String myName ;
 
@@ -2534,7 +2538,7 @@ public class JmxaTest extends TestCase {
     @Climate( rainfall=10.0, highTemp = 30, lowTemp = 0 )
     @AMXMetadata( group="other", isSingleton=true, type="TestTheMetaData")
     @ManagedObject
-    public class TestMDBean {
+    public static class TestMDBean {
         @ManagedAttribute
         String data() { return "blue" ; }
     }
@@ -2586,6 +2590,16 @@ public class JmxaTest extends TestCase {
             ModelMBeanInfo mmbi = (ModelMBeanInfo)mbi ;
             try {
                 Descriptor[] mdesc = mmbi.getDescriptors("mbean");
+                msg( "\tDescriptors from ModelMBeanInfo:") ;
+                int ctr = 0 ;
+                for (Descriptor desc : mdesc) {
+                    msg( "\tDescriptor " + ctr++ ) ;
+                    String[] keys = desc.getFieldNames() ;
+                    for (String key : keys) {
+                        Object value = desc.getFieldValue(key) ;
+                        msg( "\t\t" + key + " -> " + value ) ;
+                    }
+                }
             } catch (MBeanException ex) {
                 Logger.getLogger(JmxaTest.class.getName()).log(Level.SEVERE, null, ex);
             } catch (RuntimeOperationsException ex) {
@@ -2614,6 +2628,169 @@ public class JmxaTest extends TestCase {
             for (Map.Entry<String,?> entry : amxc.getMeta().entrySet()) {
                 System.out.println( "\t" + entry.getKey()
                     + " => " + getString( entry.getValue() ) ) ;
+            }
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    @ManagedObject
+    @AMXMetadata( isSingleton=true )
+    public interface InhMeta {
+        @ManagedAttribute
+        String myAttribute() ;
+    }
+
+    public class InhMetaImpl implements InhMeta {
+        private String myAttr ;
+
+        public InhMetaImpl( String str ) {
+            myAttr = str ;
+        }
+
+        public String myAttribute() {
+            return myAttr ;
+        }
+    }
+
+    public void testInhMeta() throws IOException, MBeanException {
+        System.out.println( "testInhMeta" ) ;
+
+        final String data = "AttributeValue" ;
+
+        ManagedObjectManager mom = null ;
+        Object obj = new InhMetaImpl( data ) ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+
+            GmbalMBean mb = mom.registerAtRoot( obj ) ;
+            AMXClient amxc = mom.getAMXClient( obj ) ;
+
+            System.out.println( "MBeanInfo: " ) ;
+            dumpMBeanInfo( amxc.getMBeanInfo() ) ;
+            System.out.println( "getMeta: " ) ;
+            for (Map.Entry<String,?> entry : amxc.getMeta().entrySet()) {
+                System.out.println( "\t" + entry.getKey()
+                    + " => " + getString( entry.getValue() ) ) ;
+            }
+
+            ModelMBeanInfo mmbi = (ModelMBeanInfo)amxc.getMBeanInfo() ;
+            Descriptor desc = mmbi.getMBeanDescriptor() ;
+            boolean isSingleton = (Boolean)(desc.getFieldValue(
+                AMX.DESC_IS_SINGLETON )) ;
+            assertTrue( isSingleton ) ;
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    // test for invalid attributes
+    private static final String BAD_ATTR_1 = "b234567" ;
+    private static final String BAD_ATTR_2 = "b123456" ;
+
+    @ManagedObject
+    @AMXMetadata( isSingleton=true )
+    private static class BadAttrBean {
+        private int id ;
+
+        public BadAttrBean( int id ) {
+            this.id = id ;
+        }
+
+        @ManagedAttribute
+        int id() { return id ; }
+    }
+
+    public void testBadAttr() throws IOException, MBeanException {
+        System.out.println( "testBadAttr" ) ;
+
+        final int data = 27 ;
+
+        ManagedObjectManager mom = null ;
+        Object obj = new BadAttrBean( data ) ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+
+            GmbalMBean mb = mom.registerAtRoot( obj ) ;
+            AMXClient amxc = mom.getAMXClient( obj ) ;
+
+            try {
+                amxc.getAttribute( BAD_ATTR_1 ) ;
+                fail( "Exception expected" ) ;
+            } catch (GmbalException exc) {
+                System.out.println( "caught exception " + exc ) ;
+            } catch (Exception exc) {
+                fail( "caught unexpected exception " + exc ) ;
+            }
+
+            try {
+                amxc.getAttribute( BAD_ATTR_1 ) ;
+                fail( "Exception expected" ) ;
+            } catch (GmbalException exc) {
+                System.out.println( "caught exception " + exc ) ;
+            } catch (Exception exc) {
+                fail( "caught unexpected exception " + exc ) ;
+            }
+        } catch (GmbalException exc) {
+            fail( "Exception: " + exc ) ;
+        } finally {
+            if (mom != null) {
+                mom.close() ;
+            }
+        }
+    }
+
+    public void testBadAttrs() throws IOException, MBeanException {
+        System.out.println( "testBadAttrs" ) ;
+
+        final int data = 27 ;
+
+        ManagedObjectManager mom = null ;
+        Object obj = new BadAttrBean( data ) ;
+
+        try {
+            mom = ManagedObjectManagerFactory.createStandalone("test") ;
+            mom.stripPackagePrefix();
+            mom.createRoot() ;
+
+            GmbalMBean mb = mom.registerAtRoot( obj ) ;
+            AMXClient amxc = mom.getAMXClient( obj ) ;
+
+            try {
+                String[] attrs = { BAD_ATTR_1, BAD_ATTR_2, "id" } ;
+
+                AttributeList alist = amxc.getAttributes( attrs ) ;
+
+                AttributeList expList = new AttributeList() ;
+                Attribute attr = new Attribute( "id", data ) ;
+                expList.add( attr ) ;
+
+                assertEquals( expList, alist ) ;
+            } catch (Exception exc) {
+                fail( "caught unexpected exception " + exc ) ;
+            }
+
+            try {
+                amxc.getAttribute( BAD_ATTR_1 ) ;
+                fail( "Exception expected" ) ;
+            } catch (GmbalException exc) {
+                System.out.println( "caught exception " + exc ) ;
+            } catch (Exception exc) {
+                fail( "caught unexpected exception " + exc ) ;
             }
         } catch (GmbalException exc) {
             fail( "Exception: " + exc ) ;

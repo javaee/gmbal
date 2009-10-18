@@ -46,6 +46,8 @@ import org.glassfish.gmbal.InheritedAttribute ;
 import org.glassfish.gmbal.generic.FacetAccessor;
 import org.glassfish.gmbal.generic.Predicate;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import javax.management.ObjectName;
@@ -70,8 +72,26 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     
     String getDescription( EvaluatedDeclaration element ) ;
         
-    <T extends Annotation> T getAnnotation( EvaluatedDeclaration element,
+    <T extends Annotation> T getAnnotation( AnnotatedElement element,
         Class<T> type ) ;
+
+    /* Return the list of all annotations on this declaration and its
+     * related declarations.
+     * <p> "related" has different meanings for the various kinds of
+     * EvaluatedDeclarations.
+     * <ul>
+     * <li>For EvaluatedFieldDeclaration, fullAnnotations() is the same
+     * as annotations().</li>
+     * <li> For EvaluatedClassDeclaration, fullAnnotations includes annotations()
+     * from the class and all of its super classes/interfaces, with only the
+     * most derived instance of any annotation included.</li>
+     * <li>For EvaluatedMethodDeclaration, fullAnnotations includes
+     * annotations() on the method, and on all overridden methods in derivation
+     * order, with only the most derived annotations included.
+     *
+     * @return full list of annotations.
+     */
+     Collection<Annotation> getAnnotations( AnnotatedElement element ) ;
 
     /** Find the superclass or superinterface of cls (which may be cls itself) 
      * that has the given annotationClass as an annotation.  If the annotated 

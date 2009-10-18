@@ -66,8 +66,7 @@ public interface FacetAccessor {
     
     /** Remove the facet (if any) of the given type.
      * 
-     * @param <T>
-     * @param cls 
+     * @param cls The class of the facet to remove.
      */
     void removeFacet( Class<?> cls ) ;
     
@@ -91,7 +90,7 @@ public interface FacetAccessor {
      *
      * @param field The field to access
      * @param debug True if debugging trace output is desired
-     * @return
+     * @return The value of the field
      */
     Object get( Field field, boolean debug ) ;
 

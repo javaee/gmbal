@@ -39,7 +39,6 @@ package org.glassfish.gmbal.util;
 
 import java.lang.reflect.Constructor ;
 import java.security.AccessController;
-import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,6 +47,8 @@ import java.util.logging.Logger;
  * Really a short hand to avoid writing a bunch of reflective code.
  */
 public class GenericConstructor<T> {
+    private final Object lock = new Object() ;
+
     private String typeName ;
     private Class<T> resultType ;
     private Class<?> type ;
@@ -77,22 +78,26 @@ public class GenericConstructor<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private synchronized void getConstructor() {
-	if ((type == null) || (constructor == null)) {
-            try {
-                type = (Class<T>)Class.forName( typeName ) ;
-                constructor = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<Constructor>() {
-                        public Constructor run() throws Exception {
-                            return type.getDeclaredConstructor( signature ) ;
-                        }
-                    } ) ;
-            } catch (Exception exc) {
-                // Catch all for several checked exceptions: ignore findbugs
-                Logger.getLogger( "org.glassfish.gmbal.util" ).log( Level.FINE,
-                    "Failure in getConstructor", exc ) ;
+    private void getConstructor() {
+        synchronized( lock ) {
+            if ((type == null) || (constructor == null)) {
+                try {
+                    type = (Class<T>)Class.forName( typeName ) ;
+                    constructor = AccessController.doPrivileged(
+                        new PrivilegedExceptionAction<Constructor>() {
+                            public Constructor run() throws Exception {
+                                synchronized( lock ) {
+                                    return type.getDeclaredConstructor( signature ) ;
+                                }
+                            }
+                        } ) ;
+                } catch (Exception exc) {
+                    // Catch all for several checked exceptions: ignore findbugs
+                    Logger.getLogger( "org.glassfish.gmbal.util" ).log( Level.FINE,
+                        "Failure in getConstructor", exc ) ;
+                }
             }
-	}
+        }
     }
 
     /** Create an instance of type T using the constructor that
@@ -105,25 +110,28 @@ public class GenericConstructor<T> {
      * @return A new instance of the object.
      */
     public synchronized T create( Object... args ) {
-        T result = null ;
-        for (int ctr=0; ctr<=1; ctr++) {
-            getConstructor() ;
-            if (constructor == null) {
-                break ;
+        synchronized(lock) {
+            T result = null ;
+
+            for (int ctr=0; ctr<=1; ctr++) {
+                getConstructor() ;
+                if (constructor == null) {
+                    break ;
+                }
+
+                try {
+                    result = resultType.cast( constructor.newInstance( args ) ) ;
+                    break ;
+                } catch (Exception exc) {
+                    // There are 4 checked exceptions here with identical handling.
+                    // Ignore FindBugs complaints.
+                    constructor = null ;
+                    Logger.getLogger("org.glassfish.gmbal.util").
+                        log(Level.WARNING, "Error invoking constructor", exc );
+                }
             }
-            
-            try {
-                result = resultType.cast( constructor.newInstance( args ) ) ;	
-                break ;
-            } catch (Exception exc) {
-                // There are 4 checked exceptions here with identical handling.
-                // Ignore FindBugs complaints.
-                constructor = null ;
-                Logger.getLogger("org.glassfish.gmbal.util").
-                    log(Level.WARNING, "Error invoking constructor", exc );
-            }
+
+            return result ;
         }
-        
-        return result ;
     }
 }

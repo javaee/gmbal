@@ -427,6 +427,10 @@ public interface Exceptions {
     @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 12 )
     public IllegalArgumentException managedObjectAnnotationNotFound(String cname);
 
+    @Message( "Cannot call getAnnotations on {0}")
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 13 )
+    public IllegalArgumentException annotationsNotSupported(AnnotatedElement elem);
+
 // TypeConverterImpl
     static final int TYPE_CONVERTER_IMPL_START =
         MANAGED_OBJECT_MANAGER_IMPL_START + EXCEPTIONS_PER_CLASS ;
@@ -541,7 +545,4 @@ public interface Exceptions {
     @Log( id=JMX_REGISTRATION_MANAGER_START + 0 )
     void deferredRegistrationException( @Chain JMException exc,
         MBeanImpl mbean ) ;
-
-
-
 }

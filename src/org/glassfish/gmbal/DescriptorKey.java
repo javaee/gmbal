@@ -43,11 +43,11 @@ import java.lang.annotation.*;
  * JDK 5.
  *
  * <p>Meta-annotation that describes how an annotation element relates
- * to a field in a {@link Descriptor}.  This can be the Descriptor for
+ * to a field in a Descriptor.  This can be the Descriptor for
  * an MBean, or for an attribute, operation, or constructor in an
  * MBean, or for a parameter of an operation or constructor.</p>
  *
- * <p>(The {@link DescriptorFields @DescriptorFields} annotation
+ * <p>(The DescriptorFields annotation
  * provides another way to add fields to a {@code Descriptor}.  See
  * the documentation for that annotation for a comparison of the
  * two possibilities.)</p>
@@ -77,7 +77,7 @@ import java.lang.annotation.*;
  * the usual rules mean that it will have an attribute called
  * {@code CacheSize} of type {@code long}.  The {@code @Units}
  * annotation, given the above definition, will ensure that the
- * {@link MBeanAttributeInfo} for this attribute will have a
+ * MBeanAttributeInfo for this attribute will have a
  * {@code Descriptor} that has a field called {@code units} with
  * corresponding value {@code bytes}.</p>
  *
@@ -145,8 +145,8 @@ import java.lang.annotation.*;
  *
  * <p>The Descriptor fields contributed in this way by different
  * annotations on the same program element must be consistent with
- * each other and with any fields contributed by a {@link
- * DescriptorFields &#64;DescriptorFields} annotation.  That is, two
+ * each other and with any fields contributed by a 
+ * DescriptorFields annotation.  That is, two
  * different annotations, or two members of the same annotation, must
  * not define a different value for the same Descriptor field.  Fields
  * from annotations on a getter method must also be consistent with
@@ -169,10 +169,10 @@ import java.lang.annotation.*;
  *     <td>Wrapped value ({@code Integer.valueOf(5)},
  *         {@code Boolean.FALSE}, etc)</td></tr>
  * <tr><td>Class constant (e.g. {@code Thread.class})</td>
- *     <td>Class name from {@link Class#getName()}
+ *     <td>Class name from Class.getName()
  *         (e.g. {@code "java.lang.Thread"})</td></tr>
- * <tr><td>Enum constant (e.g. {@link ElementType#FIELD})</td>
- *     <td>Constant name from {@link Enum#name()}
+ * <tr><td>Enum constant (e.g. ElementType.FIELD)</td>
+ *     <td>Constant name from Enum.name()
  *         (e.g. {@code "FIELD"})</td></tr>
  * <tr><td>Array of class constants or enum constants</td>
  *     <td>String array derived by applying these rules to each

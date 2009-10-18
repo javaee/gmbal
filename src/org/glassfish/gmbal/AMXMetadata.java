@@ -37,6 +37,7 @@
 package org.glassfish.gmbal;
 
 import java.lang.annotation.Documented ;
+import java.lang.annotation.Inherited ;
 import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
@@ -58,6 +59,7 @@ import org.glassfish.external.amx.AMX ;
 @Documented 
 @Target(ElementType.TYPE) 
 @Retention(RetentionPolicy.RUNTIME)
+@Inherited
 public @interface AMXMetadata {
     /** True if only one MBean of this type may be created inside the same
      * parent container

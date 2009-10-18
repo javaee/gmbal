@@ -48,8 +48,12 @@ import java.util.List;
 public interface EvaluatedDeclaration extends EvaluatedType {
     <T extends Annotation> T annotation( Class<T> annotationType ) ;
 
+    /** Return the annotations on this declaration.
+     * 
+     * @return List of all annotations on this declaration.
+     */
     List<Annotation> annotations() ;
-    
+
     int modifiers() ;
 
     AnnotatedElement element() ;

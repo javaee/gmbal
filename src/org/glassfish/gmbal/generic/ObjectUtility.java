@@ -68,25 +68,7 @@ import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
 import javax.management.openmbean.TabularType;
 
-/** General object related utilities.  This class must not depend on
- * generated log wrappers.
- *
- * Object dumper:
- *
- * Special ObjectPrinters for Map, List, Array
- * Some classes handled simply by toString
- * General Object dumper that introspects fields.
- * Probably want to use ClassAnalyzer idea here (but directly on classes)
- * CA gives the most type specific result on a lookup.
- *
- * Field annotations:
- * DumpControl( DumpType )
- * DumpType:
- *      - NORMAL (just follow the dumper from class lookup)
- *      - TOSTRING (just use the toString method)
- *      - IGNORE (do not dump the field)
- * @DumpToString
- * @DumpIgnore
+/** General object related utilities.  
  */
 public final class ObjectUtility {
     interface ObjectPrinter {

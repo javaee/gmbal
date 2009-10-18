@@ -53,11 +53,9 @@ import org.glassfish.external.amx.AMX;
 @ManagedObject
 @Description( "Base interface for any MBean that works in the AMX framework" )
 public interface AMXMBeanInterface {
-    /** Get all metadata about this MBean.  See {@link #META_SINGLETON} et al.
+    /** Get all metadata about this MBean.
      * @return The descriptor, which will be a ModelMBeanInfoSupport instance.
      */
-    // This is not mapped to an attribute, because it is always available on a
-    // dynamic MBean simply by calling getMBeanInfo().
     public Map<String,?> getMeta();
 
     /** Usually the same as the ObjectName 'name' property, but can differ

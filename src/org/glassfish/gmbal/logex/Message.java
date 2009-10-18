@@ -62,7 +62,6 @@ public @interface Message {
      * The default format is "name: arg1={1} ..." where name is the annotated
      * Method name and each arg is listed after the name.
      * The default format is also used if this annotation is not present.
-     * @return
      */
     String value() default "" ;
 }

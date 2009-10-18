@@ -42,6 +42,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,6 +51,7 @@ import javax.management.Descriptor;
 
 import org.glassfish.gmbal.DescriptorKey ;
 import org.glassfish.gmbal.DescriptorFields ;
+import org.glassfish.gmbal.generic.ClassAnalyzer;
 
 /**
  * This class contains the methods for performing all the tests needed to verify
@@ -62,26 +64,29 @@ public class DescriptorIntrospector {
     private DescriptorIntrospector() {
     }
 
-    /*
-     * ------------------------------------------
-     *  PUBLIC METHODS
-     * ------------------------------------------
+    /* If elmt is a class, we need to take the union of all inherited annotations.
+     * If elmt is a field or method, we just need the information from the element.
+     * XXX Should we also consider information from overridden methods?
      */
+    public static Descriptor descriptorForElement(
+        final ManagedObjectManagerInternal mom, final AnnotatedElement elmt) {
 
-    public static Descriptor descriptorForElement(final AnnotatedElement elmt) {
         if (elmt == null) {
             return DescriptorUtility.EMPTY_DESCRIPTOR;
         }
-        final Annotation[] annots = elmt.getAnnotations();
+
+        Collection<Annotation> annots = null ;
+        if (mom == null) {
+            annots = Arrays.asList( elmt.getAnnotations() ) ;
+        } else {
+            annots = mom.getAnnotations( elmt );
+        }
+
         return descriptorForAnnotations(annots);
     }
 
-    public static Descriptor descriptorForAnnotation(Annotation annot) {
-        return descriptorForAnnotations(new Annotation[] {annot});
-    }
-
-    public static Descriptor descriptorForAnnotations(Annotation[] annots) {
-        if (annots.length == 0) {
+    private static Descriptor descriptorForAnnotations(Collection<Annotation> annots) {
+        if (annots.size() == 0) {
             return DescriptorUtility.EMPTY_DESCRIPTOR;
         }
         Map<String, Object> descriptorMap = new HashMap<String, Object>();

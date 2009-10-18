@@ -78,42 +78,15 @@ import javax.management.ObjectName;
 public class TypeEvaluator {
     private TypeEvaluator() {}
 
-    private static boolean DEBUG = false ;
-    private static boolean DEBUG_EVALUATE = false ;
+    private static boolean debug = false ;
+    private static boolean debugEvaluate = false ;
+    
     private static final MethodMonitor mm = MethodMonitorFactory.makeStandard(
 	TypeEvaluator.class ) ;
 
     private static Map<Class<?>,EvaluatedType> immutableTypes =
         new HashMap<Class<?>,EvaluatedType>() ;
-
-    /** Return the EvaluatedType corresponding to cls if cls represents an
-     * immutable type, otherwise return null.
-     * @param cls
-     * @return an EvaluatedType, if cls is on the immutable list; otherwise null.
-     */
-    private static EvaluatedType getImmutableEvaluatedType( Class<?> cls ) {
-        return immutableTypes.get( cls ) ;
-    }
-
-    public static void setDebugLevel( int level ) {
-        DEBUG = level > 1 ;
-        DEBUG_EVALUATE = level >= 1 ;
-    }
-
-    private static class EvalMapKey extends Pair<Class<?>,List<EvaluatedType>> {
-        public EvalMapKey( Class<?> cls, List<EvaluatedType> decls ) {
-            super( cls, decls ) ;
-        }
-
-        public static final EvalMapKey OBJECT_KEY = new EvalMapKey(
-             Object.class, new ArrayList<EvaluatedType>(0) ) ;
-    }
-
-    private static EvaluatedClassDeclaration getECD( Class cls ) {
-        return DeclarationFactory.ecdecl( PUBLIC,
-            cls.getName(), cls, true ) ;
-    }
-
+    
     // Cache of representations of classes with bound type variables.
     // A class may be in many EvalMapKeys with different tvar bindings.
     // XXX EvaluatedClassDeclaration strongly references Class!
@@ -128,67 +101,17 @@ public class TypeEvaluator {
 
     private static void mapPut( EvaluatedClassDeclaration ecd, 
         Class cls ) {
-        mm.enter( DEBUG, "mapPut", ecd, cls ) ;
+        mm.enter( debug, "mapPut", ecd, cls ) ;
         immutableTypes.put( cls, ecd ) ;
 
         try {
             EvalMapKey key = new EvalMapKey( cls, emptyETList ) ;
             evalClassMap.put( key, ecd ) ;
         } finally {
-            mm.exit( DEBUG ) ;
+            mm.exit( debug ) ;
         }
     }
-
-    private static List<Method> getDeclaredMethods( final Class<?> cls ) {
-        SecurityManager sman = System.getSecurityManager() ;
-        if (sman == null) {
-            return Arrays.asList( cls.getDeclaredMethods() ) ;
-        } else {
-            return AccessController.doPrivileged(
-                new PrivilegedAction<List<Method>>() {
-                    public List<Method> run() {
-                        return Arrays.asList( cls.getDeclaredMethods() ) ;
-                    }
-                }
-            ) ;
-
-        }
-    }
-
-    private static List<Field> getDeclaredFields( final Class<?> cls ) {
-        SecurityManager sman = System.getSecurityManager() ;
-        if (sman == null) {
-            return Arrays.asList( cls.getDeclaredFields() ) ;
-        } else {
-            return AccessController.doPrivileged(
-                new PrivilegedAction<List<Field>>() {
-                    public List<Field> run() {
-                        return Arrays.asList( cls.getDeclaredFields() ) ;
-                    }
-                }
-            ) ;
-
-        }
-    }
-
-    private static Method getDeclaredMethod( final Class<?> cls,
-        final String name, final Class<?>... sig )
-        throws NoSuchMethodException, PrivilegedActionException {
-
-        SecurityManager sman = System.getSecurityManager() ;
-        if (sman == null) {
-            return cls.getDeclaredMethod( name, sig ) ;
-        } else {
-            return AccessController.doPrivileged(
-                new PrivilegedExceptionAction<Method>() {
-                    public Method run() throws Exception {
-                        return cls.getDeclaredMethod( name, sig ) ;
-                    }
-                }
-            ) ;
-        }
-    }
-
+    
     // Initialize the map with a few key classes that we do NOT want to evaluate
     // (evaluating Object leads to a getClass method, which leads to all of the
     // reflection classes, which leads to, ... (450 classes later).
@@ -264,11 +187,89 @@ public class TypeEvaluator {
         }
     }
 
-    public static int evalClassMapSize() {
+    /** Return the EvaluatedType corresponding to cls if cls represents an
+     * immutable type, otherwise return null.
+     * @param cls
+     * @return an EvaluatedType, if cls is on the immutable list; otherwise null.
+     */
+    private static EvaluatedType getImmutableEvaluatedType( Class<?> cls ) {
+        return immutableTypes.get( cls ) ;
+    }
+
+    public synchronized static void setDebugLevel( int level ) {
+        debug = level > 1 ;
+        debugEvaluate = level >= 1 ;
+    }
+
+    private static class EvalMapKey extends Pair<Class<?>,List<EvaluatedType>> {
+        public EvalMapKey( Class<?> cls, List<EvaluatedType> decls ) {
+            super( cls, decls ) ;
+        }
+
+        public static final EvalMapKey OBJECT_KEY = new EvalMapKey(
+             Object.class, new ArrayList<EvaluatedType>(0) ) ;
+    }
+
+    private static EvaluatedClassDeclaration getECD( Class cls ) {
+        return DeclarationFactory.ecdecl( PUBLIC,
+            cls.getName(), cls, true ) ;
+    }
+
+    private static List<Method> getDeclaredMethods( final Class<?> cls ) {
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return Arrays.asList( cls.getDeclaredMethods() ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedAction<List<Method>>() {
+                    public List<Method> run() {
+                        return Arrays.asList( cls.getDeclaredMethods() ) ;
+                    }
+                }
+            ) ;
+
+        }
+    }
+
+    private static List<Field> getDeclaredFields( final Class<?> cls ) {
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return Arrays.asList( cls.getDeclaredFields() ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedAction<List<Field>>() {
+                    public List<Field> run() {
+                        return Arrays.asList( cls.getDeclaredFields() ) ;
+                    }
+                }
+            ) ;
+
+        }
+    }
+
+    private static Method getDeclaredMethod( final Class<?> cls,
+        final String name, final Class<?>... sig )
+        throws NoSuchMethodException, PrivilegedActionException {
+
+        SecurityManager sman = System.getSecurityManager() ;
+        if (sman == null) {
+            return cls.getDeclaredMethod( name, sig ) ;
+        } else {
+            return AccessController.doPrivileged(
+                new PrivilegedExceptionAction<Method>() {
+                    public Method run() throws Exception {
+                        return cls.getDeclaredMethod( name, sig ) ;
+                    }
+                }
+            ) ;
+        }
+    }
+
+    public synchronized static int evalClassMapSize() {
         return evalClassMap.size() ;
     }
 
-    public static void dumpEvalClassMap() {
+    public synchronized static void dumpEvalClassMap() {
         System.out.println( "TypeEvaluator: dumping eval class map") ;
         int numSystem = 0 ;
         int total = 0 ;
@@ -396,7 +397,7 @@ public class TypeEvaluator {
 
         // External entry point into the Visitor.
 	public EvaluatedType evaluateType( Object type ) {
-            mm.enter( DEBUG_EVALUATE, "evaluateType", type ) ;
+            mm.enter( debugEvaluate, "evaluateType", type ) ;
 
             EvaluatedType result = null ;
 
@@ -424,7 +425,7 @@ public class TypeEvaluator {
                     throw Exceptions.self.evaluateTypeCalledWithUnknownType(type) ;
                 }
             } finally {
-                mm.exit( DEBUG_EVALUATE, result ) ;
+                mm.exit( debugEvaluate, result ) ;
             }
 
             return result ;
@@ -433,13 +434,13 @@ public class TypeEvaluator {
         // The kind-specific visitXXX methods
 
         private EvaluatedType visitClassDeclaration( Class decl ) {
-            mm.enter( DEBUG, "visitClassDeclaration", decl ) ;
+            mm.enter( debug, "visitClassDeclaration", decl ) ;
 
             EvaluatedType result = null ;
 
             try {
                 if (decl.isArray()) {
-                    mm.info( DEBUG, "decl is an array" ) ;
+                    mm.info( debug, "decl is an array" ) ;
 
                     return DeclarationFactory.egat( evaluateType(
                         decl.getComponentType() ) ) ;
@@ -462,18 +463,18 @@ public class TypeEvaluator {
                             partialDefinitions.remove( decl ) ;
                         }
                     } else {
-                        mm.info( DEBUG, "found result:" + result ) ;
+                        mm.info( debug, "found result:" + result ) ;
                     }
                 }
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitParameterizedType( ParameterizedType pt ) {
-            mm.enter( DEBUG, "visitParameterizedType", pt ) ;
+            mm.enter( debug, "visitParameterizedType", pt ) ;
 
             Class<?> decl = (Class<?>)pt.getRawType() ;
 
@@ -498,7 +499,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
@@ -506,7 +507,7 @@ public class TypeEvaluator {
 
         private EvaluatedFieldDeclaration visitFieldDeclaration(
             final EvaluatedClassDeclaration cdecl, final Field fld ) {
-            mm.enter( DEBUG, "visitFieldDeclaration", cdecl, fld ) ;
+            mm.enter( debug, "visitFieldDeclaration", cdecl, fld ) ;
 
             EvaluatedFieldDeclaration result = null ;
 
@@ -529,9 +530,9 @@ public class TypeEvaluator {
                 result = DeclarationFactory.efdecl(cdecl, fld.getModifiers(),
                     ftype, fld.getName(), fld ) ;
             } catch (Exception exc) {
-                mm.info( DEBUG, "Caught exception ", exc, " for field ", fld ) ;
+                mm.info( debug, "Caught exception ", exc, " for field ", fld ) ;
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
@@ -539,7 +540,7 @@ public class TypeEvaluator {
 
         private EvaluatedMethodDeclaration visitMethodDeclaration(
             final EvaluatedClassDeclaration cdecl, final Method mdecl ) {
-            mm.enter( DEBUG, "visitMethodDeclaration", cdecl, mdecl ) ;
+            mm.enter( debug, "visitMethodDeclaration", cdecl, mdecl ) ;
 
             EvaluatedMethodDeclaration result = null ;
 
@@ -551,41 +552,41 @@ public class TypeEvaluator {
                                 return evaluateType( type ) ;
                             } } ) ;
 
-                mm.info( DEBUG, "eptypes" + eptypes ) ;
+                mm.info( debug, "eptypes" + eptypes ) ;
 
                 // Convenience for the test: all processing is done on a method
                 // named getThing, and this is where we need to debug, out of the
                 // many hundreds of other method calls.
                 if (mdecl.getName().equals( "getThing" )) {
-                    mm.info( DEBUG, "processing getThing method from test" ) ;
+                    mm.info( debug, "processing getThing method from test" ) ;
                 }
 
                 result = DeclarationFactory.emdecl( cdecl, mdecl.getModifiers(),
                     evaluateType( mdecl.getGenericReturnType() ),
                     mdecl.getName(), eptypes, mdecl ) ;
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitTypeVariable( TypeVariable tvar ) {
-            mm.enter( DEBUG, "visitTypeVariable" ) ;
+            mm.enter( debug, "visitTypeVariable" ) ;
 
             EvaluatedType result = null ;
 
             try {
                 result = lookup( tvar ) ;
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitGenericArrayType( GenericArrayType at ) {
-            mm.enter( DEBUG, "visitGenericArrayType" ) ;
+            mm.enter( debug, "visitGenericArrayType" ) ;
 
             EvaluatedType result = null ;
 
@@ -593,14 +594,14 @@ public class TypeEvaluator {
                 result = DeclarationFactory.egat(
                     evaluateType( at.getGenericComponentType() ) ) ;
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType visitWildcardType( WildcardType wt ) {
-            mm.enter( DEBUG, "visitWilcardType" ) ;
+            mm.enter( debug, "visitWilcardType" ) ;
 
             EvaluatedType result = null ;
 
@@ -619,14 +620,14 @@ public class TypeEvaluator {
                     result = EvaluatedType.EOBJECT ;
                 }
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
         }
 
         private EvaluatedType lookup( TypeVariable tvar ) {
-            mm.enter( DEBUG, "lookup", tvar ) ;
+            mm.enter( debug, "lookup", tvar ) ;
 
             EvaluatedType result = null ;
 
@@ -634,7 +635,7 @@ public class TypeEvaluator {
                 result = display.lookup( tvar.getName() ) ;
 
                 if (result == null) {
-                    mm.info( DEBUG, "tvar not found in display" ) ;
+                    mm.info( debug, "tvar not found in display" ) ;
 
                     Type[] bounds = tvar.getBounds() ;
                     if (bounds.length > 0) {
@@ -649,7 +650,7 @@ public class TypeEvaluator {
                     }
                 }
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
@@ -658,7 +659,7 @@ public class TypeEvaluator {
         private EvaluatedType getCorrectDeclaration( 
             OrderedResult<String,EvaluatedType> bindings,
             Class decl, EvaluatedClassDeclaration newDecl ) {
-            mm.enter( DEBUG, "getCorrectDeclaration", decl ) ;
+            mm.enter( debug, "getCorrectDeclaration", decl ) ;
 
             EvaluatedType result = null ;
 
@@ -671,7 +672,7 @@ public class TypeEvaluator {
 
                 result = evalClassMap.get( key ) ;
                 if (result == null) {
-                    mm.info( DEBUG, "No result in evalClassMap" ) ;
+                    mm.info( debug, "No result in evalClassMap" ) ;
 
                     evalClassMap.put( key, newDecl ) ;
 
@@ -679,10 +680,10 @@ public class TypeEvaluator {
 
                     result = newDecl ;
                 } else {
-                    mm.info( DEBUG, "Found result in evalClassMap" ) ;
+                    mm.info( debug, "Found result in evalClassMap" ) ;
                 }
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;
@@ -691,7 +692,7 @@ public class TypeEvaluator {
         private void processClass( final EvaluatedClassDeclaration newDecl,
             final Map<String,EvaluatedType> bindings, final Class decl ) {
 
-            mm.enter( DEBUG, "processClass", bindings, decl ) ;
+            mm.enter( debug, "processClass", bindings, decl ) ;
 
             display.enterScope() ;
             display.bind( bindings ) ;
@@ -704,7 +705,7 @@ public class TypeEvaluator {
                             return (EvaluatedClassDeclaration)evaluateType( pt ) ;
                         } } ) ;
 
-                mm.info( DEBUG, "inheritance", inheritance ) ;
+                mm.info( debug, "inheritance", inheritance ) ;
 
                 newDecl.inheritance( inheritance ) ;
 
@@ -729,16 +730,16 @@ public class TypeEvaluator {
                 newDecl.methods( newMethods ) ;
                 newDecl.freeze() ;
 
-                mm.info( DEBUG, "newDecl" + newDecl ) ;
+                mm.info( debug, "newDecl" + newDecl ) ;
             } finally {
                 display.exitScope() ;
 
-                mm.exit( DEBUG ) ;
+                mm.exit( debug ) ;
             }
         }
 
         private List<Type> getInheritance( Class cls ) {
-            mm.enter( DEBUG, "getInheritance", cls ) ;
+            mm.enter( debug, "getInheritance", cls ) ;
 
             List<Type> result = null ;
 
@@ -747,7 +748,7 @@ public class TypeEvaluator {
                 result.add( cls.getGenericSuperclass() ) ;
                 result.addAll( Arrays.asList( cls.getGenericInterfaces() ) ) ;
             } finally {
-                mm.exit( DEBUG, result ) ;
+                mm.exit( debug, result ) ;
             }
 
             return result ;

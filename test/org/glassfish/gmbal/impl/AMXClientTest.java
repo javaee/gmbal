@@ -138,8 +138,9 @@ public class AMXClientTest extends TestCase {
         new HashMap<MomType,Pair<ManagedObjectManager,
         List<Pair<MyManagedClass,GmbalMBean>>>>() ;
 
-    private ManagedObjectManager getMom( MomType mtype ) {
-        ManagedObjectManager mom = moms.get(mtype).first() ;
+    private ManagedObjectManagerInternal getMom( MomType mtype ) {
+        ManagedObjectManagerInternal mom =
+            (ManagedObjectManagerInternal)moms.get(mtype).first() ;
         return mom ;
     }
 
@@ -260,6 +261,7 @@ public class AMXClientTest extends TestCase {
         expResult.put( "descriptorType", "mbean" ) ;
 
         Descriptor desc = DescriptorIntrospector.descriptorForElement(
+            getMom( mtype),
             ManagedObjectManagerImpl.DefaultAMXMetadataHolder.class ) ;
         for (String fname : desc.getFieldNames()) {
             Object value = desc.getFieldValue(fname) ;

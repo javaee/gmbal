@@ -47,7 +47,7 @@ import java.lang.annotation.Target;
 /** This is taken directly from JDK 7 in order to support this feature in
  * JDK 5.
  *
- * <p>Annotation that adds fields to a {@link Descriptor}.  This can be the
+ * <p>Annotation that adds fields to a Descriptor.  This can be the
  * Descriptor for an MBean, or for an attribute, operation, or constructor
  * in an MBean, or for a parameter of an operation or constructor.</p>
  *
@@ -63,7 +63,7 @@ import java.lang.annotation.Target;
  * <p>When a Standard MBean is made using this interface, the usual rules
  * mean that it will have an attribute called {@code CacheSize} of type
  * {@code long}.  The {@code DescriptorFields} annotation will ensure
- * that the {@link MBeanAttributeInfo} for this attribute will have a
+ * that the MBeanAttributeInfo for this attribute will have a
  * {@code Descriptor} that has a field called {@code units} with
  * corresponding value {@code bytes}.</p>
  *
@@ -109,8 +109,8 @@ import java.lang.annotation.Target;
  * the method in the child interface are considered.
  *
  * <p>The Descriptor fields contributed in this way must be consistent
- * with each other and with any fields contributed by {@link
- * DescriptorKey &#64;DescriptorKey} annotations.  That is, two
+ * with each other and with any fields contributed by
+ * DescriptorKey annotations.  That is, two
  * different annotations, or two members of the same annotation, must
  * not define a different value for the same Descriptor field.  Fields
  * from annotations on a getter method must also be consistent with
@@ -124,7 +124,7 @@ import java.lang.annotation.Target;
  *
  * <h4>{@literal @DescriptorFields and @DescriptorKey}</h4>
  *
- * <p>The {@link DescriptorKey @DescriptorKey} annotation provides
+ * <p>The DescriptorKey annotation provides
  * another way to use annotations to define Descriptor fields.
  * <code>&#64;DescriptorKey</code> requires more work but is also more
  * robust, because there is less risk of mistakes such as misspelling
