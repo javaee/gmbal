@@ -2645,7 +2645,7 @@ public class JmxaTest extends TestCase {
         String myAttribute() ;
     }
 
-    public class InhMetaImpl implements InhMeta {
+    public static class InhMetaImpl implements InhMeta {
         private String myAttr ;
 
         public InhMetaImpl( String str ) {
