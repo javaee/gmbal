@@ -108,6 +108,13 @@ public class JMXRegistrationManager {
                 isJMXRegistrationEnabled = true ;
                 register( root ) ;
             } else {
+                // Need to handle the suspended case here.  The non-suspended
+                // case is handled in the Listener below.
+                if (suspendCount > 0) {
+                    deferredRegistrations.add( root ) ;
+                    root.suspended( true ) ;
+                }
+
                 // Set up an MBeanListener so that we don't register MBeans unless
                 // rootParentName actually refers to a registered MBean.
                 // Note that the listener will register the root either now,
