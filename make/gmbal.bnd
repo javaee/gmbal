@@ -1,4 +1,3 @@
 -include bnd.properties
-Export-Package: org.glassfish.gmbal
-Private-Package: org.glassfish.gmbal.util, org.glassfish.gmbal.impl, org.glassfish.gmbal.generic, org.glassfish.gmbal.typelib, org.glassfish.gmbal.logex
-
+Export-Package: org.glassfish.gmbal, org.glassfish.gmbal.logex
+Private-Package: org.glassfish.gmbal.util, org.glassfish.gmbal.impl, org.glassfish.gmbal.generic, org.glassfish.gmbal.typelib
