@@ -407,7 +407,7 @@ The modules             (and their dependencies):
     <push-to-maven module="gmbal-source" description="gmbal source code" repo="${local.url}"/>
 </target>
 
-<target name="hudson-job" depends="clean,jar,emma-instr,test,javadoc,test-report,findbugs-xml,emma-report,make-bundles"/>
+<target name="hudson-job" depends="all,javadoc,findbugs-xml"/>
 
 <target name="copy-docs" depends="gmbal-init">
     <mkdir dir="gmbal/gmbal/javadoc"/>
