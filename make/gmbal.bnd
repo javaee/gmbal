@@ -1,3 +1,4 @@
 -include bnd.properties
-Export-Package: org.glassfish.gmbal, org.glassfish.gmbal.logex
-Private-Package: org.glassfish.gmbal.util, org.glassfish.gmbal.impl, org.glassfish.gmbal.generic, org.glassfish.gmbal.typelib
+Include-Resource: org/glassfish/gmbal/logex/LogStrings.properties=../build/classes/org/glassfish/gmbal/logex/LogStrings.properties 
+Export-Package: org.glassfish.gmbal
+Private-Package: org.glassfish.gmbal.util, org.glassfish.gmbal.impl, org.glassfish.gmbal.generic, org.glassfish.gmbal.typelib, org.glassfish.gmbal.logex

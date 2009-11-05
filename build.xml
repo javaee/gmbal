@@ -126,9 +126,9 @@
         <echo message="Current version is ${version}"/>
     </target>
 
-    <target name="all" depends="gmbal-init,clean,jar,emma-instr,test,test-report,emma-report"/>
+    <target name="all" depends="gmbal-init,clean,jar,gen-resource-bundle,emma-instr,test,test-report,emma-report,make-bundles"/>
 
-    <target name="-post-jar">
+    <target name="gen-resource-bundle">
         <!-- generate LogStrings.properties ResourceBundle -->
         <java classname="org.glassfish.gmbal.tools.file.ExceptionResourceGenerator"
             classpath="build/classes:lib/management-api.jar" fork="true" dir=".">
