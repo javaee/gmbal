@@ -409,11 +409,6 @@ public class MBeanSkeleton {
 
 	mm.enter( mom.registrationFineDebug(), "makeOperation", m);
 
-	SecurityManager sman = System.getSecurityManager();
-	if (sman != null) {
-	    sman.checkPermission(accessControlPermission);
-	}
-
 	AccessController.doPrivileged(
 	    new PrivilegedAction<Method>() {
 		public Method run() {

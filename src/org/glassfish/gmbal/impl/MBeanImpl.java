@@ -60,6 +60,9 @@ import javax.management.MBeanNotificationInfo ;
 import javax.management.AttributeChangeNotification ;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import java.security.AccessController ;
+import java.security.PrivilegedExceptionAction ;
+import java.security.PrivilegedActionException ;
 import java.util.Map ;
 import java.util.HashMap ;
 import java.util.HashSet;
@@ -302,7 +305,30 @@ public class MBeanImpl extends NotificationBroadcasterSupport
             if (skeleton().mom().jmxRegistrationDebug()) {
                 Exceptions.self.registeringMBean( oname ) ;
             }
-            server.registerMBean( this, oname ) ;
+
+            try {
+                AccessController.doPrivileged( 
+                    new PrivilegedExceptionAction<Object>() {
+                        public Object run() throws Exception {
+                            server.registerMBean( MBeanImpl.this, oname ) ;
+                            return null ;
+                        }
+                    } ) ;
+            } catch (PrivilegedActionException exc) {
+                final Throwable e = exc.getCause() ;
+                if (e instanceof InstanceAlreadyExistsException) {
+                    throw (InstanceAlreadyExistsException)e ;
+                } else if (e instanceof MBeanRegistrationException) {
+                    throw (MBeanRegistrationException)e ;
+                } else if (e instanceof NotCompliantMBeanException) {
+                    throw (NotCompliantMBeanException)e ;
+                } else {
+                    // got an unexpected exception: log it
+                    Exceptions.self.unexpectedException( 
+                        "MBeanServer.registerMBean", e ) ;
+                }
+            }
+
             registered = true ;
         } else {
             Exceptions.self.registerMBeanRegistered( oname ) ;
@@ -318,7 +344,27 @@ public class MBeanImpl extends NotificationBroadcasterSupport
             }
 
             registered = false ;
-            server.unregisterMBean( oname );
+
+            try {
+                AccessController.doPrivileged( 
+                    new PrivilegedExceptionAction<Object>() {
+                        public Object run() throws Exception {
+                            server.unregisterMBean( oname );
+                            return null ;
+                        }
+                    } ) ;
+            } catch (PrivilegedActionException exc) {
+                final Throwable e = exc.getCause() ;
+                if (e instanceof InstanceNotFoundException) {
+                    throw (InstanceNotFoundException)e ;
+                } else if (e instanceof MBeanRegistrationException) {
+                    throw (MBeanRegistrationException)e ;
+                } else {
+                    // got an unexpected exception: log it
+                    Exceptions.self.unexpectedException( 
+                        "MBeanServer.unregisterMBean", e ) ;
+                }
+            }
         } else {
             Exceptions.self.unregisterMBeanNotRegistered( oname ) ;
         }

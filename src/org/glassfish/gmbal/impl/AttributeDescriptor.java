@@ -82,11 +82,6 @@ public class AttributeDescriptor {
         final EvaluatedAccessibleDeclaration decl, final String id,
         final String description, final AttributeType atype,
         final EvaluatedType type ) {
-                SecurityManager sman = System.getSecurityManager() ;
-
-        if (sman != null) {
-            sman.checkPermission( accessControlPermission ) ;
-        }
 
         this._decl = AccessController.doPrivileged(
             new PrivilegedAction<EvaluatedAccessibleDeclaration>() {

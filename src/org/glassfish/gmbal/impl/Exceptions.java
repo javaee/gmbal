@@ -226,6 +226,10 @@ public interface Exceptions {
     @Log( id = MBEAN_IMPL_START + 6, level=LogLevel.INFO )
     public void unregisteringMBean(ObjectName oname);
 
+    @Message( "Got an unexpected exception from method {0}" ) 
+    @Log( id = MBEAN_IMPL_START + 7 ) 
+    public void unexpectedException( String method, @Chain Throwable exc ) ;
+
 // MBeanSkeleton
     static final int MBEAN_SKELETON_START =
         MBEAN_IMPL_START + EXCEPTIONS_PER_CLASS ;

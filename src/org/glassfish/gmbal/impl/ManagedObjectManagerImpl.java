@@ -330,7 +330,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     private void init() {
-        this.server = ManagementFactory.getPlatformMBeanServer() ;
+        this.server = AccessController.doPrivileged( 
+            new PrivilegedAction<MBeanServer>() {
+                public MBeanServer run() {
+                    return ManagementFactory.getPlatformMBeanServer() ;
+                } 
+            } ) ;
+
         rootCreated = false ;
         resourceBundle = null ;
         regDebugLevel = ManagedObjectManager.RegistrationDebugLevel.NONE ;
