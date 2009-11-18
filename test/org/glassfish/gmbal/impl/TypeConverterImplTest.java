@@ -57,8 +57,14 @@ public class TypeConverterImplTest extends TestCase {
         super(testName);
     }
 
+    private static boolean firstTime = true ;
+
     @Override
     protected void setUp() throws Exception {
+        if (firstTime) {
+            System.out.println( "****************** TypeConverterImplTest **********************" ) ;
+            firstTime = false ;
+        }
         super.setUp();
         mom = (ManagedObjectManagerInternal)ManagedObjectManagerFactory
             .createStandalone( "TestDomain" ) ;

@@ -27,3 +27,4 @@ make/bnd.properties
 \.rej$
 \.conflict\~$
 gmbal/**
+libcache/**

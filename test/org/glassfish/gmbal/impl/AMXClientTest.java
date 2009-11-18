@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.Descriptor;
@@ -40,6 +42,7 @@ public class AMXClientTest extends TestCase {
     private ManagedObjectManager standaloneMom = null ;
     private ManagedObjectManager federatedMom = null ;
     private ObjectName externalRootName = null ;
+
 
     @ManagedObject
     @Description( "A simple class for generating MBeans" )
@@ -157,9 +160,17 @@ public class AMXClientTest extends TestCase {
         super(testName);
     }
 
+    private static boolean firstTime = true ;
+
     @Override
     protected void setUp() throws Exception {
+        if (firstTime) {
+            System.out.println( "****************** AMXClientTest **********************" ) ;
+            firstTime = false ;
+        }
         super.setUp();
+        final Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
+        logger.setLevel(Level.OFF) ;
         standaloneMom = ManagedObjectManagerFactory.createStandalone("test") ;
         standaloneMom.setJMXRegistrationDebug(true) ;
         initializeMom( MomType.STANDALONE, standaloneMom ) ;
@@ -210,6 +221,8 @@ public class AMXClientTest extends TestCase {
 
     @Override
     protected void tearDown() throws Exception {
+        final Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
+        logger.setLevel(Level.INFO) ;
         federatedMom.close() ;
         rootMom.close() ;
         standaloneMom.close() ;
@@ -270,7 +283,7 @@ public class AMXClientTest extends TestCase {
 
         Map result = instance.getMeta();
 
-        System.out.println( "result = " + result ) ;
+        // System.out.println( "result = " + result ) ;
         for (Map.Entry<String,Object> entry : expResult.entrySet()) {
             assertEquals( entry.getValue(), result.get( entry.getKey())) ;
         }
@@ -427,10 +440,10 @@ public class AMXClientTest extends TestCase {
         AttributeList expected = new AttributeList() ;
         expected.add( new Attribute( "Attr", "a grandchild" ) ) ;
         expected.add( new Attribute( "Id", 6 ) ) ;
-        System.out.println( "expected = " + toString( expected ) ) ;
+        // System.out.println( "expected = " + toString( expected ) ) ;
 
         AttributeList result = amx.getAttributes( anames ) ;
-        System.out.println( "result = " + toString( result ) ) ;
+        // System.out.println( "result = " + toString( result ) ) ;
 
         // Stupid attributes do not define equals properly!
         // assertEquals( expected, result );

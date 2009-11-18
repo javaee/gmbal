@@ -53,8 +53,14 @@ public class WrapperGeneratorTest extends TestCase {
         super(testName);
     }
 
+    private static boolean firstTime = true ;
+
     @Override
     protected void setUp() throws Exception {
+        if (firstTime) {
+            System.out.println( "****************** WrapperGeneratorTest **********************" ) ;
+            firstTime = false ;
+        }
         super.setUp();
     }
 

@@ -140,8 +140,15 @@ public class FacetAccessorTest extends TestCase {
         super(testName);
     }            
 
+    private static boolean firstTime = true ;
+
     @Override
     protected void setUp() throws Exception {
+        if (firstTime) {
+            System.out.println( "****************** FacetAccessorTest **********************" ) ;
+            firstTime = false ;
+        }
+
         super.setUp();
     }
 

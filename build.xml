@@ -38,14 +38,12 @@
 <!-- You may freely edit this file. See commented blocks below for -->
 <!-- some examples of how to customize the build. -->
 <!-- (If you delete it and reopen the project it will be recreated.) -->
-<project name="GlassFish MBean Annotation Library (gmbal)" default="default" basedir="." xmlns:artifact="urn:maven-artifact-ant">
+<project name="GlassFish MBean Annotation Library (gmbal)" default="default" basedir="." xmlns:artifact="antlib:org.apache.maven.artifact.ant">
     <description>Builds, tests, and runs the gmbal project.</description>
     <import file="nbproject/build-impl.xml"/>
-
     <import file="nbproject/profiler-build-impl.xml"/>
-    <import file="nbproject/profiler-build-impl.xml"/>
-    <import file="nbproject/profiler-build-impl.xml"/>
-    <import file="nbproject/management-build-impl.xml"/>    <!--
+    <import file="nbproject/management-build-impl.xml"/>
+<!--
 
     There exist several targets which are by default empty and which can be 
     used for execution of your tasks. These targets are usually executed 
@@ -106,32 +104,65 @@
     nbproject/build-impl.xml file. 
     -->
     <property file="build.properties"/>
-
-    <property name="maven.ant.file"                 value="maven-ant-tasks-2.0.9.jar"/>
-    <property name="maven.ant.dir"                  value="http://apache.hoxt.com/maven/binaries"/>
-    <property name="groupId"                        value="org.glassfish.gmbal"/>
-    <property name="version"                        value="${release.version}-${build.version}"/>
     <property name="repo.url"                       value="java-net:/maven2-repository/trunk/repository"/>
-    <property name="file.url"                       value="file:/tmp/maven"/>
     <property environment="env"/>
     <property name="local.url"                      value="file://${env.HOME}/.m2"/>
     <property name="emma.dir"                       value="build/coverage"/>
+    <property name="file.url"                       value="file:/tmp/maven"/>
+
+    <property name="libcache.dir"                   location="libcache"/>
+
+    <path id="maven.class.path"  path="${local.maven.ant.tasks.jar}"/>
+
+    <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
+        uri="antlib:org.apache.maven.artifact.ant" 
+        classpathref="maven.class.path">
+    </typedef>
+
+    <artifact:dependencies versionsId="dependency.versions" filesetId="dependency.fileset" pathId="dependency.classpath">
+        <remoteRepository url="${gf.repository}"/>
+        <dependency groupId="${management-api.groupid}" artifactId="${management-api.artifactid}" version="${management-api.version}" scope="runtime"/>
+    </artifact:dependencies>
+
+    <artifact:dependencies pathId="bnd.classpath">
+        <remoteRepository url="${aqute.repository}"/>
+        <dependency groupId="${bnd.groupid}" artifactId="${bnd.artifactid}" version="${bnd.version}" scope="compile"/>
+    </artifact:dependencies>
+
+    <target name="get-dependencies">
+        <mkdir dir="${libcache.dir}"/>
+        <copy todir="${libcache.dir}">
+            <fileset refid="dependency.fileset"/>
+            <mapper classpathref="maven.class.path" 
+                classname="org.apache.maven.artifact.ant.VersionMapper"
+                from="${dependency.versions}" to="flatten"/>
+        </copy>
+    </target>
+
+    <target name="-post-init" depends="get-dependencies"/>
+
+    <target name="mavenize" depends="project-init" description="initialize maven ">
+        <artifact:install-provider artifactId="wagon-svn" groupId="org.jvnet.wagon-svn" version="1.7">
+            <artifact:remoteRepository id="java.net.maven2.repository" url="http://download.java.net/maven/2/" />
+            <artifact:localRepository path="/tmp/test"/>
+        </artifact:install-provider>
+    </target>
 
     <target name="-post-clean">
         <delete dir="coverage"/>
         <delete file="coverage.ec"/>
     </target>
 
-    <target name="gmbal-init">
-        <echo message="Current version is ${version}"/>
+    <target name="project-init">
+        <echo message="Current version is ${gmbal.version}"/>
     </target>
 
-    <target name="all" depends="gmbal-init,clean,jar,gen-resource-bundle,emma-instr,test,test-report,emma-report,make-bundles"/>
+    <target name="all" depends="project-init,clean,jar,gen-resource-bundle,emma-instr,test,test-report,emma-report,make-bundles"/>
 
     <target name="gen-resource-bundle">
         <!-- generate LogStrings.properties ResourceBundle -->
         <java classname="org.glassfish.gmbal.tools.file.ExceptionResourceGenerator"
-            classpath="build/classes:lib/management-api.jar" fork="true" dir=".">
+            classpath="build/classes:libcache/management-api.jar" fork="true" dir=".">
             <arg value="-verbose"/>
             <arg value="0"/>
             <arg value="-source"/>
@@ -236,7 +267,7 @@
         <attribute name="file"/>
             <sequential>
                 <mkdir dir="dist/bundles"/>
-                <java jar="lib/bnd.jar" fork="true" failonerror="true">
+                <java classpathref="bnd.classpath" classname="aQute.bnd.main.bnd" fork="true" failonerror="true">
                     <arg value="build"/>
                     <arg value="-classpath"/>
                     <arg value="dist/gmbal.jar"/>
@@ -269,66 +300,18 @@
 
     <target name="make-bnd-properties">
         <delete file="make/bnd.properties"/>
-        <echo message="Bundle-Version: ${version}${line.separator}" file="make/bnd.properties"/>
+        <echo message="Bundle-Version: ${gmbal.version}${line.separator}" file="make/bnd.properties"/>
     </target>
 
-    <target name="make-bundles" depends="gmbal-init,make-source-bundle,make-bnd-properties">
+    <target name="make-bundles" depends="project-init,make-source-bundle,make-bnd-properties">
         <make-bundle file="gmbal-api-only"/>
         <make-bundle file="gmbal"/>
     </target>
 
-<target name="bootstrap" 
-	description="Fetch Maven library - needed only the first time.">
-   <get
-       src="${maven.ant.dir}/${maven.ant.file}"
-       dest="lib/${maven.ant.file}"
-       verbose="true"
-       usetimestamp="true"/>
-</target>
-
-<target name="testAntJar"
-    description="Check if the mavn-ant-tasks jar is already present in the lib dir.. .">
-    <condition property="maven.lib.present">
-       <available file="lib/${maven.ant.file}"/>
-    </condition>
-</target>
-
-<target name="checkmaven" depends="testAntJar"  unless="maven.lib.present">
-    <echo>
-        Missing ${maven.ant.file} library. 
-	It can be fetched from the Internet by giving 
-	the command "ant bootstrap"
-     </echo>
-     <echo message="I'm getting it from internet for You!"/>
-     <antcall target="bootstrap"/>
-</target>
-
-<target name="mavenize" depends="gmbal-init, checkmaven" description="initialize maven ">
-    <path id="maven-ant-tasks.classpath" 
-	  path="lib/${maven.ant.file}" />
-    <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
-        uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath">
-    </typedef>
-    <artifact:install-provider artifactId="wagon-svn" groupId="org.jvnet.wagon-svn" version="1.7">
-    <artifact:remoteRepository id="java.net.maven2.repository" url="http://download.java.net/maven/2/" />
-    <artifact:localRepository path="/tmp/test"/>
-    </artifact:install-provider>
-</target>
-
-<target name="test-loadfile">
-    <loadfile property="dependency" srcFile="make/dependency.template.xml">
-        <filterchain>
-            <replacetokens>
-                <token key="artifactId" value="codegen"/>
-                <token key="version" value="${version}"/>
-            </replacetokens>
-        </filterchain>
-    </loadfile>
-    <echo message="${dependency}"/>
-    <sequential>
-        <property name="dependencies" value="orb,codegen,asm"/>
-        <foreach list="${dependencies}" target="test-chain" name="foo"/>
-    </sequential>
+<target name="increment-build-version" depends="project-init">
+    <propertyfile file="build.properties">
+        <entry key="build.int" type="int" value="1" pattern="000" operation="+"/>
+    </propertyfile>
 </target>
 
 <!--
@@ -359,18 +342,18 @@ The modules             (and their dependencies):
             <filterchain>
                 <replacetokens>
                     <token key="artifactId" value="@{module}"/>
-                    <token key="version" value="${version}"/>
+                    <token key="version" value="${gmbal.version}"/>
                     <token key="jarDescription" value="@{description}"/>
-                    <token key="groupId" value="${groupId}"/>
+                    <token key="groupId" value="${gmbal.groupId}"/>
                     <token key="repositoryUrl" value="${repo.url}"/>
                 </replacetokens>
             </filterchain>
         </loadfile>
-        <copy file="make/@{module}.template.xml" tofile="make/gmbal.temp.pom" overwrite="true">
+        <copy file="make/@{module}.template.xml" tofile="make/temp.pom" overwrite="true">
             <filterset>
               <filter token="HEADER" value="${HEADER-@{module}}"/>
-              <filter token="version" value="${version}"/>
-              <filter token="groupId" value="${groupId}"/>
+              <filter token="version" value="${gmbal.version}"/>
+              <filter token="groupId" value="${gmbal.groupId}"/>
             </filterset>
         </copy>
     </sequential>
@@ -383,33 +366,38 @@ The modules             (and their dependencies):
     <sequential>
         <make-file module="@{module}" description="@{description}"/>
 
-        <artifact:pom id="gmbal.project" file="make/gmbal.temp.pom" />
+        <artifact:pom id="pom.file" file="make/temp.pom" />
         <artifact:deploy file="dist/bundles/@{module}.jar">
             <remoteRepository url="@{repo}">
             </remoteRepository>
-            <pom refid="gmbal.project"/>
+            <pom refid="pom.file"/>
         </artifact:deploy>
-        <delete file="make/gmbal.temp.pom" verbose="true"/>
+        <delete file="make/temp.pom" verbose="true"/>
     </sequential>
 </macrodef>
 
-<target name="release" depends="gmbal-init,mavenize">
-    <push-to-maven module="gmbal-api-only" description="gmbal API" repo="${repo.url}"/>
-    <push-to-maven module="gmbal" description="gmbal implementation" repo="${repo.url}"/>
-    <push-to-maven module="gmbal-api-only-source" description="gmbal source code (API only)" repo="${repo.url}"/>
-    <push-to-maven module="gmbal-source" description="gmbal source code" repo="${repo.url}"/>
+<macrodef name="release-to-maven">
+    <attribute name="repo"/>
+    <sequential>
+        <echo message="Releasing modules with version ${version} to @{repo}"/>
+        <push-to-maven module="gmbal-api-only" description="gmbal API" repo="@{repo}"/>
+        <push-to-maven module="${gmbal.artifactid}" description="gmbal implementation" repo="@{repo}"/>
+        <push-to-maven module="gmbal-api-only-source" description="gmbal source code (API only)" repo="@{repo}"/>
+        <push-to-maven module="gmbal-source" description="gmbal source code" repo="@{repo}"/>
+    </sequential>
+</macrodef>
+
+<target name="release" depends="project-init,mavenize">
+    <release-to-maven rep="${repo.url}"/>
 </target>
 
-<target name="release-local" depends="gmbal-init,mavenize">
-    <push-to-maven module="gmbal-api-only" description="gmbal API" repo="${local.url}"/>
-    <push-to-maven module="gmbal" description="gmbal implementation" repo="${local.url}"/>
-    <push-to-maven module="gmbal-api-only-source" description="gmbal source code (API only)" repo="${local.url}"/>
-    <push-to-maven module="gmbal-source" description="gmbal source code" repo="${local.url}"/>
+<target name="release-local" depends="project-init,mavenize">
+    <release-to-maven rep="${local.url}"/>
 </target>
 
 <target name="hudson-job" depends="all,javadoc,findbugs-xml"/>
 
-<target name="copy-docs" depends="gmbal-init">
+<target name="copy-docs" depends="project-init">
     <mkdir dir="gmbal/gmbal/javadoc"/>
     <copy file="index.html" todir="gmbal"/>
     <copy file="FunctionalSpec.html" todir="gmbal"/>

@@ -111,6 +111,27 @@ import static org.glassfish.gmbal.typelib.EvaluatedType.* ;
 import static org.glassfish.gmbal.generic.Algorithms.* ;
 
 public class JmxaTest extends TestCase {
+    private static final boolean DEBUG = false ;
+    private static boolean firstTime = true ;
+
+    @Override
+    protected void setUp() throws Exception {
+        if (firstTime) {
+            System.out.println( "****************** JmxaTest **********************" ) ;
+            firstTime = false ;
+        }
+        super.setUp();
+        final Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
+        logger.setLevel(Level.OFF) ;
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        super.tearDown();
+        final Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
+        logger.setLevel(Level.INFO) ;
+    }
+
     //==============================================================================================
     // Tests for Algorithms class
     //==============================================================================================
@@ -127,6 +148,7 @@ public class JmxaTest extends TestCase {
     
     // Test Algorithms
     public void testMap1() {
+        System.out.println( "testMap1" ) ;
 	final List<Integer> data = Arrays.asList( 12, 23, 4, 9, 17, 213 ) ;
 	final List<Integer> sdata = new ArrayList<Integer>() ;
 
@@ -146,6 +168,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testMap2() {
+        System.out.println( "testMap2" ) ;
 	final List<Integer> data = Arrays.asList( 12, 23, 4, 9, 17, 213 ) ;
 	final List<Integer> sdata = new ArrayList<Integer>() ;
 
@@ -166,6 +189,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testFilter1() {
+        System.out.println( "testFilter1" ) ;
 	final List<Integer> data = Arrays.asList( 12, 23, 4, 9, 17, 213, 16, 1, 25 ) ;
 	final List<Integer> sdata = new ArrayList<Integer>() ;
 
@@ -186,6 +210,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testFilter2() {
+        System.out.println( "testFilter2" ) ;
 	final List<Integer> data = Arrays.asList( 12, 23, 4, 9, 17, 213, 16, 1, 25 ) ;
 	final List<Integer> sdata = new ArrayList<Integer>() ;
 
@@ -207,6 +232,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testFind() {
+        System.out.println( "testFind" ) ;
 	final List<Integer> data = Arrays.asList( 12, 23, 4, 9, 17, 42, 213, 16, 1, 25 ) ;
 
 	final Predicate<Integer> is42 = new Predicate<Integer>() {
@@ -254,6 +280,7 @@ public class JmxaTest extends TestCase {
 
 
     public void testGetInheritanceChain() {
+        System.out.println( "testGetInheritanceChain" ) ;
         EvaluatedClassAnalyzer ca = getCA( I.class ) ;
         List<EvaluatedClassDeclaration> res = ca.findClasses(
             Algorithms.TRUE( EvaluatedClassDeclaration.class ) ) ;
@@ -366,6 +393,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testFindMethod() {
+        System.out.println( "testFindMethod" ) ;
         final EvaluatedClassAnalyzer ca = getCA( DD.class ) ;
 	final Predicate predicate = 
 	    new Predicate() {
@@ -390,6 +418,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testGetAnnotatedMethods() throws IOException {
+        System.out.println( "testGetAnnotatedMethods" ) ;
         ManagedObjectManagerInternal mom = (ManagedObjectManagerInternal)
             ManagedObjectManagerFactory.createStandalone("master" ) ;
         try {
@@ -422,6 +451,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testGetClassAnnotations() throws IOException {
+        System.out.println( "testGetClassAnnotations" ) ;
         List<EvaluatedClassDeclaration> expectedResult =
             new ArrayList<EvaluatedClassDeclaration>() ;
         expectedResult.add( getECD( DD.class ) ) ;
@@ -574,6 +604,7 @@ public class JmxaTest extends TestCase {
             EFLOAT, EDOUBLE ) ) ;
 
     public void testPrimitiveTypeConverter() {
+        System.out.println( "testPrimitiveTypeConverter" ) ;
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
                 .createStandalone( "ORBTest" ) ;
@@ -727,6 +758,7 @@ public class JmxaTest extends TestCase {
     }
     
     public void testManagedObjectExample() {
+        System.out.println( "testManagedObjectExample" ) ;
         final int num = 12 ;
 	final String name = "Liskov" ;
 	final ManagedObjectExample rootObject = 
@@ -735,6 +767,7 @@ public class JmxaTest extends TestCase {
     }
     
     public void testManagedObjectExampleDerived() {
+        System.out.println( "testManagedObjectExampleDerived" ) ;
         final int num = 12 ;
 	final String name = "Liskov" ;
 	final ManagedObjectExample rootObject = 
@@ -803,6 +836,7 @@ public class JmxaTest extends TestCase {
 
     @SuppressWarnings("unchecked")
     public void testManagedDataTypeConverter() {
+        System.out.println( "testManagedDataTypeConverter" ) ;
 	ManagedObjectManagerInternal mom = 
             (ManagedObjectManagerInternal)ManagedObjectManagerFactory
                 .createStandalone( "ORBTest" ) ;
@@ -883,6 +917,7 @@ public class JmxaTest extends TestCase {
     }
         
     public void testRootMBean1() throws MalformedObjectNameException {
+        System.out.println( "testRootMBean1" ) ;
         final int value = 42 ;
         final String rootName = "MyRoot" ;
         final Object rootObject = new RootObject( value ) ;
@@ -916,6 +951,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testRootMBean3() throws MalformedObjectNameException {
+        System.out.println( "testRootMBean3" ) ;
         final int value = 42 ;
         final String rootName = "MyRoot" ;
         final Object rootObject = new RootObject( value ) ;
@@ -949,6 +985,7 @@ public class JmxaTest extends TestCase {
     }
     
     public void testRootMBean2() throws MalformedObjectNameException {
+        System.out.println( "testRootMBean2" ) ;
         final int value = 42 ;
         final String rootName = "MyRoot" ;
         final Object rootObject = new NamedRootObject( rootName, value ) ;
@@ -1092,6 +1129,7 @@ public class JmxaTest extends TestCase {
     
     public void testNestedManagedData() throws AttributeNotFoundException, 
         MBeanException, ReflectionException, InstanceNotFoundException, IntrospectionException {
+        System.out.println( "testNestedManagedData" ) ;
         
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             ROOT_DOMAIN ) ;
@@ -1357,14 +1395,15 @@ public class JmxaTest extends TestCase {
     }
 
     public void testMethodSequence() {
+        System.out.println( "testMethodSequence" ) ;
         Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
         try {
             // Turn off logging for this test, since we expect to see
             // many exceptions.
-            logger.setLevel(Level.OFF) ;
+            // logger.setLevel(Level.OFF) ;
             (new MOMSequenceTester()).doTest() ;
         } finally {
-            logger.setLevel(Level.INFO) ;
+            // logger.setLevel(Level.INFO) ;
         }
     }
 
@@ -1392,7 +1431,7 @@ public class JmxaTest extends TestCase {
         Object obj = new TestClass( str ) ;
         mom.registerAtRoot(obj) ;
         ObjectName oname = mom.getObjectName(obj) ;
-        System.out.println( "\tObjectName is " + oname ) ;
+        // System.out.println( "\tObjectName is " + oname ) ;
     }
 
     public void testQuotedName() throws IOException {
@@ -1413,7 +1452,7 @@ public class JmxaTest extends TestCase {
             Object child = new TestClass( "Another[Annoying:String]") ;
             mom.register( parent, child ) ;
             ObjectName oname = mom.getObjectName(child) ;
-            System.out.println( "\tObjectName is " + oname);
+            // System.out.println( "\tObjectName is " + oname);
             // mom.setRegistrationDebug(ManagedObjectManager.RegistrationDebugLevel.NONE) ;
         } finally {
             mom.close() ;
@@ -1455,6 +1494,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testDataTypes() throws IOException {
+        System.out.println( "testDataTypes") ;
         ManagedObjectManager mom =
             ManagedObjectManagerFactory.createStandalone( "test" ) ;
         mom.stripPackagePrefix() ;
@@ -1725,6 +1765,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testIllegalAttribute() throws IOException {
+        System.out.println( "testIllegalAttribute") ;
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             "test" ) ;
         Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
@@ -1786,6 +1827,7 @@ public class JmxaTest extends TestCase {
 
     public void testMyDataObject() throws IOException,
         AttributeNotFoundException, MBeanException, ReflectionException {
+        System.out.println( "testMyDataObject") ;
 
         MyDataObjectBean mdob = new MyDataObjectBean() ;
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
@@ -1864,6 +1906,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testSingletonMBean() throws IOException {
+        System.out.println( "testSingletonMBean") ;
         ManagedObjectManager mom = ManagedObjectManagerFactory.createStandalone(
             "test" );
         Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
@@ -1905,6 +1948,7 @@ public class JmxaTest extends TestCase {
 
     public void testFieldAttribute() throws IOException,
         AttributeNotFoundException, MBeanException, ReflectionException {
+        System.out.println( "testFieldAttribute") ;
 
         TestFieldAttribute tobj = new TestFieldAttribute() ;
 
@@ -1955,15 +1999,15 @@ public class JmxaTest extends TestCase {
             mom.stripPackagePrefix();
             mom.createRoot( root ) ;
             ObjectName rootName = mom.getObjectName(root) ;
-            System.out.println( "\trootName=" + rootName ) ;
+            // System.out.println( "\trootName=" + rootName ) ;
 
             mom.registerAtRoot( child1 ) ;
             ObjectName child1Name = mom.getObjectName(child1) ;
-            System.out.println( "\tchild1Name=" + child1Name ) ;
+            // System.out.println( "\tchild1Name=" + child1Name ) ;
 
             mom.registerAtRoot( child2 ) ;
             ObjectName child2Name = mom.getObjectName(child2) ;
-            System.out.println( "\tchild2Name=" + child2Name ) ;
+            // System.out.println( "\tchild2Name=" + child2Name ) ;
         } finally {
             if (mom != null) {
                 mom.close() ;
@@ -2026,7 +2070,7 @@ public class JmxaTest extends TestCase {
             mom.stripPackagePrefix();
             GmbalMBean gmb = mom.createRoot( root ) ;
             ObjectName rootName = mom.getObjectName(root) ;
-            System.out.println( "\trootName=" + rootName ) ;
+            // System.out.println( "\trootName=" + rootName ) ;
 
             Object data = gmb.getAttribute( "Stat" ) ;
             assertTrue( data instanceof CompositeData) ;
@@ -2111,7 +2155,7 @@ public class JmxaTest extends TestCase {
             mom.stripPackagePrefix();
             GmbalMBean gmb = mom.createRoot( bat ) ;
             ObjectName rootName = mom.getObjectName(bat) ;
-            System.out.println( "\trootName=" + rootName ) ;
+            // System.out.println( "\trootName=" + rootName ) ;
             AMXClient amxc = mom.getAMXClient( bat ) ;
 
             assertEquals( Boolean.FALSE, amxc.getAttribute( "Flag") ) ;
@@ -2225,7 +2269,7 @@ public class JmxaTest extends TestCase {
             mom.stripPackagePrefix();
             GmbalMBean gmb = mom.createRoot( cpb ) ;
             ObjectName rootName = mom.getObjectName(cpb) ;
-            System.out.println( "\trootName=" + rootName ) ;
+            // System.out.println( "\trootName=" + rootName ) ;
             AMXClient amxc = mom.getAMXClient( cpb ) ;
 
             Object result = amxc.getAttribute( "Arrays") ;
@@ -2567,7 +2611,9 @@ public class JmxaTest extends TestCase {
     }
 
     public void msg( String str ) {
-        System.out.println( str ) ;
+        if (DEBUG) {
+            System.out.println( str ) ;
+        }
     }
 
     public void dumpMBeanInfo( MBeanInfo mbi ) {
@@ -2609,7 +2655,7 @@ public class JmxaTest extends TestCase {
     }
 
     public void testDumpMetadata() throws IOException {
-                System.out.println( "testDumpMetadata" ) ;
+        System.out.println( "testDumpMetadata" ) ;
 
         ManagedObjectManager mom = null ;
         Object obj = new TestMDBean() ;
@@ -2622,11 +2668,11 @@ public class JmxaTest extends TestCase {
             AMXClient amxc = mom.getAMXClient( obj ) ;
 
 
-            System.out.println( "MBeanInfo: " ) ;
+            msg( "MBeanInfo: " ) ;
             dumpMBeanInfo( amxc.getMBeanInfo() ) ;
-            System.out.println( "getMeta: " ) ;
+            msg( "getMeta: " ) ;
             for (Map.Entry<String,?> entry : amxc.getMeta().entrySet()) {
-                System.out.println( "\t" + entry.getKey()
+                msg( "\t" + entry.getKey()
                     + " => " + getString( entry.getValue() ) ) ;
             }
         } catch (GmbalException exc) {
@@ -2673,11 +2719,11 @@ public class JmxaTest extends TestCase {
             GmbalMBean mb = mom.registerAtRoot( obj ) ;
             AMXClient amxc = mom.getAMXClient( obj ) ;
 
-            System.out.println( "MBeanInfo: " ) ;
+            msg( "MBeanInfo: " ) ;
             dumpMBeanInfo( amxc.getMBeanInfo() ) ;
-            System.out.println( "getMeta: " ) ;
+            msg( "getMeta: " ) ;
             for (Map.Entry<String,?> entry : amxc.getMeta().entrySet()) {
-                System.out.println( "\t" + entry.getKey()
+                msg( "\t" + entry.getKey()
                     + " => " + getString( entry.getValue() ) ) ;
             }
 
@@ -2732,7 +2778,7 @@ public class JmxaTest extends TestCase {
                 amxc.getAttribute( BAD_ATTR_1 ) ;
                 fail( "Exception expected" ) ;
             } catch (GmbalException exc) {
-                System.out.println( "caught exception " + exc ) ;
+                msg( "caught exception " + exc ) ;
             } catch (Exception exc) {
                 fail( "caught unexpected exception " + exc ) ;
             }
@@ -2741,7 +2787,7 @@ public class JmxaTest extends TestCase {
                 amxc.getAttribute( BAD_ATTR_1 ) ;
                 fail( "Exception expected" ) ;
             } catch (GmbalException exc) {
-                System.out.println( "caught exception " + exc ) ;
+                msg( "caught exception " + exc ) ;
             } catch (Exception exc) {
                 fail( "caught unexpected exception " + exc ) ;
             }
@@ -2788,7 +2834,7 @@ public class JmxaTest extends TestCase {
                 amxc.getAttribute( BAD_ATTR_1 ) ;
                 fail( "Exception expected" ) ;
             } catch (GmbalException exc) {
-                System.out.println( "caught exception " + exc ) ;
+                msg( "caught exception " + exc ) ;
             } catch (Exception exc) {
                 fail( "caught unexpected exception " + exc ) ;
             }
