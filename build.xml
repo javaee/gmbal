@@ -119,13 +119,16 @@
         classpathref="maven.class.path">
     </typedef>
 
+    <artifact:remoteRepository id="gf.repo" url="${gf.repository}"/>
+    <artifact:remoteRepository id="aqute.repo" url="${aqute.repository}"/>
+
     <artifact:dependencies versionsId="dependency.versions" filesetId="dependency.fileset" pathId="dependency.classpath">
-        <remoteRepository url="${gf.repository}"/>
+        <remoteRepository refid="gf.repo"/>
         <dependency groupId="${management-api.groupid}" artifactId="${management-api.artifactid}" version="${management-api.version}" scope="runtime"/>
     </artifact:dependencies>
 
     <artifact:dependencies pathId="bnd.classpath">
-        <remoteRepository url="${aqute.repository}"/>
+        <remoteRepository refid="aqute.repo"/>
         <dependency groupId="${bnd.groupid}" artifactId="${bnd.artifactid}" version="${bnd.version}" scope="compile"/>
     </artifact:dependencies>
 
@@ -344,7 +347,7 @@ The modules             (and their dependencies):
                     <token key="artifactId" value="@{module}"/>
                     <token key="version" value="${gmbal.version}"/>
                     <token key="jarDescription" value="@{description}"/>
-                    <token key="groupId" value="${gmbal.groupId}"/>
+                    <token key="groupId" value="${gmbal.groupid}"/>
                     <token key="repositoryUrl" value="${repo.url}"/>
                 </replacetokens>
             </filterchain>
@@ -353,7 +356,7 @@ The modules             (and their dependencies):
             <filterset>
               <filter token="HEADER" value="${HEADER-@{module}}"/>
               <filter token="version" value="${gmbal.version}"/>
-              <filter token="groupId" value="${gmbal.groupId}"/>
+              <filter token="groupId" value="${gmbal.groupid}"/>
             </filterset>
         </copy>
     </sequential>
