@@ -392,7 +392,7 @@ The modules             (and their dependencies):
 </target>
 
 <target name="release-local" depends="project-init,mavenize">
-    <release-to-maven rep="${local.url}"/>
+    <release-to-maven repo="${local.url}"/>
 </target>
 
 <target name="hudson-job" depends="all,javadoc,findbugs-xml"/>
