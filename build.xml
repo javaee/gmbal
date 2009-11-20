@@ -120,7 +120,7 @@
     </typedef>
 
     <artifact:remoteRepository id="gf.repo" url="${gf.repository}"/>
-    <artifact:remoteRepository id="aqute.repo" url="${aqute.repository}"/>
+    <artifact:remoteRepository id="bnd.repo" url="${bnd.repository}"/>
 
     <artifact:dependencies versionsId="dependency.versions" filesetId="dependency.fileset" pathId="dependency.classpath">
         <remoteRepository refid="gf.repo"/>
@@ -128,7 +128,7 @@
     </artifact:dependencies>
 
     <artifact:dependencies pathId="bnd.classpath">
-        <remoteRepository refid="aqute.repo"/>
+        <remoteRepository refid="bnd.repo"/>
         <dependency groupId="${bnd.groupid}" artifactId="${bnd.artifactid}" version="${bnd.version}" scope="compile"/>
     </artifact:dependencies>
 
@@ -142,8 +142,6 @@
         </copy>
     </target>
 
-    <target name="-post-init" depends="get-dependencies"/>
-
     <target name="mavenize" depends="project-init" description="initialize maven ">
         <artifact:install-provider artifactId="wagon-svn" groupId="org.jvnet.wagon-svn" version="1.7">
             <artifact:remoteRepository id="java.net.maven2.repository" url="http://download.java.net/maven/2/" />
@@ -154,18 +152,19 @@
     <target name="-post-clean">
         <delete dir="coverage"/>
         <delete file="coverage.ec"/>
+        <delete dir="${libcache.dir}"/>
     </target>
 
     <target name="project-init">
         <echo message="Current version is ${gmbal.version}"/>
     </target>
 
-    <target name="all" depends="project-init,clean,jar,gen-resource-bundle,emma-instr,test,test-report,emma-report,make-bundles"/>
+    <target name="all" depends="project-init,clean,get-dependencies,jar,gen-resource-bundle,emma-instr,test,test-report,emma-report,make-bundles"/>
 
     <target name="gen-resource-bundle">
         <!-- generate LogStrings.properties ResourceBundle -->
         <java classname="org.glassfish.gmbal.tools.file.ExceptionResourceGenerator"
-            classpath="build/classes:libcache/management-api.jar" fork="true" dir=".">
+            classpath="build/classes:${libcache.dir}/management-api.jar" fork="true" dir=".">
             <arg value="-verbose"/>
             <arg value="0"/>
             <arg value="-source"/>
