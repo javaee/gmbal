@@ -203,7 +203,14 @@ public class AMXClientTest extends TestCase {
                 gmb = mom.createRoot( mmc ) ;
             } else {
                 MyManagedClass parent = result.get( parentIndex ).first() ;
-                gmb = mom.register( parent, mmc) ;
+                mom.setRegistrationDebug(
+                    ManagedObjectManager.RegistrationDebugLevel.NORMAL) ;
+                try {
+                    gmb = mom.register( parent, mmc) ;
+                } finally {
+                    mom.setRegistrationDebug(
+                        ManagedObjectManager.RegistrationDebugLevel.NONE) ;
+                }
             }
             Pair<MyManagedClass,GmbalMBean> pair = 
                 new Pair<MyManagedClass,GmbalMBean>( mmc, gmb ) ;

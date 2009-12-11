@@ -41,7 +41,7 @@
   Created on : Nov 17, 2008, 4:25:47 PM
   Author : ken
   -->
-  <title>JMXA Functional Spec</title>
+  <title>GMBAL Functional Spec</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <style type="text/css" title="Amaya theme">
 /* Modern style for Amaya Editor Lite */
@@ -208,8 +208,9 @@ a[href] {
 <h1>GlassFish MBean Annotation Library (gmbal)</h1>
 <h1>Functional Specification</h1>
 by Ken Cavanaugh<br>
-Version .9<span style="background-color: rgb(250, 255, 221);"></span><br>
-5/19/09<span style="background-color: rgb(255, 249, 200);"></span><br>
+Version 1.0 (for GlassFish v3 FCS)<span
+ style="background-color: rgb(250, 255, 221);"></span><br>
+12/11/09<span style="background-color: rgb(255, 249, 200);"></span><br>
 <h2>1. Introduction</h2>
 <p>The GlassFish MBean Annotation Library (gmbal, pronounced as in
 "gumball")
@@ -548,7 +549,8 @@ from Method name)<br>
       </td>
       <td style="vertical-align: top;">Same<br>
       </td>
-      <td style="vertical-align: top;">Defines a method that represents
+      <td style="vertical-align: top;">Defines a method or field that
+represents
 an attribute either in ManagedData or ManagedObject<br>
       </td>
     </tr>
@@ -791,6 +793,18 @@ MBeanServer as the ManagedObjectManager.&nbsp; The ObjectName MUST be
 an AMX-compliant ObjectName: in particular, it MUST define pp, type,
 and
 name attributes.<br>
+<br>
+Note that createFederated must obey the parent-child restriction in
+AMX.&nbsp; That is, a child cannot be created<br>
+before its parent has been created.&nbsp; It is possible that the root
+parent ObjectName passed to createFederated does not correspond to a
+valid MBean in the MBeanServer at the time that createFederated is
+called.&nbsp; In this case, the Gmbal ManagedObjectManager&nbsp;
+created by the createFederated call must defer registration of its
+MBeans until after the root parent has been registered.&nbsp; The MOM
+monitors the root parent in the MBeanServer, registering and
+de-registering all MBeans in the mom's tree as the root parent is
+registered and de-registered.<br>
 <br>
 For examples of the usage of these methods, see "<a
  href="#4.6._Using_Gmbal_">Using Gmbal</a>".<br>
@@ -1050,7 +1064,29 @@ access any field of an object unless an MBean operation requires it, so
 it is safe to pass partially constructed objects into gmbal itself. So
 avoiding MBeanServer registration by suspending registration allows
 this case to be handled easily.<br>
-<p></p>
+<br>
+<h4>3.2.12. getAMXClient</h4>
+This returns an AMXClient that is a convenient wrapper for accessing
+the features of the MBean corresponding to the object passed to
+getAMXClient.<br>
+<br>
+<h4>3.2.13. getDomain</h4>
+This method returns the domain for all MBeans created in the mom.&nbsp;
+This is either the domain passed to createStandalone, or the domain of
+the ObjectName passed to createFederated.<br>
+<br>
+<h4>3.2.14. isManagedObject</h4>
+This method is a convenience API that simply checks whether or not the
+object passed to isManagedObject is annotated as a @ManagedObject or
+not.<br>
+<br>
+<h4>3.2.15. suppressDuplicateRootReport<br>
+</h4>
+This controls the behavior of setting the MOM's root.&nbsp; If true, no
+error is reported when the root has already been registered with the
+JMX MBeanServer.&nbsp; This method was added to allow GFv3 monitoring
+to avoid reporting an uninteresting error.<br>
+<br>
 <h2>4. Further notes on the API<br>
 </h2>
 There are a number of details about how the APIs work that require
@@ -1069,7 +1105,9 @@ method names:<br>
 non-void result):
         <ol>
           <li>If the method name starts with "get" or "is", remote the
-prefix.&nbsp; The rest of the method name is the attribute ID.<br>
+prefix.&nbsp; The rest of the method name is the attribute ID for an
+attribute in a ManagedObject.&nbsp; If the attribute is in a
+ManagedData, then the first character is forced to lower case.<br>
           </li>
           <li>Otherwise the method name is the id.<br>
           </li>
@@ -1079,8 +1117,9 @@ prefix.&nbsp; The rest of the method name is the attribute ID.<br>
 result):
         <ol>
           <li>If the method name starts with "set", remove "set". The
-rest of the method name is the attribute ID.<br>
-          </li>
+rest of the method name is the attribute ID for an attribute in a
+ManagedObject.&nbsp; If the attribute is in a ManagedData, then the
+first character is forced to lower case.&nbsp;</li>
           <li>Otherwise the method name is the id.</li>
         </ol>
       </li>
@@ -1105,6 +1144,9 @@ ManagedObjectManager.&nbsp; If this option is used, all values of
 appropriate
 ResourceBundle must then be associated with the ManagedObjectManager
 when the ManagedObjectManager is created.<br>
+<br>
+Note: this feature is not implemented in the GFv3 FCS version of Gmbal.<br>
+<br>
 <h3><a name="4.3._OpenType_mapping_"></a>4.3. OpenType mapping<br>
 </h3>
 Gmbal mostly follows the OpenType mapping rules for MXBeans (see the <a
@@ -1172,7 +1214,7 @@ almost any sort of metadata to be added to MBeans defined by gmbal,
 with no changes to gmbal required to add the additional metadata.<span
  style="font-weight: bold;"></span>
 <h3>4.5. AMX support for MBeans</h3>
-Gmbal will be fully compliant with all requirements and recommendations
+Gmbal is fully compliant with all requirements and recommendations
 of the
 <a
  href="https://glassfish.dev.java.net/nonav/v3/admin/planning/V3Changes/V3_AMX_SPI.html">GlassFish
@@ -1314,7 +1356,6 @@ the methods suspendJMXRegistration() and resumeJMXRegistration(). When
 registration is suspended, newly created MBeanImpl instances are kept
 in a queue.&nbsp; Once resume is called, all enqueued MBeanImpl
 instances are registered with the MBeanServer.<br>
-<p></p>
 <p>In the timer library case, the TimerFactory is constructed by a
 TimerFactoryBuilder as follows:<br>
 </p>
@@ -1707,7 +1748,7 @@ that projects that are not part of GFv3 may support GlassFish
 monitoring probes without depending at build-time or runtime on
 anything other than a single probe bundle.<br>
 <br>
-The resulting OSGi bundles are currently (version 3.0.0-b002) sized at:<br>
+The resulting OSGi bundles are currently (version 3.0-FCS) sized at:<br>
 <br>
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2"
  cellspacing="2">
@@ -1715,13 +1756,13 @@ The resulting OSGi bundles are currently (version 3.0.0-b002) sized at:<br>
     <tr>
       <td style="vertical-align: top;">gmbal-api-only<br>
       </td>
-      <td style="vertical-align: top;">14 KBytes<br>
+      <td style="vertical-align: top;">22 KBytes<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;">gmbal<br>
       </td>
-      <td style="vertical-align: top;">243 Kbytes<br>
+      <td style="vertical-align: top;">272 Kbytes<br>
       </td>
     </tr>
   </tbody>
