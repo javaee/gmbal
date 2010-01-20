@@ -185,6 +185,9 @@ public class TypeEvaluator {
         } catch (Exception exc) {
             throw Exceptions.self.internalTypeEvaluatorError( exc ) ;
         }
+
+        setDebugLevel( 
+            Integer.getInteger( "org.glassfish.gmbal.TypelibDebugLevel", 0 ) ) ;
     }
 
     /** Return the EvaluatedType corresponding to cls if cls represents an
