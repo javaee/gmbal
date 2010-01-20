@@ -160,6 +160,8 @@
         <echo message="Current version is ${gmbal.version}"/>
     </target>
 
+    <target name="-pre-compile" depends="get-dependencies"/>
+
     <target name="all" depends="project-init,clean,get-dependencies,jar,gen-resource-bundle,emma-instr,test,test-report,emma-report,make-bundles"/>
 
     <target name="gen-resource-bundle">
