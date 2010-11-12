@@ -132,9 +132,11 @@
 
     <artifact:remoteRepository id="gf.repo" url="${gf.repository}"/>
     <artifact:remoteRepository id="bnd.repo" url="${bnd.repository}"/>
+    <artifact:localRepository id="local.repo" path="${maven.local.repository}"/>
 
     <artifact:dependencies versionsId="dependency.versions" filesetId="dependency.fileset" pathId="dependency.classpath">
         <remoteRepository refid="gf.repo"/>
+        <localRepository refid="local.repo"/>
         <dependency groupId="${management-api.groupid}" artifactId="${management-api.artifactid}" version="${management-api.version}" scope="runtime"/>
     </artifact:dependencies>
 
@@ -283,6 +285,7 @@
             <sequential>
                 <mkdir dir="dist/bundles"/>
                 <java classpathref="bnd.classpath" classname="aQute.bnd.main.bnd" fork="true" failonerror="true">
+                    <arg value="-exceptions"/>
                     <arg value="build"/>
                     <arg value="-classpath"/>
                     <arg value="dist/gmbal.jar"/>
@@ -374,6 +377,20 @@ The modules             (and their dependencies):
     </sequential>
 </macrodef>
 
+<macrodef name="push-to-local-maven">
+    <attribute name="module"/>
+    <attribute name="description"/>
+    <sequential>
+        <make-file module="@{module}" description="@{description}"/>
+
+        <artifact:pom id="pom.file" file="make/temp.pom" />
+        <artifact:install file="dist/bundles/@{module}.jar">
+            <pom refid="pom.file"/>
+        </artifact:install>
+        <delete file="make/temp.pom" verbose="true"/>
+    </sequential>
+</macrodef>
+
 <macrodef name="push-to-maven">
     <attribute name="module"/>
     <attribute name="description"/>
@@ -391,6 +408,16 @@ The modules             (and their dependencies):
     </sequential>
 </macrodef>
 
+<macrodef name="release-to-local-maven">
+    <sequential>
+        <echo message="Releasing modules with version ${version} to local maven"/>
+        <push-to-local-maven module="gmbal-api-only" description="gmbal API"/>
+        <push-to-local-maven module="${gmbal.artifactid}" description="gmbal implementation"/>
+        <push-to-local-maven module="gmbal-api-only-source" description="gmbal source code (API only)"/>
+        <push-to-local-maven module="gmbal-source" description="gmbal source code"/>
+    </sequential>
+</macrodef>
+
 <macrodef name="release-to-maven">
     <attribute name="repo"/>
     <sequential>
@@ -403,11 +430,11 @@ The modules             (and their dependencies):
 </macrodef>
 
 <target name="release" depends="project-init,mavenize">
-    <release-to-maven rep="${repo.url}"/>
+    <release-to-maven repo="${repo.url}"/>
 </target>
 
 <target name="release-local" depends="project-init,mavenize">
-    <release-to-maven repo="${local.url}"/>
+    <release-to-local-maven/>
 </target>
 
 <target name="hudson-job" depends="all,javadoc,findbugs-xml"/>
