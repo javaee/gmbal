@@ -47,7 +47,10 @@ import java.io.IOException ;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Properties;
+import org.glassfish.gmbal.generic.Pair;
 import org.glassfish.gmbal.generic.UnaryFunction;
 import org.glassfish.gmbal.tools.argparser.ArgParser;
 import org.glassfish.gmbal.tools.argparser.DefaultValue;
@@ -104,7 +107,8 @@ public class CopyrightProcessor {
     //  SHELL_SCRIPT
     //  IGNORE
     // Each class has suffixes and file names specified in a property file:
-    // cptool.<CLASS>.suffixes is a comma separated list (no spaces) of filename suffixes
+    // cptool.<CLASS>.suffixes is a comma separated list (no spaces)
+    //     of filename suffixes
     // cptool.<CLASS>.filenames is a comma separated list of specific filenames
 
     private static class FileProcessing {
@@ -152,14 +156,15 @@ public class CopyrightProcessor {
     // Block tags
     private static final String COPYRIGHT_BLOCK_TAG = "CopyrightBlock" ;
     private static final String SUN_COPYRIGHT_TAG = "SunCopyright" ;
+    private static final String ORACLE_COPYRIGHT_TAG = "OracleCopyright" ;
     private static final String CORRECT_COPYRIGHT_TAG = "CorrectCopyright" ;
 
     private static void trace( String msg ) {
 	System.out.println( msg ) ;
     }
 
-    private static Block makeCopyrightLineCommentBlock( final Block copyrightText, 
-	final String prefix, final String tag ) {
+    private static Block makeCopyrightLineCommentBlock(
+        final Block copyrightText, final String prefix, final String tag ) {
 
 	final Block result = new Block( copyrightText ) ;
 	result.addPrefixToAll( prefix ) ;
@@ -186,37 +191,48 @@ public class CopyrightProcessor {
 
     private static final String COPYRIGHT = "Copyright" ;
 
-    // Copyright year is first non-blank after COPYRIGHT
-    private static String getSunCopyrightStart( String str ) {
-	int index = str.indexOf( COPYRIGHT ) ;
-	if (index == -1) 
-	    return null ;
+    // Search for COPYRIGHT followed by white space, then [0-9]*-[0-9]*
+    private static Pair<String,String> getCopyrightPair( String str ) {
+        StringParser sp = new StringParser( str ) ;
+        if (!sp.skipToString( COPYRIGHT )) {
+            return null;
+        }
 
-	int pos = index + COPYRIGHT.length() ;
-	char ch = str.charAt( pos ) ;
-	while (Character.isWhitespace(ch) && (pos<str.length())) {
-	    ch = str.charAt( ++pos ) ;
-	}
-	
-	int start = pos ;
-	ch = str.charAt( pos ) ;
-	while (Character.isDigit(ch) && (pos<str.length())) {
-	    ch = str.charAt( ++pos ) ;
-	}
+        if (!sp.skipString( COPYRIGHT )) {
+            return null;
+        }
 
-	if (pos==start) 
-	    return null ;
+        if (!sp.skipWhitespace()) {
+            return null;
+        }
 
-	return str.substring( start, pos ) ;
+        String start = sp.parseInt() ;
+        if (start == null) {
+            return null;
+        }
+
+        if (!sp.skipString( "-" )) {
+            return null;
+        }
+
+        String end = sp.parseInt() ;
+        if (end == null) {
+            return null;
+        }
+
+        return new Pair<String,String>( start, end ) ;
     }
 
-    private static final String START_YEAR = "StartYear" ;
 
-    private static Block makeCopyrightBlock( String startYear, 
+    // These strings are found in the copyright text file.
+    private static final String START_YEAR = "StartYear" ;
+    private static final String LAST_YEAR = "LastYear" ;
+
+    private static Block makeCopyrightBlock( Pair<String,String> years, 
 	Block copyrightText) throws IOException {
 
 	if (args.verbose() > 1) {
-	    trace( "makeCopyrightBlock: startYear = " + startYear ) ;
+	    trace( "makeCopyrightBlock: years = " + years ) ;
 	    trace( "makeCopyrightBlock: copyrightText = " + copyrightText ) ;
 
 	    trace( "Contents of copyrightText block:" ) ;
@@ -226,20 +242,22 @@ public class CopyrightProcessor {
 	}
 
 	Map<String,String> map = new HashMap<String,String>() ;
-	map.put( START_YEAR, startYear ) ;
-	Block withStart = copyrightText.instantiateTemplate( map ) ;
+	map.put( START_YEAR, years.first() ) ;
+	map.put( LAST_YEAR, years.second() ) ;
+	Block blk = copyrightText.instantiateTemplate( map ) ;
 
 	if (args.verbose() > 1) {
-	    trace( "Contents of copyrightText block withStart date:" ) ;
-	    for (String str : withStart.contents()) {
+	    trace( "Contents of copyrightText block with start and end dates:" ) ;
+	    for (String str : blk.contents()) {
 		trace( "\t" + str ) ;
 	    }
 	}   
 
-	return withStart ;
+	return blk ;
     }
 
-    private interface BlockParserCall extends UnaryFunction<FileWrapper,List<Block>> {}
+    private interface BlockParserCall
+        extends UnaryFunction<FileWrapper,List<Block>> {}
 
     private static BlockParserCall makeBlockCommentParser( final String start, 
 	final String end ) {
@@ -261,7 +279,8 @@ public class CopyrightProcessor {
 	} ;
     }
 
-    private static BlockParserCall makeLineCommentParser( final String prefix ) {
+    private static BlockParserCall makeLineCommentParser(
+        final String prefix ) {
 
 	return new BlockParserCall() {
             @Override
@@ -279,7 +298,9 @@ public class CopyrightProcessor {
 	} ;
     }
 
-    private static void validationError( Block block, String msg, FileWrapper fw ) {
+    private static void validationError( Block block, String msg, 
+        FileWrapper fw ) {
+
 	trace( "Copyright validation error: " + msg + " for " + fw ) ;
 	if ((args.verbose() > 0) && (block != null)) {
 	    trace( "Block=" + block ) ;
@@ -290,22 +311,28 @@ public class CopyrightProcessor {
 	}
     }
 
-    // Strip out old Sun copyright block.  Prepend new copyrightText.
-    // copyrightText is a Block containing a copyright template in the correct comment format.
+    // Strip out old Sun or Oracle copyright block.  Prepend new copyrightText.
+    //
+    // copyrightText is a Block containing a copyright template in the correct
+    //    comment format.
     // parseCall is the correct block parser for splitting the file into Blocks.
     // defaultStartYear is the default year to use in copyright comments if not
-    // otherwise specified in an old copyright block.
-    // afterFirstBlock is true if the copyright needs to start after the first block in the
-    // file.
-    private static Scanner.Action makeCopyrightBlockAction( final Block copyrightText, 
-	final BlockParserCall parserCall, final String defaultStartYear, 
-	final boolean afterFirstBlock ) {
+    //     otherwise specified in an old copyright block.
+    // afterFirstBlock is true if the copyright needs to start after the 
+    //     first block in the file.
+    private static Scanner.Action makeCopyrightBlockAction( 
+        final Block copyrightText, final BlockParserCall parserCall,
+        final String defaultStartYear, final boolean afterFirstBlock ) {
 
 	if (args.verbose() > 0) {
-	    trace( "makeCopyrightBlockAction: copyrightText = " + copyrightText ) ;
-	    trace( "makeCopyrightBlockAction: parserCall = " + parserCall ) ;
-	    trace( "makeCopyrightBlockAction: defaultStartYear = " + defaultStartYear ) ;
-	    trace( "makeCopyrightBlockAction: afterFirstBlock = " + afterFirstBlock ) ;
+	    trace( "makeCopyrightBlockAction: copyrightText = "
+                + copyrightText ) ;
+	    trace( "makeCopyrightBlockAction: parserCall = "
+                + parserCall ) ;
+	    trace( "makeCopyrightBlockAction: defaultStartYear = "
+                + defaultStartYear ) ;
+	    trace( "makeCopyrightBlockAction: afterFirstBlock = "
+                + afterFirstBlock ) ;
 	}
 
 	return new Scanner.Action() {
@@ -317,9 +344,125 @@ public class CopyrightProcessor {
 		    + ",afterFirstBlock=" + afterFirstBlock + "]" ;
 	    }
 
+            private void validateBlock( final Block copyrightBlock, 
+                final Block block, final int count, final FileWrapper fw ) {
+                if (block.hasTags( ORACLE_COPYRIGHT_TAG,
+                    COPYRIGHT_BLOCK_TAG,
+                    BlockParser.COMMENT_BLOCK_TAG)) {
+                    if (!copyrightBlock.equals( block )) {
+                        validationError( block,
+                            "block " + count + " has incorrect "
+                            + "copyright text", fw ) ;
+                    }
+                } else {
+                    validationError( block,
+                        "Block " + count + " should be copyright "
+                        + "but isn't", fw ) ;
+                }
+            }
+
+            private boolean validateFile( final Block copyrightBlock,
+                final List<Block> fileBlocks, final FileWrapper fw ) {
+
+                // There should be an Oracle copyright block in the
+                // first block (if afterFirstBlock is false), otherwise
+                // in the second block.  It should entirely match
+                // copyrightText
+                int count = 0 ;
+                for (Block block : fileBlocks) {
+                    // Generally always return true, because we want
+                    // to see ALL validation errors.
+
+                    if (block.hasTags( COPYRIGHT_BLOCK_TAG,
+                        SUN_COPYRIGHT_TAG )) {
+                        validationError( block,
+                            "File contains an old Sun Copyright block", fw ) ;
+                        return true ;
+                    }
+
+                    final boolean checkBlock0 = !afterFirstBlock && count==0 ;
+                    final boolean checkBlock1 = afterFirstBlock && count==1 ;
+
+                    if (checkBlock0 || checkBlock1) {
+                        validateBlock( copyrightBlock, block, count, fw ) ;
+                        return true ;
+                    }
+
+                    if (count > 1) {
+                        // should not get here!  Return false only
+                        // in this case, because this is
+                        // an internal error in the validator.
+                        validationError( null,
+                            "Neither first nor second block checked",
+                            fw ) ;
+                        return false ;
+                    }
+
+                    count++ ;
+                }
+
+                return true ;
+            }
+
+            private boolean rewriteFile( final boolean hadAnOldOracleCopyright,
+                final Block copyrightBlock,
+                final List<Block> fileBlocks, final FileWrapper fw ) throws IOException {
+
+                // Re-write file, replacing the first block tagged
+                // ORACLE_COPYRIGHT_TAG, COPYRIGHT_BLOCK_TAG, and
+                // commentBlock with the copyrightText block.
+                // Any old SUN_COPYRIGHT_TAG blocks are skipped.
+
+                if (fw.canWrite()) {
+                    trace( "Updating copyright/license header on file " + fw ) ;
+
+                    // Note: this is dangerous: a crash before close
+                    // will destroy the file!
+                    boolean res = fw.delete() ;
+                    if (args.verbose() > 1 && !res) {
+                        trace( "Failed to delete file " + fw ) ;
+                    }
+                    fw.open( FileWrapper.OpenMode.WRITE ) ;
+
+                    int count = 0 ;
+                    for (Block block : fileBlocks) {
+                        if (count==0 && !afterFirstBlock) {
+                            copyrightBlock.write( fw ) ;
+                        }
+
+                        if (block.hasTags( COPYRIGHT_BLOCK_TAG,
+                            BlockParser.COMMENT_BLOCK_TAG)) {
+                            if (block.hasNoTags( ORACLE_COPYRIGHT_TAG,
+                                SUN_COPYRIGHT_TAG )) {
+                                block.write( fw ) ;
+                            }
+                        } else {
+                            block.write( fw ) ;
+                        }
+
+                        if (count==0 && afterFirstBlock) {
+                            copyrightBlock.write( fw ) ;
+                        }
+
+                        count++ ;
+                    }
+                } else {
+                    if (args.verbose() > 1) {
+                        trace( "Skipping file " + fw
+                            + " because is is not writable" ) ;
+                    }
+                }
+
+                return true ;
+            }
+
 	    public boolean evaluate( FileWrapper fw ) {
 		try {
-		    String startYear = defaultStartYear ;
+                    int cy = (new GregorianCalendar()).get( Calendar.YEAR ) ;
+                    String currentYear = "" + cy ;
+                    Pair<String,String> years = 
+                        new Pair<String,String>( defaultStartYear, currentYear ) ;
+		    boolean hadAnOldOracleCopyright = false ;
 		    boolean hadAnOldSunCopyright = false ;
 		    
 		    // Convert file into blocks
@@ -331,9 +474,22 @@ public class CopyrightProcessor {
 			if (str != null) {
 			    block.addTag( COPYRIGHT_BLOCK_TAG ) ;
 			    if (str.contains( "Sun" )) {
-				startYear = getSunCopyrightStart( str ) ;
+				Pair<String,String> scp =
+                                    getCopyrightPair( str ) ;
+                                if (scp != null) {
+                                    years = scp ;
+                                }
 				block.addTag( SUN_COPYRIGHT_TAG ) ;
 				hadAnOldSunCopyright = true ;
+			    }
+			    if (str.contains( "Oracle" )) {
+				Pair<String,String> scp =
+                                    getCopyrightPair( str ) ;
+                                if (scp != null && !hadAnOldSunCopyright) {
+                                    years = scp ;
+                                }
+				block.addTag( ORACLE_COPYRIGHT_TAG ) ;
+				hadAnOldOracleCopyright = true ;
 			    }
 			}
 		    }
@@ -348,93 +504,17 @@ public class CopyrightProcessor {
 			}
 		    }
 
-		    Block cb = makeCopyrightBlock( startYear, copyrightText ) ;
+		    Block cb = makeCopyrightBlock( years, copyrightText ) ;
 
 		    if (args.validate()) {
-			// There should be a Sun copyright block in the first block
-			// (if afterFirstBlock is false), otherwise in the second block.
-			// It should entirely match copyrightText
-			int count = 0 ;
-			for (Block block : fileBlocks) {
-			    // Generally always return true, because we want to see ALL validation errors.
-			    if (!afterFirstBlock && (count == 0)) {
-				if (block.hasTags( SUN_COPYRIGHT_TAG, COPYRIGHT_BLOCK_TAG, 
-				    BlockParser.COMMENT_BLOCK_TAG)) {
-				    if (!cb.equals( block )) {
-					validationError( block, "First block has incorrect copyright text", fw ) ;
-				    }
-				} else {
-				    validationError( block, "First block should be copyright but isn't", fw ) ;
-				}
-
-				return true ;
-			    } else if (afterFirstBlock && (count == 1)) {
-				if (block.hasTags( SUN_COPYRIGHT_TAG, COPYRIGHT_BLOCK_TAG, 
-				    BlockParser.COMMENT_BLOCK_TAG)) {
-				    if (!cb.equals( block )) {
-					validationError( block, "Second block has incorrect copyright text", fw ) ;
-				    }
-				} else {
-				    validationError( block, "Second block should be copyright but isn't", fw ) ;
-				}
-
-				return true ;
-			    } 
-			    
-			    if (count > 1) {
-				// should not get here!  Return false only in this case, because this is
-				// an internal error in the validator.
-				validationError( null, "Neither first nor second block checked", fw ) ;
-				return false ;
-			    }
-
-			    count++ ;
-			}
+                        validateFile( cb, fileBlocks, fw ) ;
 		    } else {
-			// Re-write file, replacing the first block tagged
-			// SUN_COPYRIGHT_TAG, COPYRIGHT_BLOCK_TAG, and commentBlock with
-			// the copyrightText block.
-			
-			if (fw.canWrite()) {
-			    trace( "Updating copyright/license header on file " + fw ) ;
-
-			    // Note: this is dangerous: a crash before close will destroy the file!
-			    boolean res = fw.delete() ;
-                            if (args.verbose() > 1 && !res) {
-                                trace( "Failed to delete file " + fw ) ;
-                            }
-			    fw.open( FileWrapper.OpenMode.WRITE ) ;
-
-			    boolean firstMatch = true ;
-			    boolean firstBlock = true ;
-			    for (Block block : fileBlocks) {
-				if (!hadAnOldSunCopyright && firstBlock) {
-				    if (afterFirstBlock) {
-					block.write( fw ) ;
-					cb.write( fw ) ;
-				    } else {
-					cb.write( fw ) ;
-					block.write( fw ) ;
-				    }
-				    firstBlock = false ;
-				} else if (block.hasTags( SUN_COPYRIGHT_TAG, COPYRIGHT_BLOCK_TAG, 
-				    BlockParser.COMMENT_BLOCK_TAG) && firstMatch)  {
-				    firstMatch = false ;
-				    if (hadAnOldSunCopyright) {
-					cb.write( fw ) ;
-				    }
-				} else {
-				    block.write( fw ) ;
-				}
-			    }
-			} else {
-			    if (args.verbose() > 1) {
-				trace( "Skipping file " + fw + " because is is not writable" ) ;
-			    }
-			}
+                        rewriteFile( hadAnOldOracleCopyright, cb, fileBlocks,
+                            fw ) ;
 		    }
 		} catch (IOException exc ) {
-		    trace( "Exception while processing file " + fw + ": " + exc ) ;
+		    trace( "Exception while processing file " + fw + ": "
+                        + exc ) ;
 		    exc.printStackTrace() ;
 		    return false ;
 		} finally {
@@ -446,11 +526,10 @@ public class CopyrightProcessor {
 	} ;
     }
 
-    // Note: we could also make the block and line comment processors configurable,
-    // but that seems like overkill.
+    // Note: we could also make the block and line comment processors 
+    // configurable, but that seems like overkill.
     private static final String JAVA_COMMENT_START = "/*" ;
     private static final String JAVA_COMMENT_PREFIX = " *" ;
-    // Note that the display form of JAVA_COMMENT_END adds a space to line up the *'s
     private static final String JAVA_COMMENT_END = "*/" ; 
 
     private static final boolean JAVA_AFTER_FIRST_BLOCK = false ;
@@ -481,37 +560,39 @@ public class CopyrightProcessor {
         procMap.put( fp.name(), fp ) ;
     }
 
-    private static void initializeScanners( ActionFactory af ) throws IOException {
+    private static void initializeScanners( ActionFactory af ) 
+        throws IOException {
+
         procMap = new HashMap<String,FileProcessing>() ;
 
         // Create the blocks needed for different forms of the
         // copyright comment template
-        final Block copyrightText = BlockParser.getBlock( args.copyright() ) ;
+        final Block crtext = BlockParser.getBlock( args.copyright() ) ;
 
         final Block javaCopyrightText =
-            makeCopyrightBlockCommentBlock( copyrightText,
+            makeCopyrightBlockCommentBlock( crtext,
                 JAVA_COMMENT_START + " ", JAVA_COMMENT_PREFIX + " ",
                 " " + JAVA_COMMENT_END + " ", JAVA_FORMAT_TAG ) ;
 
         final Block xmlCopyrightText =
-            makeCopyrightBlockCommentBlock( copyrightText,
+            makeCopyrightBlockCommentBlock( crtext,
                 XML_COMMENT_START, XML_COMMENT_PREFIX, XML_COMMENT_END,
                 XML_FORMAT_TAG ) ;
 
         final Block javaLineCopyrightText =
-            makeCopyrightLineCommentBlock( copyrightText, JAVA_LINE_PREFIX,
+            makeCopyrightLineCommentBlock( crtext, JAVA_LINE_PREFIX,
             JAVA_LINE_FORMAT_TAG ) ;
 
         final Block schemeCopyrightText =
-            makeCopyrightLineCommentBlock( copyrightText, SCHEME_PREFIX,
+            makeCopyrightLineCommentBlock( crtext, SCHEME_PREFIX,
             SCHEME_FORMAT_TAG ) ;
 
         final Block shellCopyrightText =
-            makeCopyrightLineCommentBlock( copyrightText, SHELL_PREFIX,
+            makeCopyrightLineCommentBlock( crtext, SHELL_PREFIX,
             SHELL_FORMAT_TAG ) ;
 
         if (args.verbose() > 0) {
-            trace( "Main: copyrightText = " + copyrightText ) ;
+            trace( "Main: copyrightText = " + crtext ) ;
             trace( "Main: javaCopyrightText = " + javaCopyrightText ) ;
             trace( "Main: xmlCopyrightText = " + xmlCopyrightText ) ;
             trace( "Main: javaLineCopyrightText = " + javaLineCopyrightText ) ;
@@ -595,7 +676,7 @@ public class CopyrightProcessor {
     private static Arguments args ;
 
     public static void main(String[] strs) {
-	ArgParser<Arguments> ap = new ArgParser( Arguments.class ) ;
+	ArgParser<Arguments> ap = new ArgParser<Arguments>( Arguments.class ) ;
 	args = ap.parse( strs ) ;
 
 	if (args.verbose() > 0) {
@@ -603,7 +684,8 @@ public class CopyrightProcessor {
 	}
 
 	try {
-            ActionFactory af = new ActionFactory( args.verbose(), args.dryrun() ) ;
+            ActionFactory af = new ActionFactory( args.verbose(),
+                args.dryrun() ) ;
             initializeScanners( af ) ;
 
             // override any defaults from the config file
@@ -621,7 +703,7 @@ public class CopyrightProcessor {
             }
 
 	    // Configure the recognizer
-            Recognizer recognizer = af.getRecognizerAction() ; // recognizer is the scanner action
+            Recognizer recognizer = af.getRecognizerAction() ;
 
             for (Map.Entry<String,FileProcessing> entry : procMap.entrySet()) {
                 String name = entry.getKey() ;
@@ -629,6 +711,9 @@ public class CopyrightProcessor {
                 FileProcessing fp = entry.getValue() ;
                 Scanner.Action action = fp.action() ;
 
+                // Install the actions in the recognizer, overriding the
+                // defaults from the fp instance with data from the
+                // properties file, if present.
                 List<String> suffixes = getProp( props,
                     "cptool." + name + ".suffixes", fp.suffixes() ) ;
                 List<String> fileNames = getProp( props, 
@@ -649,8 +734,9 @@ public class CopyrightProcessor {
 	    }
 
 	    Scanner scanner = new Scanner( args.verbose(), args.roots() ) ;
-	    for (String str : args.skipdirs() )
-		scanner.addDirectoryToSkip( str ) ;
+	    for (String str : args.skipdirs() ) {
+                scanner.addDirectoryToSkip(str);
+            }
 
 	    // Finally, we process all files
 	    scanner.scan( recognizer ) ;

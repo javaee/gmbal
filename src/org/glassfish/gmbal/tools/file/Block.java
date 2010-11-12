@@ -146,6 +146,18 @@ public class Block {
 	return true ;
     }
 
+    /** Return whether or not a block has NONE of the listed tags.
+     */
+    public boolean hasNoTags( final String... tags ) {
+	for (String tag : tags) {
+	    if (hasTag( tag )) {
+                return false;
+            }
+	}
+
+	return true ;
+    }
+
     /** Get the contents of the block.
      */
     public List<String> contents() {

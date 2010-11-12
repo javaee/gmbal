@@ -113,6 +113,13 @@
 
     <property name="libcache.dir"                   location="libcache"/>
 
+    <property name="copyright.file"
+        value="${basedir}/copyright-information/copyright.txt"/>
+    <property name="copyright.roots"
+        value="src,test"/>
+    <property name="copyright.skip"
+        value=".hg,ARCHIVE,build,copyright-information,dist,javadoc,lib,libcache,nbproject,javadoc"/>
+
     <path id="maven.class.path"  path="${local.maven.ant.tasks.jar}"/>
 
     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
@@ -412,5 +419,112 @@ The modules             (and their dependencies):
         <fileset dir="dist/javadoc"/>
     </copy>
 </target>
+
+<!-- =================== Copyright header mainenance ================== -->
+
+<target name="update-copyright-headers" depends="init">
+    <!--
+            This target is used when it is necessary to update the 
+            copyright headers.  See
+            com.sun.corba.se.spi.orbutil.file.CopyrightProcessor
+            for all of the details.
+            Notes:
+                - Certain directories are ignored, mainly Mercurial
+                  and CodeManager related directories.
+                - Files are classified as follows:
+                    - Java-like; uses /* ... */ style block comments
+                    - JavaLine-like; uses // ... style line comments
+                    - XML-like; uses <- -! ... - -> style block comments
+                    - Scheme-like; uses ; ... line comments
+                    - Shell-like; uses # ... line comments
+                    - Binary-like; can not be modified by this tool
+                - The classification is done as follows, in the order listed:
+                    1. Some files are recognized by exact name (primarily
+                       makefiles)
+                    2. Most files are classified by suffix
+                    3. If a file starts with "#!", it is a shell script.
+                    4. Otherwise we stop and complain, because we need to
+                       be correct for all files.
+                - The current copyright text lives in
+                  make/headers/copyright.txt.  This is just
+                  the text: it must be formatted appropriately based on
+                  the file type.
+                - CopyrightProcessor supports a verbose flag, and a 
+                  dryrun flag.  Turning both of these on gives the details
+                  of what will happen, without actually changing anything.
+                - DO NOT INTERRUPT THIS TARGET!  It can destroy files,
+                  which is hardly catastrophic,
+                  because the file is still in the version control system.
+                - Do NOT mix header comment changes with other changes!
+
+            Arguments to command:
+                -verbose: normally set to false, except when debugging this
+                -dryrun: normally set to false, except when debugging this
+                -root: set to the root directories to process: 
+                    experimental, make, nbproject, src, test, tools, www
+                -skipdirs: set to the directories to skip:
+                    .hg, Codemgr_wsdata, deleted_files, headers, freezepoint
+                -copyright: this is set to the copyright template, currently
+                 in make/headers/copyrights.txt
+                -startYear: set to the default start year for the header
+                 (1997)
+                    
+            The tool is flexible enough to remove old Sun or Oracle
+            copyright headers, leave non-Sun/Oracle copyright headers in
+            place, ignore copyright info that is not in comments, and
+            insert the correct start year into the new copyright header.
+    -->
+    <java classname="org.glassfish.gmbal.tools.file.CopyrightProcessor"
+        fork="true"
+        dir="${basedir}">
+        <classpath>
+            <pathelement location="${basedir}/build/classes"/>
+        </classpath>
+        <arg value="-validate"/>
+        <arg value="false"/>
+        <arg value="-verbose"/>
+        <arg value="0"/>
+        <arg value="-dryrun"/>
+        <arg value="false"/>
+        <arg value="-roots"/>
+        <arg value="${copyright.roots}"/>
+        <arg value="-skipdirs"/>
+        <arg value="${copyright.skip}"/>
+        <arg value="-copyright"/>
+        <arg value="${copyright.file}"/>
+        <arg value="-startyear"/>
+        <arg value="1997"/>
+    </java>
+</target>
+
+<target name="validate-copyright-headers" depends="init">
+    <!--
+        This target is similar to update-copyright-headers,
+        but instead it validates that all files have the correct headers.
+
+    -->
+    <java classname="org.glassfish.gmbal.tools.file.CopyrightProcessor"
+        fork="true"
+        dir="${basedir}">
+        <classpath>
+            <pathelement location="${basedir}/build/classes"/>
+        </classpath>
+        <arg value="-validate"/>
+        <arg value="true"/>
+        <arg value="-verbose"/>
+        <arg value="0"/>
+        <arg value="-dryrun"/>
+        <arg value="false"/>
+        <arg value="-roots"/>
+        <arg value="${copyright.roots}"/>
+        <arg value="-skipdirs"/>
+        <arg value="${copyright.skip}"/>
+        <arg value="-copyright"/>
+        <arg value="${copyright.file}"/>
+        <arg value="-startyear"/>
+        <arg value="1997"/>
+    </java>
+</target>
+
 
 </project>

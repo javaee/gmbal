@@ -1,8 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package org.glassfish.gmbal.impl;
 
 import org.glassfish.gmbal.AMXMBeanInterface;
@@ -172,18 +167,18 @@ public class AMXClientTest extends TestCase {
         final Logger logger = Logger.getLogger( "org.glassfish.gmbal.impl" ) ;
         logger.setLevel(Level.OFF) ;
         standaloneMom = ManagedObjectManagerFactory.createStandalone("test") ;
-        standaloneMom.setJMXRegistrationDebug(true) ;
+        // standaloneMom.setJMXRegistrationDebug(true) ;
         initializeMom( MomType.STANDALONE, standaloneMom ) ;
 
         rootMom = ManagedObjectManagerFactory.createStandalone("extern") ;
-        rootMom.setJMXRegistrationDebug(true) ;
+        // rootMom.setJMXRegistrationDebug(true) ;
         rootMom.createRoot() ;
 
         externalRootName = rootMom.getObjectName( rootMom.getRoot() ) ;
 
         federatedMom = ManagedObjectManagerFactory.createFederated(
             externalRootName ) ;
-        federatedMom.setJMXRegistrationDebug(true) ;
+        // federatedMom.setJMXRegistrationDebug(true) ;
         initializeMom( MomType.FEDERATED, federatedMom ) ;
     }
 
@@ -203,13 +198,13 @@ public class AMXClientTest extends TestCase {
                 gmb = mom.createRoot( mmc ) ;
             } else {
                 MyManagedClass parent = result.get( parentIndex ).first() ;
-                mom.setRegistrationDebug(
-                    ManagedObjectManager.RegistrationDebugLevel.NORMAL) ;
+                // mom.setRegistrationDebug(
+                    // ManagedObjectManager.RegistrationDebugLevel.NORMAL) ;
                 try {
                     gmb = mom.register( parent, mmc) ;
                 } finally {
-                    mom.setRegistrationDebug(
-                        ManagedObjectManager.RegistrationDebugLevel.NONE) ;
+                    // mom.setRegistrationDebug(
+                        // ManagedObjectManager.RegistrationDebugLevel.NONE) ;
                 }
             }
             Pair<MyManagedClass,GmbalMBean> pair = 

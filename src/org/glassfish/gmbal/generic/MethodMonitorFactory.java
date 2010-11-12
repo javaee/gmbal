@@ -138,7 +138,7 @@ public class MethodMonitorFactory {
 	}
     } ;
 
-    public static MethodMonitor dprintUtil( final Class cls ) {
+    public static MethodMonitor dprintUtil( final Class<?> cls ) {
 	final DprintUtil dputil = DprintUtil.getDprintUtil( cls ) ;
 
 	return new MethodMonitorBase( "DprintUtil" ) {
@@ -167,7 +167,7 @@ public class MethodMonitorFactory {
 
     // This is the same as compose( operationTracer, dprintUtil ), but
     // it is created so often that this avoid some significant overhead.
-    private static MethodMonitor standardImpl( final Class cls ) {
+    private static MethodMonitor standardImpl( final Class<?> cls ) {
 	final DprintUtil dputil = DprintUtil.getDprintUtil( cls ) ;
 
 	return new MethodMonitorBase( "StandardImpl" ) {
@@ -204,7 +204,7 @@ public class MethodMonitorFactory {
     private static Map<Class<?>,MethodMonitor> stdMap =
 	new WeakHashMap<Class<?>,MethodMonitor>() ;
 
-    public static MethodMonitor makeStandard( Class cls ) {
+    public static MethodMonitor makeStandard( Class<?> cls ) {
 	 MethodMonitor result = stdMap.get( cls ) ;
 	 if (result == null) {
 	     result = standardImpl( cls ) ;
