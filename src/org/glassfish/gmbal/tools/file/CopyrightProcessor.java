@@ -1,38 +1,41 @@
 /* 
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
- * 
- * Copyright 1997-2009 Sun Microsystems, Inc. All rights reserved.
- * 
- * The contents of this file are subject to the terms of either the GNU
- * General Public License Version 2 only ("GPL") or the Common Development
- * and Distribution License("CDDL") (collectively, the "License").  You
- * may not use this file except in compliance with the License. You can obtain
- * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
- * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific 
- * language governing permissions and limitations under the License.
- * 
- * When distributing the software, include this License Header Notice in each
- * file and include the License file at legal/LICENSE.TXT.
- * Sun designates this particular file as subject to the "Classpath" exception
- * as provided by Sun in the GPL Version 2 section of the License file that
- * accompanied this code.  If applicable, add the following below the License
- * Header, with the fields enclosed by brackets [] replaced by your own
- * identifying information: "Portions Copyrighted [year]
- * [name of copyright owner]"
- * 
- * Contributor(s):
- * 
- * If you wish your version of this file to be governed by only the CDDL or
- * only the GPL Version 2, indicate your decision by adding "[Contributor]
- * elects to include this software in this distribution under the [CDDL or GPL
- * Version 2] license."  If you don't indicate a single choice of license, a
- * recipient has the option to distribute your version of this file under
- * either the CDDL, the GPL Version 2 or to extend the choice of license to
- * its licensees as provided above.  However, if you add GPL Version 2 code
- * and therefore, elected the GPL Version 2 license, then the option applies
- * only if the new code is made subject to such option by the copyright
- * holder.
- * 
+ *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ *  
+ *  Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ *  
+ *  The contents of this file are subject to the terms of either the GNU
+ *  General Public License Version 2 only ("GPL") or the Common Development
+ *  and Distribution License("CDDL") (collectively, the "License").  You
+ *  may not use this file except in compliance with the License.  You can
+ *  obtain a copy of the License at
+ *  https://glassfish.dev.java.net/public/CDDL+GPL_1_1.html
+ *  or packager/legal/LICENSE.txt.  See the License for the specific
+ *  language governing permissions and limitations under the License.
+ *  
+ *  When distributing the software, include this License Header Notice in each
+ *  file and include the License file at glassfish/bootstrap/legal/LICENSE.txt.
+ *  
+ *  GPL Classpath Exception:
+ *  Oracle designates this particular file as subject to the "Classpath"
+ *  exception as provided by Oracle in the GPL Version 2 section of the License
+ *  file that accompanied this code.
+ *  
+ *  Modifications:
+ *  If applicable, add the following below the License Header, with the fields
+ *  enclosed by brackets [] replaced by your own identifying information:
+ *  "Portions Copyright [year] [name of copyright owner]"
+ *  
+ *  Contributor(s):
+ *  If you wish your version of this file to be governed by only the CDDL or
+ *  only the GPL Version 2, indicate your decision by adding "[Contributor]
+ *  elects to include this software in this distribution under the [CDDL or GPL
+ *  Version 2] license."  If you don't indicate a single choice of license, a
+ *  recipient has the option to distribute your version of this file under
+ *  either the CDDL, the GPL Version 2 or to extend the choice of license to
+ *  its licensees as provided above.  However, if you add GPL Version 2 code
+ *  and therefore, elected the GPL Version 2 license, then the option applies
+ *  only if the new code is made subject to such option by the copyright
+ *  holder.
  */ 
 
 package org.glassfish.gmbal.tools.file ;
@@ -189,13 +192,13 @@ public class CopyrightProcessor {
 	return result ;
     }
 
-    private static final String COPYRIGHT = "Copyright" ;
+    private static final String COPYRIGHT = "Copyright (c)" ;
 
     // Search for COPYRIGHT followed by white space, then [0-9]*-[0-9]*
     private static Pair<String,String> getCopyrightPair( String str ) {
         StringParser sp = new StringParser( str ) ;
         if (!sp.skipToString( COPYRIGHT )) {
-            return null;
+            return null ;
         }
 
         if (!sp.skipString( COPYRIGHT )) {
@@ -305,8 +308,10 @@ public class CopyrightProcessor {
 	if ((args.verbose() > 0) && (block != null)) {
 	    trace( "Block=" + block ) ;
 	    trace( "Block contents:" ) ;
-	    for (String str : block.contents()) {
-		trace( "\"" + str + "\"" ) ;
+            if (args.verbose() > 1) {
+                for (String str : block.contents()) {
+                    trace( "\"" + str + "\"" ) ;
+                }
 	    }
 	}
     }
@@ -353,6 +358,12 @@ public class CopyrightProcessor {
                         validationError( block,
                             "block " + count + " has incorrect "
                             + "copyright text", fw ) ;
+
+                        if (args.verbose() > 0) {
+                            Pair<String,String> firstDiff =
+                                copyrightBlock.firstDifference(block) ;
+                            trace( "The first difference is " + firstDiff ) ;
+                        }
                     }
                 } else {
                     validationError( block,
@@ -404,8 +415,7 @@ public class CopyrightProcessor {
                 return true ;
             }
 
-            private boolean rewriteFile( final boolean hadAnOldOracleCopyright,
-                final Block copyrightBlock,
+            private boolean rewriteFile( final Block copyrightBlock,
                 final List<Block> fileBlocks, final FileWrapper fw ) throws IOException {
 
                 // Re-write file, replacing the first block tagged
@@ -428,6 +438,9 @@ public class CopyrightProcessor {
                     for (Block block : fileBlocks) {
                         if (count==0 && !afterFirstBlock) {
                             copyrightBlock.write( fw ) ;
+                            if (args.verbose() > 0) {
+                                trace( "Writing copyright block first" ) ;
+                            }
                         }
 
                         if (block.hasTags( COPYRIGHT_BLOCK_TAG,
@@ -435,9 +448,15 @@ public class CopyrightProcessor {
                             if (block.hasNoTags( ORACLE_COPYRIGHT_TAG,
                                 SUN_COPYRIGHT_TAG )) {
                                 block.write( fw ) ;
+                                if (args.verbose() > 0) {
+                                    trace( "Writing 3rd party copyright block" ) ;
+                                }
                             }
                         } else {
                             block.write( fw ) ;
+                            if (args.verbose() > 0) {
+                                trace( "Writing data block second" ) ;
+                            }
                         }
 
                         if (count==0 && afterFirstBlock) {
@@ -462,37 +481,42 @@ public class CopyrightProcessor {
                     String currentYear = "" + cy ;
                     Pair<String,String> years = 
                         new Pair<String,String>( defaultStartYear, currentYear ) ;
-		    boolean hadAnOldOracleCopyright = false ;
-		    boolean hadAnOldSunCopyright = false ;
 		    
 		    // Convert file into blocks
 		    final List<Block> fileBlocks = parserCall.evaluate( fw ) ;
 
 		    // Tag blocks
 		    for (Block block : fileBlocks) {
-			String str = block.find( COPYRIGHT ) ;
-			if (str != null) {
-			    block.addTag( COPYRIGHT_BLOCK_TAG ) ;
-			    if (str.contains( "Sun" )) {
-				Pair<String,String> scp =
-                                    getCopyrightPair( str ) ;
+                        if (block.hasTag( BlockParser.COMMENT_BLOCK_TAG )) {
+                            String str = block.find( COPYRIGHT ) ;
+                            if (str != null) {
+                                block.addTag( COPYRIGHT_BLOCK_TAG ) ;
+                                Pair<String,String> scp = null ;
+                                if (str.contains( "Sun" )) {
+                                    scp = getCopyrightPair( str ) ;
+                                    block.addTag( SUN_COPYRIGHT_TAG ) ;
+                                }
+                                if (str.contains( "Oracle" )) {
+                                    scp = getCopyrightPair( str ) ;
+                                    block.addTag( ORACLE_COPYRIGHT_TAG ) ;
+                                }
+
                                 if (scp != null) {
-                                    years = scp ;
+                                    if (args.validate()) {
+                                        years = scp ;
+                                    } else {
+                                        // Updating: lastYear is current year
+                                        years = new Pair<String,String>(
+                                            scp.first(), currentYear ) ;
+                                    }
                                 }
-				block.addTag( SUN_COPYRIGHT_TAG ) ;
-				hadAnOldSunCopyright = true ;
-			    }
-			    if (str.contains( "Oracle" )) {
-				Pair<String,String> scp =
-                                    getCopyrightPair( str ) ;
-                                if (scp != null && !hadAnOldSunCopyright) {
-                                    years = scp ;
-                                }
-				block.addTag( ORACLE_COPYRIGHT_TAG ) ;
-				hadAnOldOracleCopyright = true ;
-			    }
-			}
+                            }
+                        }
 		    }
+
+                    if (args.verbose() > 0) {
+                        trace( "years = " + years ) ;
+                    }
 
 		    if (args.verbose() > 1) {
 			trace( "copyrightBlockAction: blocks in file " + fw ) ;
@@ -509,8 +533,7 @@ public class CopyrightProcessor {
 		    if (args.validate()) {
                         validateFile( cb, fileBlocks, fw ) ;
 		    } else {
-                        rewriteFile( hadAnOldOracleCopyright, cb, fileBlocks,
-                            fw ) ;
+                        rewriteFile( cb, fileBlocks, fw ) ;
 		    }
 		} catch (IOException exc ) {
 		    trace( "Exception while processing file " + fw + ": "
