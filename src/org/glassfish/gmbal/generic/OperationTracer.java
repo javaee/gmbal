@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2002-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2002-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -46,6 +46,7 @@ import java.util.Formatter;
 
 public class OperationTracer {
     private static boolean enabled = true ;
+    private static boolean frozen = false ;
 
     public static void enable() {
         enabled = true ;
@@ -53,6 +54,10 @@ public class OperationTracer {
 
     public static void disable() {
         enabled = false ;
+    }
+
+    public static void freeze() {
+        frozen = true ;
     }
 
     private OperationTracer() {}
@@ -108,6 +113,7 @@ public class OperationTracer {
     public static void clear() {
         if (enabled) {
             state.get().clear() ;
+            frozen = false ;
         }
     }
 
@@ -118,7 +124,7 @@ public class OperationTracer {
     }
 
     public static void exit() {
-        if (enabled) {
+        if (enabled & !frozen) {
             final List<Pair<String,Object[]>> elements = state.get() ;
             int size = elements.size() ;
             if (size > 0) {

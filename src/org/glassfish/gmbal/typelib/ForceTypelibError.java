@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2011 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -40,53 +40,19 @@
 
 package org.glassfish.gmbal.typelib;
 
-import java.lang.reflect.ParameterizedType;
-import org.glassfish.gmbal.logex.Chain;
-import org.glassfish.gmbal.logex.ExceptionWrapper;
-import org.glassfish.gmbal.logex.Log;
-import org.glassfish.gmbal.logex.LogLevel;
-import org.glassfish.gmbal.logex.Message;
-import org.glassfish.gmbal.logex.WrapperGenerator;
+import java.lang.annotation.Documented ;
+import java.lang.annotation.Target ;
+import java.lang.annotation.ElementType ;
+import java.lang.annotation.Retention ;
+import java.lang.annotation.RetentionPolicy ;
+import sun.font.EAttribute;
 
-/**
+/** Flag on a method indicating that the
  *
  * @author ken
  */
-@ExceptionWrapper( idPrefix="GMBALTLIB",
-    resourceBundle = "org.glassfish.gmbal.logex.LogStrings" )
-public interface Exceptions {
-    static final Exceptions self = WrapperGenerator.makeWrapper(
-        Exceptions.class ) ;
-
-    // Allow 100 exceptions per class
-    static final int EXCEPTIONS_PER_CLASS = 100 ;
-
-// TypeEvaluator
-    static final int TYPE_EVALUATOR_START = 1 ;
-
-    @Message( "Internal error in TypeEvaluator" )
-    @Log( id=TYPE_EVALUATOR_START + 0 )
-    IllegalStateException internalTypeEvaluatorError( @Chain Exception exc ) ;
-
-    @Message( "evaluateType should not be called with a Method ({0})" )
-    @Log( id=TYPE_EVALUATOR_START + 1 )
-    IllegalArgumentException evaluateTypeCalledWithMethod( Object type ) ;
-
-    @Message( "evaluateType should not be called with an unknown type ({0})" )
-    @Log( id=TYPE_EVALUATOR_START + 2 )
-    IllegalArgumentException evaluateTypeCalledWithUnknownType( Object type ) ;
-
-    @Message( "Multiple upper bounds not supported on {0}" )
-    @Log( id=TYPE_EVALUATOR_START + 3 )
-    UnsupportedOperationException multipleUpperBoundsNotSupported(
-        Object type ) ;
-
-    @Message( "Type list and TypeVariable list are not the same length for {0}" )
-    @Log( id=TYPE_EVALUATOR_START + 4 )
-    IllegalArgumentException listsNotTheSameLengthInParamType(
-        ParameterizedType pt ) ;
-
-    @Message( "Error thrown from getEvaluatedType for class {0}")
-    @Log( id=TYPE_EVALUATOR_START + 5, level=LogLevel.SEVERE )
-    IllegalStateException errorInTypeEval( Class cls, @Chain Error err);
+@Documented
+@Target({ElementType.METHOD,ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ForceTypelibError {
 }

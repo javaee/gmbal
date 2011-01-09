@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2001-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2001-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -73,6 +73,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Date;
 import java.util.WeakHashMap;
 import javax.management.ObjectName;
+import org.glassfish.gmbal.generic.OperationTracer;
 
 /**
  *
@@ -110,6 +111,9 @@ public class TypeEvaluator {
         try {
             EvalMapKey key = new EvalMapKey( cls, emptyETList ) ;
             evalClassMap.put( key, ecd ) ;
+        } catch (Error err) {
+            OperationTracer.freeze() ;
+            throw err ;
         } finally {
             mm.exit( debug ) ;
         }
@@ -312,12 +316,23 @@ public class TypeEvaluator {
      * @return The evaluated type
      */
     public static synchronized EvaluatedType getEvaluatedType( Class cls ) {
-        EvaluatedType etype = classMap.get( cls ) ;
-	if (etype == null) {
-            TypeEvaluationVisitor visitor = new TypeEvaluationVisitor() ;
-            etype = visitor.evaluateType( cls ) ;
-	    classMap.put( cls, etype ) ;
-	}
+        EvaluatedType etype = null ;
+        try {
+            etype = classMap.get( cls ) ;
+            if (etype == null) {
+                TypeEvaluationVisitor visitor = new TypeEvaluationVisitor() ;
+                etype = visitor.evaluateType( cls ) ;
+                classMap.put( cls, etype ) ;
+            }
+        } catch (Error err) {
+            // Make sure that the OperationTracer context for ANY exception
+            // is captured here for offline analysis.
+            IllegalStateException thr = Exceptions.self.errorInTypeEval( cls,
+                err ) ;
+
+            dumpEvalClassMap();
+            throw thr ;
+        }
 
         return etype ;
     }
@@ -430,6 +445,9 @@ public class TypeEvaluator {
                 } else {
                     throw Exceptions.self.evaluateTypeCalledWithUnknownType(type) ;
                 }
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debugEvaluate, result ) ;
             }
@@ -472,6 +490,14 @@ public class TypeEvaluator {
                         mm.info( debug, "found result:" + result ) ;
                     }
                 }
+
+                if (decl.isAnnotationPresent(ForceTypelibError.class )) {
+                    throw new StackOverflowError(
+                        "Simulating stack overflow in test") ;
+                }
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -504,6 +530,9 @@ public class TypeEvaluator {
                         partialDefinitions.remove( pt ) ;
                     }
                 }
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -537,6 +566,9 @@ public class TypeEvaluator {
                     ftype, fld.getName(), fld ) ;
             } catch (Exception exc) {
                 mm.info( debug, "Caught exception ", exc, " for field ", fld ) ;
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -570,6 +602,14 @@ public class TypeEvaluator {
                 result = DeclarationFactory.emdecl( cdecl, mdecl.getModifiers(),
                     evaluateType( mdecl.getGenericReturnType() ),
                     mdecl.getName(), eptypes, mdecl ) ;
+
+                if (mdecl.isAnnotationPresent(ForceTypelibError.class )) {
+                    throw new StackOverflowError(
+                        "Simulating stack overflow in test") ;
+                }
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -584,6 +624,9 @@ public class TypeEvaluator {
 
             try {
                 result = lookup( tvar ) ;
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -599,6 +642,9 @@ public class TypeEvaluator {
             try {
                 result = DeclarationFactory.egat(
                     evaluateType( at.getGenericComponentType() ) ) ;
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -625,6 +671,9 @@ public class TypeEvaluator {
                 } else {
                     result = EvaluatedType.EOBJECT ;
                 }
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -655,6 +704,9 @@ public class TypeEvaluator {
                         result = EvaluatedType.EOBJECT ;
                     }
                 }
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -688,6 +740,9 @@ public class TypeEvaluator {
                 } else {
                     mm.info( debug, "Found result in evalClassMap" ) ;
                 }
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
@@ -737,6 +792,9 @@ public class TypeEvaluator {
                 newDecl.freeze() ;
 
                 mm.info( debug, "newDecl" + newDecl ) ;
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 display.exitScope() ;
 
@@ -753,6 +811,9 @@ public class TypeEvaluator {
                 result = new ArrayList<Type>(0) ;
                 result.add( cls.getGenericSuperclass() ) ;
                 result.addAll( Arrays.asList( cls.getGenericInterfaces() ) ) ;
+            } catch (Error err) {
+                OperationTracer.freeze() ;
+                throw err ;
             } finally {
                 mm.exit( debug, result ) ;
             }
