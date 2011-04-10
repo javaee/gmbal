@@ -900,6 +900,18 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
 
+    public synchronized void addInheritedAnnotations( final Class<?> cls ) {
+        mm.clear() ;
+        checkRootNotCreated("addInheritedAnnotation");
+        mm.enter( registrationDebug(), "addInheritedAnnotation", cls ) ;
+
+        try {
+
+        } finally {
+            mm.exit( registrationDebug() ) ;
+        }
+    }
+
     public <T extends Annotation> T getFirstAnnotationOnClass(
         final EvaluatedClassDeclaration element, final Class<T> type ) {
 

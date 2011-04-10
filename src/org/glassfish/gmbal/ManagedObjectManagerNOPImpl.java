@@ -185,4 +185,8 @@ class ManagedObjectManagerNOPImpl implements ManagedObjectManager {
     public void setJMXRegistrationDebug(boolean flag) {
         // NOP
     }
+
+    public void addInheritedAnnotations(Class<?> cls) {
+        // NOP
+    }
 }
