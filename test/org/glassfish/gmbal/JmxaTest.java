@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2003-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2003-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -40,6 +40,10 @@
 
 package org.glassfish.gmbal ;
 
+import org.glassfish.pfl.basic.contain.Pair;
+import org.glassfish.pfl.basic.func.UnaryPredicate;
+import org.glassfish.pfl.basic.algorithm.Algorithms;
+import org.glassfish.pfl.basic.func.UnaryFunction;
 import java.io.IOException;
 import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
@@ -87,11 +91,6 @@ import javax.management.openmbean.CompositeType ;
 import javax.management.openmbean.TabularType ;
 import javax.management.openmbean.TabularData ;
 
-import org.glassfish.gmbal.generic.UnaryFunction ;
-import org.glassfish.gmbal.generic.Predicate ;
-import org.glassfish.gmbal.generic.Algorithms ;
-
-
 import org.glassfish.gmbal.impl.TypeConverter ;
 import org.glassfish.gmbal.impl.ManagedObjectManagerInternal ;
 
@@ -101,7 +100,6 @@ import junit.framework.TestSuite;
 import org.glassfish.external.amx.AMX;
 import org.glassfish.external.statistics.BoundedRangeStatistic;
 import org.glassfish.external.statistics.impl.BoundedRangeStatisticImpl;
-import org.glassfish.gmbal.generic.Pair;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
@@ -110,8 +108,6 @@ import org.glassfish.gmbal.typelib.TypeEvaluator;
 import org.glassfish.gmbal.impl.TypeConverterImpl ;
 
 import static org.glassfish.gmbal.typelib.EvaluatedType.* ;
-
-import static org.glassfish.gmbal.generic.Algorithms.* ;
 
 public class JmxaTest extends TestCase {
     private static final boolean DEBUG = false ;
@@ -202,7 +198,7 @@ public class JmxaTest extends TestCase {
             }
 	}
 
-	final Predicate<Integer> ifEven = new Predicate<Integer>() {
+	final UnaryPredicate<Integer> ifEven = new UnaryPredicate<Integer>() {
 	    public boolean evaluate( Integer arg ) {
 		return (arg & 2) == 0 ;
 	    }
@@ -223,7 +219,7 @@ public class JmxaTest extends TestCase {
             }
 	}
 
-	final Predicate<Integer> ifEven = new Predicate<Integer>() {
+	final UnaryPredicate<Integer> ifEven = new UnaryPredicate<Integer>() {
 	    public boolean evaluate( Integer arg ) {
 		return (arg & 2) == 0 ;
 	    }
@@ -238,7 +234,7 @@ public class JmxaTest extends TestCase {
         System.out.println( "testFind" ) ;
 	final List<Integer> data = Arrays.asList( 12, 23, 4, 9, 17, 42, 213, 16, 1, 25 ) ;
 
-	final Predicate<Integer> is42 = new Predicate<Integer>() {
+	final UnaryPredicate<Integer> is42 = new UnaryPredicate<Integer>() {
 	    public boolean evaluate( Integer arg ) {
 		return arg == 42 ;
 	    }
@@ -398,8 +394,8 @@ public class JmxaTest extends TestCase {
     public void testFindMethod() {
         System.out.println( "testFindMethod" ) ;
         final EvaluatedClassAnalyzer ca = getCA( DD.class ) ;
-	final Predicate predicate = 
-	    new Predicate() {
+	final UnaryPredicate predicate =
+	    new UnaryPredicate() {
 		public boolean evaluate( Object obj ) {
                     EvaluatedMethodDeclaration method =
                         (EvaluatedMethodDeclaration)obj ;
@@ -2029,17 +2025,17 @@ public class JmxaTest extends TestCase {
     private static final long BRTEST_START_TIME = System.currentTimeMillis() ;
     private static final long BRTEST_SAMPLE_TIME= BRTEST_START_TIME + 237 ;
 
-    private static final List<Pair<String,Object>> BRTEST_DATA = list(
-        pair( "current", (Object)BRTEST_CURRENT ),
-        pair( "highWaterMark", (Object)BRTEST_HWM ),
-        pair( "lowWaterMark", (Object)BRTEST_LWM ),
-        pair( "upperBound", (Object)BRTEST_TOP ),
-        pair( "lowerBound", (Object)BRTEST_BOTTOM ),
-        pair( "name", (Object)BRTEST_NAME ),
-        pair( "unit", (Object)BRTEST_UNITS ),
-        pair( "description", (Object)BRTEST_DESC ),
-        pair( "startTime", (Object)BRTEST_START_TIME ),
-        pair( "lastSampleTime", (Object)BRTEST_SAMPLE_TIME ) )  ;
+    private static final List<Pair<String,Object>> BRTEST_DATA = Algorithms.list(
+        Algorithms.pair( "current", (Object)BRTEST_CURRENT ),
+        Algorithms.pair( "highWaterMark", (Object)BRTEST_HWM ),
+        Algorithms.pair( "lowWaterMark", (Object)BRTEST_LWM ),
+        Algorithms.pair( "upperBound", (Object)BRTEST_TOP ),
+        Algorithms.pair( "lowerBound", (Object)BRTEST_BOTTOM ),
+        Algorithms.pair( "name", (Object)BRTEST_NAME ),
+        Algorithms.pair( "unit", (Object)BRTEST_UNITS ),
+        Algorithms.pair( "description", (Object)BRTEST_DESC ),
+        Algorithms.pair( "startTime", (Object)BRTEST_START_TIME ),
+        Algorithms.pair( "lastSampleTime", (Object)BRTEST_SAMPLE_TIME ) )  ;
 
     // Test the BoundedRangeStatistic
     @ManagedObject

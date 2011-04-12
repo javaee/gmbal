@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -40,6 +40,19 @@
 
 package org.glassfish.gmbal.impl ;
 
+import org.glassfish.gmbal.impl.trace.TraceRegistrationFine;
+import org.glassfish.pfl.tf.spi.annotation.InfoMethod;
+import org.glassfish.gmbal.impl.trace.TraceRegistration;
+import org.glassfish.pfl.basic.algorithm.DelayedObjectToString;
+import org.glassfish.pfl.basic.algorithm.DumpIgnore;
+import org.glassfish.pfl.basic.algorithm.ObjectUtility;
+import org.glassfish.pfl.basic.func.UnaryFunction;
+import org.glassfish.pfl.basic.algorithm.Algorithms;
+import org.glassfish.pfl.basic.func.UnaryPredicate;
+import org.glassfish.pfl.basic.algorithm.ClassAnalyzer;
+import org.glassfish.pfl.basic.facet.FacetAccessorImpl;
+import org.glassfish.pfl.basic.facet.FacetAccessor;
+import org.glassfish.pfl.basic.contain.Pair;
 import java.util.ResourceBundle ;
 import java.util.Map ;
 import java.util.HashMap ;
@@ -89,18 +102,6 @@ import org.glassfish.gmbal.ManagedAttribute;
 import org.glassfish.gmbal.ManagedObjectManager;
 import org.glassfish.gmbal.ManagedData;
 
-import org.glassfish.gmbal.generic.Pair ;
-import org.glassfish.gmbal.generic.Algorithms ;
-import org.glassfish.gmbal.generic.MethodMonitor;
-import org.glassfish.gmbal.generic.MethodMonitorFactory;
-import org.glassfish.gmbal.generic.DumpIgnore;
-import org.glassfish.gmbal.generic.ObjectUtility;
-import org.glassfish.gmbal.generic.Predicate;
-import org.glassfish.gmbal.generic.UnaryFunction;
-import org.glassfish.gmbal.generic.FacetAccessor ;
-import org.glassfish.gmbal.generic.FacetAccessorImpl;
-import org.glassfish.gmbal.generic.DelayedObjectToString;
-
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
@@ -120,12 +121,13 @@ import org.glassfish.external.statistics.Statistic;
 import org.glassfish.external.statistics.TimeStatistic;
 import org.glassfish.external.statistics.StringStatistic;
 
-import org.glassfish.gmbal.generic.ClassAnalyzer;
-import static org.glassfish.gmbal.generic.Algorithms.* ;
+import static org.glassfish.pfl.basic.algorithm.Algorithms.* ;
 
 /* Implementation notes:
  * XXX Test attribute change notification.
  */
+@TraceRegistration
+@TraceRegistrationFine
 public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     // Used in MBeanSkeleton
@@ -151,7 +153,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
     // All finals should be initialized in this order in the private constructor
     @DumpIgnore
-    private final MethodMonitor mm ;
     private final String domain ;
     private final MBeanTree tree ;
     private final Map<EvaluatedClassDeclaration,MBeanSkeleton> skeletonMap ;
@@ -177,7 +178,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private ManagedObjectManagerImpl( final String domain,
         final ObjectName rootParentName ) {
 
-	this.mm = MethodMonitorFactory.makeStandard( getClass() ) ;
         this.domain = domain ;
         this.tree = new MBeanTree( this, domain, rootParentName, AMX.TYPE_KEY ) ;
         this.skeletonMap = 
@@ -350,9 +350,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         skeletonMap.clear() ;
         typeConverterMap.clear() ;
         addedAnnotations.clear() ;
-        mm.clear() ;
 
         initializeStatisticsSupport() ;
+        TimerAnnotationHelper.registerTimerClasses(this);
     }
     
     public ManagedObjectManagerImpl( final String domain ) {
@@ -365,16 +365,10 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         init() ;
     }
 
+    @TraceRegistration
     public void close() throws IOException {
         // Can be called anytime
-
-        mm.enter( registrationDebug(), "close" ) ;
-        
-        try {
-            init() ;
-        } finally {
-	    mm.exit( registrationDebug() ) ;
-        }
+        init() ;
     }
 
     private synchronized void checkRootNotCreated( String methodName ) {
@@ -390,19 +384,16 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized void suspendJMXRegistration() {
-        mm.clear() ;
         // Can be called anytime
         tree.suspendRegistration() ;
     }
 
     public synchronized void resumeJMXRegistration() {
-        mm.clear() ;
         // Can be called anytime
         tree.resumeRegistration();
     }
 
     public synchronized void stripPackagePrefix() {
-        mm.clear() ;
         checkRootNotCreated("stripPackagePrefix");
         stripPackagePrefix = true ;
     }
@@ -438,7 +429,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized GmbalMBean createRoot(Object root, String name) {
-        mm.clear() ;
         checkRootNotCreated( "createRoot" ) ;
 
 
@@ -461,29 +451,31 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized Object getRoot() {
-        mm.clear() ;
         // Can be called anytime.
         return tree.getRoot() ;
     }
-    
+
+    @InfoMethod
+    private void message( String msg ) {}
+
+    @InfoMethod
+    private void describe( String msg, Object data ) {}
+
+    @TraceRegistration
     private synchronized MBeanSkeleton getSkeleton( EvaluatedClassDeclaration cls ) {
         // can be called anytime, otherwise we can't create the root itself!
-        mm.enter( registrationDebug(), "getSkeleton", cls ) ;
-        
-        try {
             MBeanSkeleton result = skeletonMap.get( cls ) ;
 
             boolean newSkeleton = result == null ;
             if (newSkeleton) {
-                mm.info( registrationDebug(), "Skeleton not found" ) ;
+                message( "Skeleton not found" ) ;
                 
                 Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer> pair = 
                     getClassAnalyzer( cls, ManagedObject.class ) ;
                 EvaluatedClassAnalyzer ca = pair.second() ;
 
                 EvaluatedClassDeclaration annotatedClass = pair.first() ;
-                mm.info( registrationFineDebug(), "Annotated class for skeleton is",
-                    annotatedClass ) ;
+                describe( "Annotated class for skeleton", annotatedClass ) ;
                 if (annotatedClass == null) {
                     throw Exceptions.self.managedObjectAnnotationNotFound(
                         cls.name() ) ;
@@ -500,45 +492,40 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
                 skeletonMap.put( cls, result ) ;
             }
-            
-            mm.info(registrationFineDebug() || (registrationDebug() && newSkeleton),
-                "Skeleton", new DelayedObjectToString( result, myObjectUtil ) ) ;
+
+            if (newSkeleton) {
+                describe( "Skeleton",
+                    new DelayedObjectToString( result, myObjectUtil ) ) ;
+            }
             
             return result ;
-        } finally {
-            mm.exit( registrationDebug() ) ;
-        }
     }
 
+    @TraceRegistrationFine
     public synchronized TypeConverter getTypeConverter( EvaluatedType type ) {
         // Can be called anytime
-        mm.enter( registrationFineDebug(), "getTypeConverter", type ) ;
         
         TypeConverter result = null;
         
-        try {
-            boolean newTypeConverter = false ;
-            result = typeConverterMap.get( type ) ;	
-            if (result == null) {
-                mm.info( registrationFineDebug(), "Creating new TypeConverter" ) ;
-            
-                // Store a TypeConverter impl that throws an exception when 
-                // acessed.  Used to detect recursive types.
-                typeConverterMap.put( type, 
-                    new TypeConverterImpl.TypeConverterPlaceHolderImpl( type ) ) ;
+        boolean newTypeConverter = false ;
+        result = typeConverterMap.get( type ) ;
+        if (result == null) {
+            message( "Creating new TypeConverter" ) ;
 
-                result = TypeConverterImpl.makeTypeConverter( type, this ) ;
+            // Store a TypeConverter impl that throws an exception when
+            // acessed.  Used to detect recursive types.
+            typeConverterMap.put( type,
+                new TypeConverterImpl.TypeConverterPlaceHolderImpl( type ) ) ;
 
-                // Replace recursion marker with the constructed implementation
-                typeConverterMap.put( type, result ) ;
-                newTypeConverter = true ;
-            }
-            
-            mm.info(registrationFineDebug() ||
-		(registrationDebug() && newTypeConverter), "result",
-		myObjectUtil.objectToString( result ) ) ;
-        } finally {
-	    mm.exit( registrationFineDebug(), result ) ;
+            result = TypeConverterImpl.makeTypeConverter( type, this ) ;
+
+            // Replace recursion marker with the constructed implementation
+            typeConverterMap.put( type, result ) ;
+            newTypeConverter = true ;
+        }
+
+        if (newTypeConverter) {
+            describe( "result", myObjectUtil.objectToString( result ) ) ;
         }
         
         return result ;
@@ -644,14 +631,13 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
 
         return mo != null ;
     }
-    
+
+    @TraceRegistration
     public synchronized MBeanImpl constructMBean( MBeanImpl parentEntity,
         Object obj, String name ) {
 
         // Can be called anytime
         MBeanImpl result = null ;
-        
-        mm.enter( registrationDebug(), "constructMean", obj, name ) ;
         
         String objName = name ;
         try {
@@ -666,7 +652,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             }
 
             String type = skel.getType() ;
-	    mm.info( registrationDebug(), "Stripped type", type ) ;
+            describe( "Stripped type", type ) ;
 
             result = new MBeanImpl( skel, obj, server, type ) ;
             
@@ -688,27 +674,23 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                         parentEntity, type, name ) ;
                 }
             }
-           
-            mm.info( registrationDebug(), "Name value =", objName ) ;
+
+            describe( "Name value", objName ) ;
             
             result.name( objName ) ;
         } catch (JMException exc) {
             throw Exceptions.self.errorInConstructingMBean( objName, exc ) ;
-        } finally {
-            mm.exit( registrationDebug(), result ) ;
         }
         
         return result ;
     }
     
     @SuppressWarnings("unchecked")
+    @TraceRegistration
     public synchronized GmbalMBean register( final Object parent,
         final Object obj, final String name ) {
 
-        mm.clear() ;
         checkRootCreated("register");
-        mm.enter( registrationDebug(), "register", parent, obj, name ) ;
-        
         if (obj instanceof String) {
             throw Exceptions.self.objStringWrongRegisterCall( (String)obj ) ;
         }
@@ -722,8 +704,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             return tree.register( parentEntity, obj, mb) ;
     	} catch (JMException exc) {
             throw Exceptions.self.exceptionInRegister(exc) ;
-        } finally {
-            mm.exit( registrationDebug() ) ;
         }
     }
     
@@ -741,25 +721,21 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public synchronized GmbalMBean registerAtRoot(Object obj) {
         return register( tree.getRoot(), obj, null ) ;
     }
-    
+
+    @TraceRegistration
     public synchronized void unregister( Object obj ) {
-        mm.clear() ;
         checkRootCreated("unregister");
-        mm.enter( registrationDebug(), "unregister", obj ) ;
-        
+
         try {
             tree.unregister( obj ) ;
         } catch (JMException exc) {
             throw Exceptions.self.exceptionInUnregister(exc) ;
-        } finally {
-            mm.exit( registrationDebug() ) ;
         }
     }
 
+    @TraceRegistration
     public synchronized ObjectName getObjectName( Object obj ) {
-        mm.clear() ;
         checkRootCreated("getObjectName");
-        mm.enter( registrationDebug(), "getObjectName", obj ) ;
 
         if (obj instanceof ObjectName) {
             return (ObjectName)obj ;
@@ -769,12 +745,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             return ((AMXClient)obj).objectName() ;
         }
 
-        ObjectName result = null;
-        try {
-            result = tree.getObjectName( obj ) ;
-        } finally {
-            mm.exit( registrationDebug(), result ) ;
-        }
+        ObjectName result = tree.getObjectName( obj ) ;
         
         return result ;
     }
@@ -788,16 +759,11 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return new AMXClient( server, oname ) ;
     }
 
+    @TraceRegistration
     public synchronized Object getObject( ObjectName oname ) {
         checkRootCreated("getObject");
-        mm.enter( registrationDebug(), "getObject", oname ) ;
         
-        Object result = null ;
-        try {
-            result = tree.getObject( oname ) ;
-	} finally {
-            mm.exit( registrationDebug(), result ) ;
-        }
+        Object result = tree.getObject( oname ) ;
         
         return result ;
     }
@@ -818,7 +784,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized void setMBeanServer( MBeanServer server ) {
-        mm.clear() ;
         checkRootNotCreated("setMBeanServer");
 	this.server = server ;
     }
@@ -829,7 +794,6 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     public synchronized void setResourceBundle( ResourceBundle rb ) {
-        mm.clear() ;
         checkRootNotCreated("setResourceBundle");
         this.resourceBundle = rb ;
     }
@@ -865,51 +829,40 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return result ;
     }
     
-    
+
+    @TraceRegistration
     public synchronized void addAnnotation( AnnotatedElement element,
         Annotation annotation ) {
-        mm.clear() ;
         checkRootNotCreated("addAnnotation");
-        mm.enter( registrationDebug(), "addAnnotation", element, annotation ) ;
         if (annotation == null) {
             throw Exceptions.self.cannotAddNullAnnotation( element ) ;
         }
 
-        try {
-            Map<Class, Annotation> map = addedAnnotations.get( element ) ;
-            if (map == null) {
-	        mm.info( registrationDebug(),
-		    "Creating new Map<Class,Annotation>" ) ;
-                
-                map = new HashMap<Class, Annotation>() ;
-                addedAnnotations.put( element, map ) ;
-            }
+        Map<Class, Annotation> map = addedAnnotations.get( element ) ;
+        if (map == null) {
+            message( "Creating new Map<Class,Annotation>" ) ;
 
-            Class<?> annotationType = annotation.annotationType() ;
-            Annotation ann = map.get( annotationType ) ;
-            if (ann != null) {
-                mm.info( registrationDebug(), "Duplicate annotation") ;
-                
-                throw Exceptions.self.duplicateAnnotation( element, 
-                    annotation.getClass().getName()) ;
-            }
-
-            map.put( annotationType, annotation ) ;
-        } finally {
-            mm.exit( registrationDebug() ) ;
+            map = new HashMap<Class, Annotation>() ;
+            addedAnnotations.put( element, map ) ;
         }
+
+        Class<?> annotationType = annotation.annotationType() ;
+        Annotation ann = map.get( annotationType ) ;
+        if (ann != null) {
+            message( "Duplicate annotation") ;
+
+            throw Exceptions.self.duplicateAnnotation( element,
+                annotation.getClass().getName()) ;
+        }
+
+        map.put( annotationType, annotation ) ;
     }
 
+    @TraceRegistration
     public synchronized void addInheritedAnnotations( final Class<?> cls ) {
-        mm.clear() ;
         checkRootNotCreated("addInheritedAnnotation");
-        mm.enter( registrationDebug(), "addInheritedAnnotation", cls ) ;
 
-        try {
-
-        } finally {
-            mm.exit( registrationDebug() ) ;
-        }
+        // XXX Implement me!
     }
 
     public <T extends Annotation> T getFirstAnnotationOnClass(
@@ -937,7 +890,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                 new HashMap<Class,Annotation>() ;
 
             ClassAnalyzer ca = ClassAnalyzer.getClassAnalyzer(cls) ;
-            ca.findClasses( new Predicate<Class>() {
+            ca.findClasses( new UnaryPredicate<Class<?>>() {
                 public boolean evaluate(Class arg) {
                     // First, put in declared annotations if not already present.
                     Annotation[] annots = arg.getDeclaredAnnotations() ;
@@ -966,160 +919,135 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     }
 
     @SuppressWarnings({"unchecked"})
+    @TraceRegistrationFine
     public synchronized <T extends Annotation> T getAnnotation( 
         AnnotatedElement element, Class<T> type ) {
 
         // Can be called anytime
-        mm.enter( registrationFineDebug(), "getAnnotation", element,
-            type.getName() ) ;
-        
-        try {
-            if (element instanceof Class) {
-                Class cls = (Class)element ;
-                Map<Class,Annotation> annos = getAllAnnotations(cls) ;
-                return (T)annos.get( type ) ;
-            } else {
-                T result = element.getAnnotation( type ) ;
-                if (result == null) {
-                    mm.info( registrationFineDebug(),
-                        "No annotation on element: trying addedAnnotations map" ) ;
+        if (element instanceof Class) {
+            Class cls = (Class)element ;
+            Map<Class,Annotation> annos = getAllAnnotations(cls) ;
+            return (T)annos.get( type ) ;
+        } else {
+            T result = element.getAnnotation( type ) ;
+            if (result == null) {
+                message( "No annotation on element: trying addedAnnotations map" ) ;
 
-                    Map<Class, Annotation> map = addedAnnotations.get(
-                        element );
-                    if (map != null) {
-                        result = (T)map.get( type ) ;
-                    }
+                Map<Class, Annotation> map = addedAnnotations.get(
+                    element );
+                if (map != null) {
+                    result = (T)map.get( type ) ;
                 }
-
-                mm.info( registrationFineDebug(), "result" + result ) ;
-
-                return result ;
             }
-        } finally {
-            mm.exit( registrationFineDebug() ) ;
+
+            return result ;
         }
     }
 
+    @TraceRegistrationFine
     public synchronized Collection<Annotation> getAnnotations(
         AnnotatedElement elem ) {
 
         // Can be called anytime
-        mm.enter( registrationFineDebug(), "getAnnotations", elem ) ;
+        if (elem instanceof Class) {
+            Class cls = (Class)elem ;
 
-        try {
-            if (elem instanceof Class) {
-                Class cls = (Class)elem ;
-
-                return getAllAnnotations( cls ).values() ;
-            } else if (elem instanceof Method) {
-                return Arrays.asList( elem.getAnnotations() ) ;
-            } else if (elem instanceof Field) {
-                return Arrays.asList( elem.getAnnotations() ) ;
-            } else {
-                // error
-                throw Exceptions.self.annotationsNotSupported( elem ) ;
-            }
-        } finally {
-            mm.exit( registrationFineDebug() ) ;
+            return getAllAnnotations( cls ).values() ;
+        } else if (elem instanceof Method) {
+            return Arrays.asList( elem.getAnnotations() ) ;
+        } else if (elem instanceof Field) {
+            return Arrays.asList( elem.getAnnotations() ) ;
+        } else {
+            // error
+            throw Exceptions.self.annotationsNotSupported( elem ) ;
         }
     }
 
+    @TraceRegistration
     public synchronized Pair<EvaluatedClassDeclaration,EvaluatedClassAnalyzer>
         getClassAnalyzer( final EvaluatedClassDeclaration cls,
         final Class<? extends Annotation> annotationClass ) {
         // Can be called anytime
-        mm.enter( registrationDebug(), "getClassAnalyzer", cls,
-            annotationClass ) ;
-        
-        try {
-            final EvaluatedClassAnalyzer clsca = new EvaluatedClassAnalyzer( cls ) ;
+        final EvaluatedClassAnalyzer clsca = new EvaluatedClassAnalyzer( cls ) ;
 
-            final EvaluatedClassDeclaration annotatedClass = Algorithms.getFirst(
-                clsca.findClasses( forAnnotation( annotationClass,
-                    EvaluatedClassDeclaration.class ) ),
-                new Runnable() {
-                    public void run() {
-                        throw Exceptions.self.noAnnotationFound(
-                            annotationClass.getName(), cls.name() ) ;
-                    }
-                } ) ;
-
-            mm.info( registrationDebug(), "annotatedClass = " + annotatedClass ) ;
-    
-            final List<EvaluatedClassDeclaration> classes =
-                new ArrayList<EvaluatedClassDeclaration>() ;
-            classes.add( cls ) ;
-
-            // XXX Should we construct a union of all @IncludeSubclass contents?
-            final IncludeSubclass incsub = getFirstAnnotationOnClass(
-                cls, IncludeSubclass.class ) ;
-            if (incsub != null) {
-                for (Class<?> klass : incsub.value()) {
-                    EvaluatedClassDeclaration ecd = 
-                        (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(klass) ;
-                    classes.add( ecd ) ;
-                    mm.info( registrationDebug(), "included subclass", klass ) ;
+        final EvaluatedClassDeclaration annotatedClass = Algorithms.getFirst(
+            clsca.findClasses( forAnnotation( annotationClass,
+                EvaluatedClassDeclaration.class ) ),
+            new Runnable() {
+                public void run() {
+                    throw Exceptions.self.noAnnotationFound(
+                        annotationClass.getName(), cls.name() ) ;
                 }
+            } ) ;
+
+        describe( "annotatedClass", annotatedClass ) ;
+
+        final List<EvaluatedClassDeclaration> classes =
+            new ArrayList<EvaluatedClassDeclaration>() ;
+        classes.add( cls ) ;
+
+        // XXX Should we construct a union of all @IncludeSubclass contents?
+        final IncludeSubclass incsub = getFirstAnnotationOnClass(
+            cls, IncludeSubclass.class ) ;
+        if (incsub != null) {
+            for (Class<?> klass : incsub.value()) {
+                EvaluatedClassDeclaration ecd =
+                    (EvaluatedClassDeclaration)TypeEvaluator.getEvaluatedType(klass) ;
+                classes.add( ecd ) ;
+                describe( "included subclass", klass ) ;
             }
-
-            EvaluatedClassAnalyzer ca = new EvaluatedClassAnalyzer( classes ) ;
-
-            return new Pair<EvaluatedClassDeclaration,
-                 EvaluatedClassAnalyzer>( annotatedClass, ca ) ;
-        } finally {
-            mm.exit( registrationDebug() ) ;
         }
+
+        EvaluatedClassAnalyzer ca = new EvaluatedClassAnalyzer( classes ) ;
+
+        return new Pair<EvaluatedClassDeclaration,
+             EvaluatedClassAnalyzer>( annotatedClass, ca ) ;
     }
-    
+
+    @TraceRegistration
     public synchronized List<InheritedAttribute> getInheritedAttributes( 
         final EvaluatedClassAnalyzer ca ) {
         // Can be called anytime
         
-        mm.enter( registrationDebug(), "getInheritedAttributes", ca ) ;
-        
-        try {
-            final Predicate<EvaluatedClassDeclaration> pred = Algorithms.or(
-                forAnnotation( InheritedAttribute.class, 
-                    EvaluatedClassDeclaration.class ),
-                forAnnotation( InheritedAttributes.class, 
-                    EvaluatedClassDeclaration.class ) ) ;
+        final UnaryPredicate<EvaluatedClassDeclaration> pred = Algorithms.or(
+            forAnnotation( InheritedAttribute.class,
+                EvaluatedClassDeclaration.class ),
+            forAnnotation( InheritedAttributes.class,
+                EvaluatedClassDeclaration.class ) ) ;
 
-            // Construct list of classes annotated with InheritedAttribute or
-            // InheritedAttributes.
-            final List<EvaluatedClassDeclaration> iaClasses =
-                ca.findClasses( pred ) ;
+        // Construct list of classes annotated with InheritedAttribute or
+        // InheritedAttributes.
+        final List<EvaluatedClassDeclaration> iaClasses =
+            ca.findClasses( pred ) ;
 
-            List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
-                new UnaryFunction<EvaluatedClassDeclaration,List<InheritedAttribute>>() {
-                    public List<InheritedAttribute> evaluate( EvaluatedClassDeclaration cls ) {
-                        final InheritedAttribute ia = getFirstAnnotationOnClass(cls,
-                            InheritedAttribute.class);
-                        final InheritedAttributes ias = getFirstAnnotationOnClass(cls,
-                            InheritedAttributes.class);
-                        if ((ia != null) && (ias != null)) {
-                            throw Exceptions.self.badInheritedAttributeAnnotation(cls) ;
-                        }
-
-                        final List<InheritedAttribute> result = 
-                            new ArrayList<InheritedAttribute>() ;
-
-                        if (ia != null) {
-                            result.add( ia ) ;
-                        } else if (ias != null) {
-                            result.addAll( Arrays.asList( ias.value() )) ;
-                        }
-
-                        return result ;
+        List<InheritedAttribute> isList = Algorithms.flatten( iaClasses,
+            new UnaryFunction<EvaluatedClassDeclaration,List<InheritedAttribute>>() {
+                public List<InheritedAttribute> evaluate( EvaluatedClassDeclaration cls ) {
+                    final InheritedAttribute ia = getFirstAnnotationOnClass(cls,
+                        InheritedAttribute.class);
+                    final InheritedAttributes ias = getFirstAnnotationOnClass(cls,
+                        InheritedAttributes.class);
+                    if ((ia != null) && (ias != null)) {
+                        throw Exceptions.self.badInheritedAttributeAnnotation(cls) ;
                     }
-            } ) ;
 
-            return isList ;
-        } finally {
-	    mm.exit( registrationDebug() ) ;
-        }
+                    final List<InheritedAttribute> result =
+                        new ArrayList<InheritedAttribute>() ;
+
+                    if (ia != null) {
+                        result.add( ia ) ;
+                    } else if (ias != null) {
+                        result.addAll( Arrays.asList( ias.value() )) ;
+                    }
+
+                    return result ;
+                }
+        } ) ;
+
+        return isList ;
     }
     
-    private class ADHolder implements Predicate<InheritedAttribute> {
+    private class ADHolder implements UnaryPredicate<InheritedAttribute> {
         
         private final EvaluatedMethodDeclaration method ;
         private final ManagedObjectManagerInternal.AttributeDescriptorType adt ;
@@ -1158,20 +1086,15 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         return adh.content() ;
     }
 
+    @TraceRegistrationFine
     public synchronized <K,V> void putIfNotPresent( final Map<K,V> map,
         final K key, final V value ) {
         // Can be called anytime
-        mm.enter( registrationFineDebug(), "putIfNotPresent", key, value ) ;
-        
-        try {
-            if (!map.containsKey( key )) {
-                mm.info( registrationFineDebug(), "Adding key, value to map" ) ;
-                map.put( key, value ) ;
-            } else {
-                mm.info( registrationFineDebug(), "Key,value already in map" ) ;
-            }
-        } finally {
-            mm.exit( registrationFineDebug() ) ;
+        if (!map.containsKey( key )) {
+            message( "Adding key, value to map" ) ;
+            map.put( key, value ) ;
+        } else {
+            message( "Key,value already in map" ) ;
         }
     }
 
@@ -1205,7 +1128,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
             
             final List<InheritedAttribute> ias = getInheritedAttributes( ca ) ;
 
-            ca.findFields( new Predicate<EvaluatedFieldDeclaration>() {
+            ca.findFields( new UnaryPredicate<EvaluatedFieldDeclaration>() {
                 public boolean evaluate( EvaluatedFieldDeclaration field ) {
                     ManagedAttribute ma = getAnnotation( field.element(),
                         ManagedAttribute.class ) ;
@@ -1235,7 +1158,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
                     }
                 } } ) ;
 
-            ca.findMethods( new Predicate<EvaluatedMethodDeclaration>() {
+            ca.findMethods( new UnaryPredicate<EvaluatedMethodDeclaration>() {
                 public boolean evaluate( EvaluatedMethodDeclaration method ) {
                     ManagedAttribute ma = getAnnotation( method.element(),
                         ManagedAttribute.class ) ;
@@ -1336,12 +1259,12 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         }
     }
     
-    public synchronized <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(
+    public synchronized <T extends EvaluatedDeclaration> UnaryPredicate<T> forAnnotation(
         final Class<? extends Annotation> annotation,
         final Class<T> cls ) {
         // Can be called anytime
 
-        return new Predicate<T>() {
+        return new UnaryPredicate<T>() {
             public boolean evaluate( T elem ) {
                 return getAnnotation( elem.element(), annotation ) != null ;
             }

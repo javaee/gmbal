@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -54,7 +54,6 @@ import javax.management.Descriptor;
 
 import org.glassfish.gmbal.DescriptorKey ;
 import org.glassfish.gmbal.DescriptorFields ;
-import org.glassfish.gmbal.generic.ClassAnalyzer;
 
 /**
  * This class contains the methods for performing all the tests needed to verify
@@ -89,7 +88,7 @@ public class DescriptorIntrospector {
     }
 
     private static Descriptor descriptorForAnnotations(Collection<Annotation> annots) {
-        if (annots.size() == 0) {
+        if (annots.isEmpty()) {
             return DescriptorUtility.EMPTY_DESCRIPTOR;
         }
         Map<String, Object> descriptorMap = new HashMap<String, Object>();

@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -44,8 +44,8 @@ import java.util.Collections ;
 import java.util.List ;
 import java.util.ArrayList ;
 
-import org.glassfish.gmbal.generic.Predicate ;
-import org.glassfish.gmbal.generic.Graph ;
+import org.glassfish.pfl.basic.algorithm.Graph;
+import org.glassfish.pfl.basic.func.UnaryPredicate;
 
     
 /** Analyzes class inheritance hiearchy and provides methods for searching for
@@ -152,7 +152,7 @@ public class EvaluatedClassAnalyzer {
         public List<EvaluatedClassDeclaration> evaluate( 
             EvaluatedClassDeclaration arg ) {
             
-            return ((EvaluatedClassDeclaration)arg).inheritance() ;
+            return arg.inheritance() ;
 	}
     } ;
 
@@ -176,7 +176,7 @@ public class EvaluatedClassAnalyzer {
     }
 
     public List<EvaluatedClassDeclaration> findClasses(
-        Predicate<EvaluatedClassDeclaration> pred ) {
+        UnaryPredicate<EvaluatedClassDeclaration> pred ) {
 	
         final List<EvaluatedClassDeclaration> result =
             new ArrayList<EvaluatedClassDeclaration>() ;
@@ -193,7 +193,7 @@ public class EvaluatedClassAnalyzer {
     // Tested by testFindMethod
     // Tested by testGetAnnotatedMethods
     public List<EvaluatedMethodDeclaration> findMethods(
-        Predicate<EvaluatedMethodDeclaration> pred ) {
+        UnaryPredicate<EvaluatedMethodDeclaration> pred ) {
 
         final List<EvaluatedMethodDeclaration> result =
             new ArrayList<EvaluatedMethodDeclaration>() ;
@@ -210,7 +210,7 @@ public class EvaluatedClassAnalyzer {
     }
 
     public List<EvaluatedFieldDeclaration> findFields(
-        Predicate<EvaluatedFieldDeclaration> pred ) {
+        UnaryPredicate<EvaluatedFieldDeclaration> pred ) {
 	
         final List<EvaluatedFieldDeclaration> result =
             new ArrayList<EvaluatedFieldDeclaration>() ;

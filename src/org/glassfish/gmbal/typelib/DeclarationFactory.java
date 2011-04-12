@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -50,9 +50,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import java.util.Map;
-import org.glassfish.gmbal.generic.MethodMonitor ;
-import org.glassfish.gmbal.generic.MethodMonitorFactory ;
-import org.glassfish.gmbal.generic.DumpToString;
+import org.glassfish.gmbal.impl.trace.TraceTypelib;
+import org.glassfish.pfl.basic.algorithm.DumpToString;
 
 /** Utility class used to construct instances of the typelib interfaces directly from
  * factory methods, rather than from actual Java classes.  This is useful for testing:
@@ -60,8 +59,6 @@ import org.glassfish.gmbal.generic.DumpToString;
  */
 public class DeclarationFactory {
     private static boolean DEBUG = false ;
-    private static MethodMonitor mm = MethodMonitorFactory.makeStandard(
-	DeclarationFactory.class ) ;
 
     private static final Map<EvaluatedType,EvaluatedArrayType> arrayMap =
         new HashMap<EvaluatedType,EvaluatedArrayType>() ;
@@ -77,22 +74,18 @@ public class DeclarationFactory {
 
     private DeclarationFactory() {}
 
+    @TraceTypelib
     public static synchronized EvaluatedArrayType egat( final EvaluatedType compType ) {
         EvaluatedArrayType result = arrayMap.get( compType ) ;
         if (result == null) {
-	    mm.enter( DEBUG, "egat", "compType", compType ) ;
-
-            try {
-                result = new EvaluatedArrayTypeImpl( compType ) ;
-                arrayMap.put( compType, result ) ;
-            } finally {
-	        mm.exit( DEBUG, result ) ;
-            }
+            result = new EvaluatedArrayTypeImpl( compType ) ;
+            arrayMap.put( compType, result ) ;
         }
 
         return result ;
     }
 
+    @TraceTypelib
     public static synchronized EvaluatedClassDeclaration ecdecl( final int modifiers,
         final String name, final List<EvaluatedClassDeclaration> inheritance,
         final List<EvaluatedMethodDeclaration> methods,
@@ -106,55 +99,35 @@ public class DeclarationFactory {
         }
 
         if (result == null) {
-	    mm.enter( DEBUG, "ecdecl", name ) ;
-
-            try {
-                result = new EvaluatedClassDeclarationImpl( modifiers, name,
-                    inheritance, methods, fields, cls, isImmutable ) ;
-                if (result.simpleClass()) {
-                    simpleClassMap.put( name, result ) ;
-                }
-            } finally {
-	        mm.exit( DEBUG, result ) ;
+            result = new EvaluatedClassDeclarationImpl( modifiers, name,
+                inheritance, methods, fields, cls, isImmutable ) ;
+            if (result.simpleClass()) {
+                simpleClassMap.put( name, result ) ;
             }
         }
 
         return result ;
     }
 
+    @TraceTypelib
     public static synchronized EvaluatedFieldDeclaration efdecl(
         final EvaluatedClassDeclaration ecdecl, final int modifiers,
         final EvaluatedType ftype, final String name, final Field field ) {
 
-        mm.enter( DEBUG, "efdecl", name, ftype ) ;
-
-        EvaluatedFieldDeclaration result = null ;
-
-        try {
-            result = new EvaluatedFieldDeclarationImpl( ecdecl, modifiers,
-                ftype, name, field ) ;
-        } finally {
-            mm.exit( DEBUG, result ) ;
-        }
+        EvaluatedFieldDeclaration result = new EvaluatedFieldDeclarationImpl( 
+            ecdecl, modifiers, ftype, name, field ) ;
 
         return result ;
     }
 
+    @TraceTypelib
     public static synchronized EvaluatedMethodDeclaration emdecl( 
         final EvaluatedClassDeclaration ecdecl, final int modifiers,
         final EvaluatedType rtype, final String name,
         final List<EvaluatedType> ptypes, final Method method ) {
 
-        mm.enter( DEBUG, "emdecl", name, ptypes ) ;
-
-        EvaluatedMethodDeclaration result = null ;
-
-        try {
-            result = new EvaluatedMethodDeclarationImpl( ecdecl, modifiers,
-                rtype, name, ptypes, method ) ;
-        } finally {
-            mm.exit( DEBUG, result ) ;
-        }
+        EvaluatedMethodDeclaration result = new EvaluatedMethodDeclarationImpl( 
+            ecdecl, modifiers, rtype, name, ptypes, method ) ;
 
         return result ;
     }

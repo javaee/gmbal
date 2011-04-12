@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2008-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -54,18 +54,17 @@ import javax.management.ObjectName;
 import javax.management.openmbean.OpenType;
 import org.glassfish.gmbal.GmbalException;
 import org.glassfish.gmbal.impl.AttributeDescriptor.AttributeType;
-import org.glassfish.gmbal.logex.Chain;
-import org.glassfish.gmbal.logex.ExceptionWrapper;
-import org.glassfish.gmbal.logex.Log;
-import org.glassfish.gmbal.logex.LogLevel;
-import org.glassfish.gmbal.logex.Message;
-import org.glassfish.gmbal.logex.StackTrace;
-import org.glassfish.gmbal.logex.WrapperGenerator;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.pfl.basic.logex.Chain;
+import org.glassfish.pfl.basic.logex.ExceptionWrapper;
+import org.glassfish.pfl.basic.logex.Log;
+import org.glassfish.pfl.basic.logex.LogLevel;
+import org.glassfish.pfl.basic.logex.Message;
+import org.glassfish.pfl.basic.logex.WrapperGenerator;
 
 /** Exception wrapper class.  The logex WrapperGenerator uses this interface
  * to generate an implementation which returns the appropriate exception, and
@@ -219,12 +218,13 @@ public interface Exceptions {
     @Log( id = MBEAN_IMPL_START + 4 )
     void unregisterMBeanNotRegistered(ObjectName oname);
 
-    @StackTrace
+    // @StackTrace
     @Message( "registering MBean {0}")
     @Log( id = MBEAN_IMPL_START + 5, level=LogLevel.INFO )
     public void registeringMBean(ObjectName oname);
 
-    @StackTrace
+    // XXX Do we want to support StackTrace annotation?
+    // @StackTrace
     @Message( "unregistering MBean {0}")
     @Log( id = MBEAN_IMPL_START + 6, level=LogLevel.INFO )
     public void unregisteringMBean(ObjectName oname);

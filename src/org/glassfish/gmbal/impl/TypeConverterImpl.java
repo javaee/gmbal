@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -40,7 +40,15 @@
 
 package org.glassfish.gmbal.impl ;
 
-import org.glassfish.gmbal.generic.DumpToString ;
+import org.glassfish.gmbal.impl.trace.TraceRuntime;
+import org.glassfish.gmbal.impl.trace.TraceRegistrationFine;
+import org.glassfish.pfl.tf.spi.annotation.InfoMethod;
+import org.glassfish.gmbal.impl.trace.TraceRegistration;
+import org.glassfish.pfl.basic.algorithm.DumpToString;
+import org.glassfish.pfl.basic.contain.Pair;
+import org.glassfish.pfl.basic.facet.FacetAccessor;
+import org.glassfish.pfl.basic.algorithm.Algorithms;
+import org.glassfish.pfl.basic.func.UnaryPredicate;
 
 import java.lang.reflect.Array ;
 import java.lang.reflect.Constructor ;
@@ -73,13 +81,6 @@ import javax.management.openmbean.TabularDataSupport ;
 import org.glassfish.gmbal.AMXClient;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.ManagedData ;
-import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.MethodMonitor;
-import org.glassfish.gmbal.generic.MethodMonitorFactory;
-import org.glassfish.gmbal.generic.FacetAccessor;
-import org.glassfish.gmbal.generic.Pair;
-
-import org.glassfish.gmbal.generic.Predicate;
 import org.glassfish.gmbal.typelib.EvaluatedArrayType;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
@@ -91,13 +92,14 @@ import static org.glassfish.gmbal.typelib.EvaluatedType.* ;
 /** A ManagedEntity is one of the pre-defined Open MBean types: SimpleType, 
  * ObjectName, TabularData, or CompositeData.
  */
+@TraceRuntime
+@TraceRegistration
+@TraceRegistrationFine
 public abstract class TypeConverterImpl implements TypeConverter {
     private static final Map<EvaluatedType,OpenType> simpleTypeMap =
         new HashMap<EvaluatedType,OpenType>() ;
     private static final Map<OpenType,EvaluatedClassDeclaration> simpleOpenTypeMap =
         new HashMap<OpenType,EvaluatedClassDeclaration>() ;
-    private static final MethodMonitor mm = MethodMonitorFactory.makeStandard(
-        TypeConverterImpl.class ) ;
 
     // Map each type in types to otype in simpleTypeMap.
     // Map otype to the first type in types in simpleOpenTypeMap.
@@ -268,10 +270,9 @@ public abstract class TypeConverterImpl implements TypeConverter {
      * the same way as in MXBeans.  
      * XXX This is not yet implemented!
      */
+    @TraceRegistration
     public static TypeConverter makeTypeConverter( final EvaluatedType type,
         final ManagedObjectManagerInternal mom ) {
-        
-        mm.enter( mom.registrationDebug(), "makeTypeConverter", type, mom ) ;
         
         TypeConverter result = null ;
         try {
@@ -305,8 +306,6 @@ public abstract class TypeConverterImpl implements TypeConverter {
             throw exc ;
         } catch (OpenDataException exc) {
             throw new RuntimeException( exc ) ;
-        } finally {
-            mm.exit( mom.registrationDebug(), result ) ;
         }
 
         return result ;
@@ -336,178 +335,153 @@ public abstract class TypeConverterImpl implements TypeConverter {
 
     public static final String NULL_STRING = "<NULL>" ;
 
+    @TraceRegistration
     private static TypeConverter handleManagedObject(
         final EvaluatedClassDeclaration type,
 	final ManagedObjectManagerInternal mom, final ManagedObject mo ) {
 
         TypeConverter result = null ;
-        mm.enter( mom.registrationDebug(), "handleManagedObject", type,
-            mom, mo ) ;
 
-        try {
-            result = new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
-                public Object toManagedEntity( Object obj ) {
-                    if (obj == null) {
-                        return AMXClient.NULL_OBJECTNAME ;
-                    } else {
-                        return mom.getObjectName( obj ) ;
-                    }
+        result = new TypeConverterImpl( type, SimpleType.OBJECTNAME ) {
+            public Object toManagedEntity( Object obj ) {
+                if (obj == null) {
+                    return AMXClient.NULL_OBJECTNAME ;
+                } else {
+                    return mom.getObjectName( obj ) ;
+                }
+            }
+
+            @Override
+            public Object fromManagedEntity( final Object entity ) {
+                if (!(entity instanceof ObjectName)) {
+                    throw Exceptions.self.entityNotObjectName( entity ) ;
                 }
 
-                @Override
-                public Object fromManagedEntity( final Object entity ) {
-                    if (!(entity instanceof ObjectName)) {
-                        throw Exceptions.self.entityNotObjectName( entity ) ;
-                    }
-
-                    final ObjectName oname = (ObjectName)entity ;
-                    if (oname.equals( AMXClient.NULL_OBJECTNAME )) {
-                        return null ;
-                    } else {
-                        return mom.getObject( oname ) ;
-                    }
+                final ObjectName oname = (ObjectName)entity ;
+                if (oname.equals( AMXClient.NULL_OBJECTNAME )) {
+                    return null ;
+                } else {
+                    return mom.getObject( oname ) ;
                 }
-            } ;
-        } finally {
-            mm.exit( mom.registrationDebug(), result ) ;
-        }
+            }
+        } ;
 
         return result ;
     }
 
+    @TraceRegistration
     private static Collection<AttributeDescriptor> analyzeManagedData(
         final EvaluatedClassDeclaration cls, final ManagedObjectManagerInternal mom ) {
 
-        mm.enter( mom.registrationDebug(), "analyzeManagedData", cls, mom ) ;
-
         Collection<AttributeDescriptor> result = null ;
 
-        try {
-            final EvaluatedClassAnalyzer ca = mom.getClassAnalyzer( cls,
-                ManagedData.class ).second() ;
+        final EvaluatedClassAnalyzer ca = mom.getClassAnalyzer( cls,
+            ManagedData.class ).second() ;
 
-            final Pair<Map<String,AttributeDescriptor>,
-                Map<String,AttributeDescriptor>> ainfos =
-                    mom.getAttributes( ca,
-                        ManagedObjectManagerInternal.AttributeDescriptorType
-                            .COMPOSITE_DATA_ATTR ) ;
+        final Pair<Map<String,AttributeDescriptor>,
+            Map<String,AttributeDescriptor>> ainfos =
+                mom.getAttributes( ca,
+                    ManagedObjectManagerInternal.AttributeDescriptorType
+                        .COMPOSITE_DATA_ATTR ) ;
 
-            result = ainfos.first().values() ;
-        } finally {
-            mm.exit( mom.registrationDebug(), result ) ;
-        }
+        result = ainfos.first().values() ;
 
         return result ;
     }
 
+    // XXX need to make tf support static info methods
+    @InfoMethod
+    private static void describe( String msg, Object data ) {}
+
+    @TraceRegistration
     private static CompositeType makeCompositeType(
         final EvaluatedClassDeclaration cls,
         final ManagedObjectManagerInternal mom, final ManagedData md,
         Collection<AttributeDescriptor> minfos ) {
 
-        mm.enter( mom.registrationDebug(), "makeCompositeType", cls, mom, md,
-	    minfos ) ;
-
         CompositeType result = null ;
 
+        String name = md.name() ;
+        if (name.equals( "" )) {
+            name = mom.getTypeName( cls.cls(), "GMBAL_TYPE",
+                md.name() ) ;
+        }
+
+        describe( "name", name ) ;
+
+        final String mdDescription = mom.getDescription( cls ) ;
+        describe( "mdDescription", mdDescription ) ;
+
+        final int length = minfos.size() ;
+        final String[] attrNames = new String[ length ] ;
+        final String[] attrDescriptions = new String[ length ] ;
+        final OpenType[] attrOTypes = new OpenType[ length ] ;
+
+        int ctr = 0 ;
+        for (AttributeDescriptor minfo : minfos) {
+            attrNames[ctr] = minfo.id() ;
+            attrDescriptions[ctr] = minfo.description() ;
+            attrOTypes[ctr] = minfo.tc().getManagedType() ;
+            ctr++ ;
+        }
+
+        describe( "attrNames=", Arrays.asList(attrNames) ) ;
+        describe( "attrDescriptions=", Arrays.asList(attrDescriptions) ) ;
+        describe( "attrOTypes=", Arrays.asList(attrOTypes) ) ;
+
         try {
-            String name = md.name() ;
-            if (name.equals( "" )) {
-                name = mom.getTypeName( cls.cls(), "GMBAL_TYPE",
-                    md.name() ) ;
-            }
-
-            mm.info( mom.registrationDebug(), "name=", name ) ;
-
-            final String mdDescription = mom.getDescription( cls ) ;
-            mm.info( mom.registrationDebug(), "mdDescription=", mdDescription ) ;
-
-            final int length = minfos.size() ;
-            final String[] attrNames = new String[ length ] ;
-            final String[] attrDescriptions = new String[ length ] ;
-            final OpenType[] attrOTypes = new OpenType[ length ] ;
-
-            int ctr = 0 ;
-            for (AttributeDescriptor minfo : minfos) {
-                attrNames[ctr] = minfo.id() ;
-                attrDescriptions[ctr] = minfo.description() ;
-                attrOTypes[ctr] = minfo.tc().getManagedType() ;
-                ctr++ ;
-            }
-
-            mm.info( mom.registrationDebug(),
-		"attrNames=", Arrays.asList(attrNames),
-                "attrDescriptions=", Arrays.asList(attrDescriptions),
-                "attrOTypes=", Arrays.asList(attrOTypes) ) ;
-
-            try {
-                result = new CompositeType(
-                    name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
-            } catch (OpenDataException exc) {
-                throw Exceptions.self.exceptionInMakeCompositeType(exc) ;
-            }
-        } finally {
-            mm.exit( mom.registrationDebug(), result ) ;
+            result = new CompositeType(
+                name, mdDescription, attrNames, attrDescriptions, attrOTypes ) ;
+        } catch (OpenDataException exc) {
+            throw Exceptions.self.exceptionInMakeCompositeType(exc) ;
         }
 
         return result ;
     }
 
+    @TraceRegistration
     private static TypeConverter handleManagedData(
         final EvaluatedClassDeclaration cls,
 	final ManagedObjectManagerInternal mom, final ManagedData md ) {
 
-        mm.enter( mom.registrationDebug(), "handleManagedData", cls, mom, md ) ;
-
         TypeConverter result = null ;
-        try {
-            final Collection<AttributeDescriptor> minfos = analyzeManagedData(
-                cls, mom ) ;
-            final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
-            mm.info( mom.registrationDebug(), "minfos=", minfos,
-		"myType=", myType ) ;
+        final Collection<AttributeDescriptor> minfos = analyzeManagedData(
+            cls, mom ) ;
+        final CompositeType myType = makeCompositeType( cls, mom, md, minfos ) ;
+        describe( "minfos=", minfos ) ;
+        describe( "myType=", myType ) ;
 
-            result = new TypeConverterImpl( cls, myType ) {
-                public Object toManagedEntity( Object obj ) {
-                    mm.enter( mom.runtimeDebug(),
-			"(ManagedData):toManagedEntity", obj ) ;
+        result = new TypeConverterImpl( cls, myType ) {
+            @TraceRuntime
+            public Object toManagedEntity( Object obj ) {
+                Object runResult = null ;
+                Map<String,Object> data = new HashMap<String,Object>() ;
+                for (AttributeDescriptor minfo : minfos) {
+                    describe( "Fetching attribute ", minfo.id() ) ;
 
-                    Object runResult = null ;
-                    try {
-                        Map<String,Object> data = new HashMap<String,Object>() ;
-                        for (AttributeDescriptor minfo : minfos) {
-                            mm.info( mom.runtimeDebug(),
-				"Fetching attribute " + minfo.id() ) ;
-
-                            Object value = null ;
-                            if (minfo.isApplicable( obj )) {
-                                try {
-                                    FacetAccessor fa = mom.getFacetAccessor( obj ) ;
-                                    value = minfo.get(fa, mom.runtimeDebug());
-                                } catch (JMException ex) {
-                                    Exceptions.self.errorInConstructingOpenData(
-                                        cls.name(), minfo.id(), ex ) ;
-                                }
-                            }
-
-                            data.put( minfo.id(), value ) ;
-                        }
-
+                    Object value = null ;
+                    if (minfo.isApplicable( obj )) {
                         try {
-                            runResult = new CompositeDataSupport( myType, data ) ;
-                        } catch (OpenDataException exc) {
-                            throw Exceptions.self.exceptionInHandleManagedData(exc) ;
+                            FacetAccessor fa = mom.getFacetAccessor( obj ) ;
+                            value = minfo.get(fa );
+                        } catch (JMException ex) {
+                            Exceptions.self.errorInConstructingOpenData(
+                                cls.name(), minfo.id(), ex ) ;
                         }
-                    } finally {
-                        mm.exit( mom.runtimeDebug(), runResult ) ;
                     }
 
-                    return runResult ;
+                    data.put( minfo.id(), value ) ;
                 }
-            } ;
-        } finally {
-            mm.exit( mom.registrationDebug(), result ) ;
-        }
+
+                try {
+                    runResult = new CompositeDataSupport( myType, data ) ;
+                } catch (OpenDataException exc) {
+                    throw Exceptions.self.exceptionInHandleManagedData(exc) ;
+                }
+
+                return runResult ;
+            }
+        } ;
 
         return result ;
     }
@@ -555,82 +529,82 @@ public abstract class TypeConverterImpl implements TypeConverter {
     }
 
     @SuppressWarnings("unchecked")
+    @TraceRegistration
     private static TypeConverter handleArrayType( final EvaluatedArrayType type,
 	final ManagedObjectManagerInternal mom ) throws OpenDataException {
 
-        mm.enter( mom.registrationDebug(), "handleArrayType",
-	    type.name() ) ;
-
         TypeConverter result = null ;
-        try {
-            final EvaluatedType ctype = type.componentType() ;
-            final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
-            final OpenType cotype = ctypeTc.getManagedType() ;
-            final OpenType ot = getArrayType( cotype ) ;
+        final EvaluatedType ctype = type.componentType() ;
+        final TypeConverter ctypeTc = mom.getTypeConverter( ctype ) ;
+        final OpenType cotype = ctypeTc.getManagedType() ;
+        final OpenType ot = getArrayType( cotype ) ;
 
-            mm.info( mom.registrationDebug(), "ctype=", ctype,
-		"ctypeTc=", ctypeTc, "cotype=", cotype, "ot=", ot ) ;
+        describe( "ctype", ctype ) ;
+        describe( "ctypeTc", ctypeTc  ) ;
+        describe( "cotype", cotype ) ;
+        describe( "ot", ot ) ;
 
-            result = new TypeConverterImpl( type, ot ) {
-                public Object toManagedEntity( final Object obj ) {
-                    if (isIdentity()) {
-                        return obj ;
-                    } else {
-                        final Class cclass = getJavaClass( cotype ) ;
-                        final int length = 
-                            obj == null ? 0 : Array.getLength( obj ) ;
-                        final Object result = Array.newInstance( cclass, length ) ;
-                        for (int ctr=0; ctr<length; ctr++) {
-                            mm.enter( mom.runtimeDebug(),
-                                "(handleArrayType):toManagedEntity", ctr ) ;
-                            try {
-                                final Object elem = Array.get( obj, ctr ) ;
-                                final Object relem =  ctypeTc.toManagedEntity( elem ) ;
-                                Array.set( result, ctr, relem ) ;
-                            } finally {
-                                mm.exit( mom.runtimeDebug() ) ;
-                            }
+        result = new TypeConverterImpl( type, ot ) {
+            @TraceRuntime
+            public Object toManagedEntity( final Object obj ) {
+                if (isIdentity()) {
+                    return obj ;
+                } else {
+                    final Class cclass = getJavaClass( cotype ) ;
+                    final int length =
+                        obj == null ? 0 : Array.getLength( obj ) ;
+                    final Object result = Array.newInstance( cclass, length ) ;
+                    for (int ctr=0; ctr<length; ctr++) {
+                        describe( "Entering (handleArrayType):toManagedEntity",
+                            ctr ) ;
+                        try {
+                            final Object elem = Array.get( obj, ctr ) ;
+                            final Object relem =  ctypeTc.toManagedEntity( elem ) ;
+                            Array.set( result, ctr, relem ) ;
+                        } finally {
+                            describe( "Exiting (handleArrayType):toManagedEntity",
+                                ctr ) ;
                         }
-
-                        return result ;
                     }
+
+                    return result ;
                 }
+            }
 
-                @Override
-                public Object fromManagedEntity( final Object entity ) {
-                    if (isIdentity()) {
-                        return entity ;
-                    } else {
-                        final Class cclass = getJavaClass( ctype ) ;
+            @Override
+            @TraceRuntime
+            public Object fromManagedEntity( final Object entity ) {
+                if (isIdentity()) {
+                    return entity ;
+                } else {
+                    final Class cclass = getJavaClass( ctype ) ;
 
-                        final int length = 
-                            entity == null ? 0 : Array.getLength( entity ) ;
-                        final Object result = Array.newInstance( cclass, length ) ;
-                        for (int ctr=0; ctr<length; ctr++) {
-                            mm.enter( mom.runtimeDebug(),
-                                "(handleArrayType):fromManagedEntity", ctr ) ;
-                            try {
-                                final Object elem = Array.get( entity, ctr ) ;
-                                final Object relem =
-                                    ctypeTc.fromManagedEntity( elem ) ;
-                                Array.set( result, ctr, relem ) ;
-                            } finally {
-                                mm.exit( mom.runtimeDebug() ) ;
-                            }
+                    final int length =
+                        entity == null ? 0 : Array.getLength( entity ) ;
+                    final Object result = Array.newInstance( cclass, length ) ;
+                    for (int ctr=0; ctr<length; ctr++) {
+                        describe( "Entering (handleArrayType):fromManagedEntity",
+                            ctr ) ;
+                        try {
+                            final Object elem = Array.get( entity, ctr ) ;
+                            final Object relem =
+                                ctypeTc.fromManagedEntity( elem ) ;
+                            Array.set( result, ctr, relem ) ;
+                        } finally {
+                            describe( "Exiting (handleArrayType):fromManagedEntity",
+                                ctr ) ;
                         }
-
-                        return result ;
                     }
-                }
 
-                @Override
-                public boolean isIdentity() {
-                    return ctypeTc.isIdentity() ;
+                    return result ;
                 }
-            } ;
-        } finally {
-            mm.exit( mom.registrationDebug(), result ) ;
-        }
+            }
+
+            @Override
+            public boolean isIdentity() {
+                return ctypeTc.isIdentity() ;
+            }
+        } ;
 
         return result ;
     }
@@ -643,7 +617,7 @@ public abstract class TypeConverterImpl implements TypeConverter {
         final EvaluatedClassAnalyzer eca, final String mname ) {
 
         return Algorithms.getFirst( eca.findMethods(
-            new Predicate<EvaluatedMethodDeclaration>() {
+            new UnaryPredicate<EvaluatedMethodDeclaration>() {
                 public boolean evaluate( EvaluatedMethodDeclaration m ) {
                     return m.name().equals( mname ) ;
                 } 
@@ -701,15 +675,13 @@ public abstract class TypeConverterImpl implements TypeConverter {
         return list.iterator() ;
     }
 
+    @TraceRegistration
     private static TypeConverter handleClass( 
         final EvaluatedClassDeclaration type,
         final ManagedObjectManagerInternal mom ) {
 
-        mm.enter( mom.registrationDebug(), "handleClass", "type", type ) ;
-        
         TypeConverter result = null ;
         
-        try {
         // Case 1: Some kind of collection.
         if (Iterable.class.isAssignableFrom(type.cls())) {
             EvaluatedClassDeclaration type2 =
@@ -810,10 +782,6 @@ public abstract class TypeConverterImpl implements TypeConverter {
             } ;
         } else {
             result = handleAsString( type ) ;
-        }
-
-        } finally {
-            mm.exit( mom.registrationDebug(), result ) ;
         }
         
         return result ;

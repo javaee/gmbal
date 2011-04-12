@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2001-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2001-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -44,7 +44,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.glassfish.gmbal.generic.ObjectSet;
+import org.glassfish.pfl.basic.contain.ObjectSet;
 
 /**
  *

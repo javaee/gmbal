@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -44,6 +44,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import junit.framework.TestCase;
+import org.glassfish.pfl.basic.facet.FacetAccessor;
+import org.glassfish.pfl.basic.facet.FacetAccessorImpl;
 
 /**
  *
@@ -85,8 +87,8 @@ public class FacetAccessorTest extends TestCase {
             this.delegate = new FacetAccessorImpl( this ) ;
         }
         
-        public <T> T facet(Class<T> cls, boolean debug) {
-            return delegate.facet( cls, debug ) ;
+        public <T> T facet(Class<T> cls ) {
+            return delegate.facet( cls ) ;
         }
 
         public <T> void addFacet(T obj) {
@@ -97,8 +99,8 @@ public class FacetAccessorTest extends TestCase {
             delegate.removeFacet( cls ) ;
         }
 
-        public Object invoke(Method method, boolean debug, Object... args) {
-            return delegate.invoke( method, debug, args ) ;
+        public Object invoke(Method method, Object... args) {
+            return delegate.invoke( method, args ) ;
         }
         
         public int operation( int arg ) {
@@ -113,12 +115,12 @@ public class FacetAccessorTest extends TestCase {
             return delegate.facets() ;
         }
 
-        public Object get(Field field, boolean debug) {
-            return delegate.get( field, debug ) ;
+        public Object get(Field field ) {
+            return delegate.get( field ) ;
         }
 
-        public void set(Field field, Object value, boolean debug) {
-            delegate.set( field, value, debug ) ;
+        public void set(Field field, Object value ) {
+            delegate.set( field, value ) ;
         }
     }
     
@@ -167,14 +169,14 @@ public class FacetAccessorTest extends TestCase {
         System.out.println("facet");
         FacetAccessor fa = new TestClass() ;
 
-        assertEquals( fa, fa.facet( TestClass.class, false ) ) ;
-        assertEquals( fa, fa.facet( A.class, false ) ) ;
-        assertNull( fa.facet( B.class, false ) ) ;
+        assertEquals( fa, fa.facet( TestClass.class ) ) ;
+        assertEquals( fa, fa.facet( A.class ) ) ;
+        assertNull( fa.facet( B.class ) ) ;
         B b = new BImpl( 10 ) ;
         fa.addFacet( b ) ;
-        assertEquals( b, fa.facet( B.class, false ) ) ;
+        assertEquals( b, fa.facet( B.class ) ) ;
         fa.removeFacet( B.class ) ;
-        assertNull( fa.facet( B.class, false ) ) ;
+        assertNull( fa.facet( B.class ) ) ;
     }
 
     /**
@@ -203,6 +205,6 @@ public class FacetAccessorTest extends TestCase {
         fa.addFacet( b ) ;
 
         Field factorField = BImpl.class.getDeclaredField("factor") ;
-        assertEquals( fa.get( factorField, false ), 10 ) ;
+        assertEquals( fa.get( factorField ), 10 ) ;
     }
 }

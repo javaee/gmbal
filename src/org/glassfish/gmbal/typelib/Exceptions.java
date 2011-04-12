@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2008-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -41,11 +41,11 @@
 package org.glassfish.gmbal.typelib;
 
 import java.lang.reflect.ParameterizedType;
-import org.glassfish.gmbal.logex.Chain;
-import org.glassfish.gmbal.logex.ExceptionWrapper;
-import org.glassfish.gmbal.logex.Log;
-import org.glassfish.gmbal.logex.Message;
-import org.glassfish.gmbal.logex.WrapperGenerator;
+import org.glassfish.pfl.basic.logex.Chain;
+import org.glassfish.pfl.basic.logex.ExceptionWrapper;
+import org.glassfish.pfl.basic.logex.Log;
+import org.glassfish.pfl.basic.logex.Message;
+import org.glassfish.pfl.basic.logex.WrapperGenerator;
 
 /**
  *
