@@ -109,7 +109,7 @@ import org.glassfish.gmbal.impl.TypeConverterImpl ;
 
 import static org.glassfish.gmbal.typelib.EvaluatedType.* ;
 
-public class JmxaTest extends TestCase {
+public class GmbalTest extends TestCase {
     private static final boolean DEBUG = false ;
     private static boolean firstTime = true ;
 
@@ -1386,7 +1386,7 @@ public class JmxaTest extends TestCase {
                 try {
                     mom.close();
                 } catch (IOException ex) {
-                    Logger.getLogger(JmxaTest.class.getName()).log(
+                    Logger.getLogger(GmbalTest.class.getName()).log(
                         Level.SEVERE, null, ex);
                 }
             }
@@ -1459,7 +1459,7 @@ public class JmxaTest extends TestCase {
     }
 
     public static Test suite() {
-        return new TestSuite( JmxaTest.class ) ;
+        return new TestSuite( GmbalTest.class ) ;
     }
 
     private static final String[][] DATA1 = new String[][] {
@@ -2646,9 +2646,9 @@ public class JmxaTest extends TestCase {
                     }
                 }
             } catch (MBeanException ex) {
-                Logger.getLogger(JmxaTest.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(GmbalTest.class.getName()).log(Level.SEVERE, null, ex);
             } catch (RuntimeOperationsException ex) {
-                Logger.getLogger(JmxaTest.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(GmbalTest.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }

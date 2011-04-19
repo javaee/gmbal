@@ -458,8 +458,7 @@ public class MBeanSkeleton {
 
                 describe( "margs before invoke", margs ) ;
 
-                Object result = target.invoke(m.method(), mom.runtimeDebug(),
-                    margs);
+                Object result = target.invoke(m.method(), margs);
 
                 describe( "result after invoke", result ) ;
 

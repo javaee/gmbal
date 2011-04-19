@@ -355,7 +355,7 @@ public interface Exceptions {
     IllegalArgumentException typeNullInRootParent() ;
 
     @Message( "A MalformedObjectNameException occured on {0}" )
-    @Log( id=MBEAN_TREE_START + 12 )
+    @Log( id=MBEAN_TREE_START + 13 )
     IllegalArgumentException malformedObjectName( @Chain Exception exc,
         String str ) ;
 
@@ -390,7 +390,7 @@ public interface Exceptions {
 
     @Message( "Field {0} must be final and have an immutable type "
         + "to be used as an attribute" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 4 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 5 )
     IllegalArgumentException illegalAttributeField(
         EvaluatedFieldDeclaration cls ) ;
 
@@ -398,44 +398,44 @@ public interface Exceptions {
     String noDescriptionAvailable() ;
 
     @Message( "Method {0} cannot be called before a successful createRoot call")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 5 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 6 )
     IllegalStateException createRootNotCalled( String methodName ) ;
 
     @Message( "Method {0} cannot be called after a successful createRoot call")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 6 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 7 )
     IllegalStateException createRootCalled( String methodName ) ;
 
     @Message( "Could not construct MBean {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 7 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 8 )
     public IllegalArgumentException errorInConstructingMBean(String objName,
         @Chain JMException exc);
 
     @Message( "Attempt made to register non-singleton object of type {1}"
         + " without a name as a child of {0}" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 8 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 9 )
     public IllegalArgumentException nonSingletonRequiresName(
         MBeanImpl parentEntity, String type);
 
     @Message( "Attempt made to register singleton object of type {1}"
         + " with name {2} as a child of {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 9 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 10 )
     public IllegalArgumentException singletonCannotSpecifyName(
         MBeanImpl parentEntity, String type, String name);
 
     @Message( "No {0} annotation found on {1}" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 10 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 11 )
     public IllegalArgumentException noAnnotationFound(String name, String cls );
 
     @Message( "Cannot add null annotation to {0}" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 11 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 12 )
     public IllegalArgumentException cannotAddNullAnnotation(AnnotatedElement element);
 
     @Message( "ManagedObject annotation not found on class {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 12 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 13 )
     public IllegalArgumentException managedObjectAnnotationNotFound(String cname);
 
     @Message( "Cannot call getAnnotations on {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 13 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 14 )
     public IllegalArgumentException annotationsNotSupported(AnnotatedElement elem);
 
 // TypeConverterImpl
