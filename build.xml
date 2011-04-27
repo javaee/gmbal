@@ -109,10 +109,9 @@
     <property file="build.properties"/>
     <property name="repo.url"                       value="java-net:/maven2-repository/trunk/repository"/>
     <property environment="env"/>
-    <property name="maven.local.repository"         value="file://${env.HOME}/.m2"/>
+    <property name="maven.local.repository"         value="${env.HOME}/.m2"/>
     <property name="local.url"                      value="${maven.local.repository}"/>
     <property name="emma.dir"                       value="build/coverage"/>
-    <property name="file.url"                       value="file:/tmp/maven"/>
 
     <property name="libcache.dir"                   location="libcache"/>
 
