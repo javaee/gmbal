@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2003-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -37,71 +37,25 @@
  *  only if the new code is made subject to such option by the copyright
  *  holder.
  */ 
-package org.glassfish.gmbal.generic ;
 
-/** A utilitiy class representing a generic types Pair of elements.
- * Useful for simple data structures, returning multiple values, etc.
- * Pair<Object,Object> is similar to a cons cell.
+package org.glassfish.gmbal.impl.trace;
+
+import java.lang.annotation.Target ;
+import java.lang.annotation.ElementType ;
+import java.lang.annotation.Retention ;
+import java.lang.annotation.RetentionPolicy ;
+import org.glassfish.pfl.tf.spi.annotation.MethodMonitorGroup ;
+
+/**
+ *
+ * @author ken_admin
  */
-public class Pair<S,T> {
-    protected S _first ;
-    protected T _second ;
 
-    public Pair( final S first, final T second ) {
-	_first = first ;
-	_second = second ;
-    }
-
-    public Pair( final S first ) {
-	this( first, null ) ;
-    }
-
-    public Pair() {
-	this( null ) ;
-    }
-
-    public S first() {
-	return _first ;
-    }
-
-    public T second() {
-	return _second ;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-	if (obj == this) {
-	    return true ;
-        }
-
-	if (!(obj instanceof Pair)) {
-	    return false ;
-        }
-
-	Pair pair = Pair.class.cast( obj ) ;
-
-	if (first() == null ? 
-	    pair.first() == null : first().equals( pair.first())) {
-	    return (second() == null ? 
-		pair.second() == null : second().equals( pair.second())) ;
-	} else {
-	    return false ;
-	}
-    }
-
-    @Override
-    public int hashCode() {
-	int result = 0 ;
-	if (_first != null) 
-	    result ^= _first.hashCode() ;
-	if (_second != null)
-	    result ^= _second.hashCode() ;
-
-	return result ;
-    }
-
-    @Override
-    public String toString() {
-	return "Pair[" + _first + "," + _second + "]" ;
-    }
+/** This annotation is applied to a class or interface to indicate
+ * that its methods are classified as part of Gmbal MBean registration process.
+ */
+@Target({ElementType.METHOD,ElementType.TYPE,ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@MethodMonitorGroup
+public @interface TraceRegistration {
 }

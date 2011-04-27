@@ -315,6 +315,17 @@ public interface ManagedObjectManager extends Closeable {
      * method.
      */
     void addAnnotation( AnnotatedElement element, Annotation annotation ) ;
+
+    /** Add all annotations for this class as if they were declared on the
+     * inheritance parent(s) of the class (immediate superclass for a class, all
+     * immediate superinterfaces for an interface).  Also add all method
+     * annotations for methods that override an inherited method.  This acts as
+     * if all annotations on cls were actually applied to the immediate super
+     * class or interface.
+     *
+     * @param cls Class to analyze for inherited annotations.
+     */
+    void addInheritedAnnotations( Class<?> cls ) ;
         
     /** DebugLevel used to control how much debug info is printed for 
      * registration of objects.

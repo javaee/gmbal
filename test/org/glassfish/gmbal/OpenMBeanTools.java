@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -40,7 +40,10 @@
 
 package org.glassfish.gmbal;
 
-import org.glassfish.gmbal.generic.ObjectWriter;
+import org.glassfish.pfl.basic.func.UnaryFunction;
+import org.glassfish.pfl.basic.algorithm.Algorithms;
+import org.glassfish.pfl.basic.algorithm.ObjectWriter;
+import org.glassfish.pfl.basic.contain.Triple;
 import java.util.Map;
 
 import javax.management.openmbean.ArrayType;
@@ -48,8 +51,6 @@ import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.OpenDataException;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.TabularType;
-
-import org.glassfish.gmbal.generic.Triple ;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
@@ -63,8 +64,6 @@ import javax.management.openmbean.CompositeDataSupport;
 import javax.management.openmbean.SimpleType;
 import javax.management.openmbean.TabularData;
 import javax.management.openmbean.TabularDataSupport;
-import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.UnaryFunction;
 import static javax.management.openmbean.SimpleType.* ;
 
 /** Tools for constructing open MBean types and values, and comparing them.

@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -43,11 +43,8 @@ package org.glassfish.gmbal.impl ;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 
 import org.glassfish.gmbal.ManagedObjectManager ;
-import org.glassfish.gmbal.generic.Pair ;
 import org.glassfish.gmbal.InheritedAttribute ;
 
-import org.glassfish.gmbal.generic.FacetAccessor;
-import org.glassfish.gmbal.generic.Predicate;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Collection;
@@ -58,6 +55,9 @@ import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.pfl.basic.contain.Pair;
+import org.glassfish.pfl.basic.facet.FacetAccessor;
+import org.glassfish.pfl.basic.func.UnaryPredicate;
 
 /** The internal interface to the ManagedObjectManager that is used in the
  * gmbal implementation.  The methods defined here are not for use by
@@ -133,7 +133,7 @@ public interface ManagedObjectManagerInternal extends ManagedObjectManager {
     String getTypeName( Class<?> cls, String fieldName,
         String nameFromAnnotation ) ;
     
-    <T extends EvaluatedDeclaration> Predicate<T> forAnnotation(
+    <T extends EvaluatedDeclaration> UnaryPredicate<T> forAnnotation(
         Class<? extends Annotation> annotation,
         Class<T> elemType ) ;
     

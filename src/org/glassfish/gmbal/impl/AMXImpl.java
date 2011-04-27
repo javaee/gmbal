@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -43,8 +43,6 @@ package org.glassfish.gmbal.impl;
 import org.glassfish.gmbal.AMXMBeanInterface;
 import org.glassfish.gmbal.AMXClient;
 import javax.management.MBeanException;
-import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.UnaryFunction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -56,6 +54,8 @@ import javax.management.Descriptor;
 import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
+import org.glassfish.pfl.basic.algorithm.Algorithms;
+import org.glassfish.pfl.basic.func.UnaryFunction;
 
 /**
  *
@@ -91,7 +91,7 @@ public class AMXImpl implements AMXMBeanInterface {
     public AMXMBeanInterface getParent() {
         MBeanImpl parent = mbean.parent() ;
         if (parent != null) {
-            return parent.facet( AMXMBeanInterface.class, false ) ;
+            return parent.facet( AMXMBeanInterface.class ) ;
         } else {
             ManagedObjectManagerInternal mom = mbean.skeleton().mom() ;
             ObjectName rpn = mom.getRootParentName() ;
@@ -112,7 +112,7 @@ public class AMXImpl implements AMXMBeanInterface {
         new UnaryFunction<MBeanImpl,AMXMBeanInterface>() {
             @SuppressWarnings("unchecked")
             public AMXMBeanInterface evaluate( MBeanImpl mb ) {
-                return mb.facet( AMXMBeanInterface.class, false ) ;
+                return mb.facet( AMXMBeanInterface.class ) ;
             }
         } ;
 

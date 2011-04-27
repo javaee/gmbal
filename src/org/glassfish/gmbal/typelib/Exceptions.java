@@ -41,12 +41,11 @@
 package org.glassfish.gmbal.typelib;
 
 import java.lang.reflect.ParameterizedType;
-import org.glassfish.gmbal.logex.Chain;
-import org.glassfish.gmbal.logex.ExceptionWrapper;
-import org.glassfish.gmbal.logex.Log;
-import org.glassfish.gmbal.logex.LogLevel;
-import org.glassfish.gmbal.logex.Message;
-import org.glassfish.gmbal.logex.WrapperGenerator;
+import org.glassfish.pfl.basic.logex.Chain;
+import org.glassfish.pfl.basic.logex.ExceptionWrapper;
+import org.glassfish.pfl.basic.logex.Log;
+import org.glassfish.pfl.basic.logex.Message;
+import org.glassfish.pfl.basic.logex.WrapperGenerator;
 
 /**
  *

@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -38,17 +38,24 @@
  *  holder.
  */ 
 
-package org.glassfish.gmbal.tools.argparser ;
+package org.glassfish.gmbal.impl.trace;
 
-import java.lang.annotation.Documented ;
 import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
+import org.glassfish.pfl.tf.spi.annotation.MethodMonitorGroup ;
 
-@Documented
-@Target(ElementType.METHOD)
+/**
+ *
+ * @author ken_admin
+ */
+
+/** This annotation is applied to a class or interface to indicate
+ * that its methods are classified as part of Gmbal MBean registration process.
+ */
+@Target({ElementType.METHOD,ElementType.TYPE,ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface DefaultValue {
-    String value() default "" ;
+@MethodMonitorGroup
+public @interface TraceRegistrationFine {
 }

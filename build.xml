@@ -109,8 +109,7 @@
     <property file="build.properties"/>
     <property name="repo.url"                       value="java-net:/maven2-repository/trunk/repository"/>
     <property environment="env"/>
-    <property name="maven.local.repository"         value="${env.HOME}/.m2"/>
-    <property name="local.url"                      value="${maven.local.repository}"/>
+    <property name="maven.local.repository"         value="${env.HOME}/.m2/repository"/>
     <property name="emma.dir"                       value="build/coverage"/>
 
     <property name="libcache.dir"                   location="libcache"/>
@@ -131,12 +130,14 @@
 
     <artifact:remoteRepository id="gf.repo" url="${gf.repository}"/>
     <artifact:remoteRepository id="bnd.repo" url="${bnd.repository}"/>
-    <artifact:localRepository id="local.repo" path="${maven.local.repository}"/>
+    <artifact:localRepository id="local.repo" path="${env.HOME}/.m2/repository"/>
 
     <artifact:dependencies versionsId="dependency.versions" filesetId="dependency.fileset" pathId="dependency.classpath">
-        <remoteRepository refid="gf.repo"/>
         <localRepository refid="local.repo"/>
+        <remoteRepository refid="gf.repo"/>
         <dependency groupId="${management-api.groupid}" artifactId="${management-api.artifactid}" version="${management-api.version}" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-basic" version="1.0.0-b001" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-tf" version="1.0.0-b001" scope="runtime"/>
     </artifact:dependencies>
 
     <artifact:dependencies pathId="bnd.classpath">
@@ -177,14 +178,14 @@
 
     <target name="gen-resource-bundle">
         <!-- generate LogStrings.properties ResourceBundle -->
-        <java classname="org.glassfish.gmbal.tools.file.ExceptionResourceGenerator"
-            classpath="build/classes:${libcache.dir}/management-api.jar" fork="true" dir=".">
+        <java classname="org.glassfish.pfl.basic.tools.logex.ExceptionResourceGenerator"
+            classpath="build/classes:${libcache.dir}/management-api.jar:lib/pfl-basic.jar:lib/pfl-basic-tools.jar:lib/pfl-tf.jar" fork="true" dir=".">
             <arg value="-verbose"/>
-            <arg value="0"/>
+            <arg value="1"/>
             <arg value="-source"/>
             <arg value="build/classes"/>
             <arg value="-destination"/>
-            <arg value="build/classes/org/glassfish/gmbal/logex/LogStrings.properties"/>
+            <arg value="build/classes/org/glassfish/gmbal/LogStrings.properties"/>
         </java>
    </target>
 

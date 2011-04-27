@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -37,38 +37,25 @@
  *  only if the new code is made subject to such option by the copyright
  *  holder.
  */ 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
-package org.glassfish.gmbal.generic;
+package org.glassfish.gmbal.impl.trace;
 
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-
+import java.lang.annotation.Target ;
+import java.lang.annotation.ElementType ;
+import java.lang.annotation.Retention ;
+import java.lang.annotation.RetentionPolicy ;
+import org.glassfish.pfl.tf.spi.annotation.MethodMonitorGroup ;
 
 /**
  *
- * @author ken
+ * @author ken_admin
  */
-public class ObjectSet {
-    private IdentityHashMap map = new IdentityHashMap();
-    private static Object VALUE = new Object() ;
 
-    public boolean contains( Object obj ) {
-        return map.get( obj ) == VALUE ;
-    }
-
-    public void add( Object obj ) {
-        map.put( obj, VALUE ) ;
-    }
-
-    public void remove( Object obj ) {
-        map.remove( obj ) ;
-    }
-
-    public Iterator iterator() {
-        return map.keySet().iterator() ;
-    }
+/** This annotation is applied to a class or interface to indicate
+ * that its methods are classified as part of Gmbal MBean registration process.
+ */
+@Target({ElementType.METHOD,ElementType.TYPE,ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@MethodMonitorGroup
+public @interface TraceTypelibEval {
 }

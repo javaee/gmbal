@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -37,46 +37,25 @@
  *  only if the new code is made subject to such option by the copyright
  *  holder.
  */ 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
-package org.glassfish.gmbal.logex;
+package org.glassfish.gmbal.impl.trace;
 
-/**
- *
- * @author ken
- */
-import java.lang.annotation.Documented ;
 import java.lang.annotation.Target ;
 import java.lang.annotation.ElementType ;
 import java.lang.annotation.Retention ;
 import java.lang.annotation.RetentionPolicy ;
+import org.glassfish.pfl.tf.spi.annotation.MethodMonitorGroup ;
 
-/** This annotation is applied to an interface or abstract class that is used
- * to define methods for logging and/or constructing exceptions.
+/**
+ *
+ * @author ken_admin
  */
-@Documented
-@Target({ElementType.TYPE})
+
+/** This annotation is applied to a class or interface to indicate
+ * that its methods are classified as part of Gmbal MBean registration process.
+ */
+@Target({ElementType.METHOD,ElementType.TYPE,ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ExceptionWrapper {
-    /** Return the prefix used in front of the numeric exception ID in the formatter
-     * exception message.  For example, CORBA uses IIOP for this purpose.
-     * @return The log messaged ID prefix
-     */
-    String idPrefix() ;
+@MethodMonitorGroup
+public @interface TraceRuntime { }
 
-    /** Return the logger name to be used for all logged messages generated
-     * from the class.  Default is the package in which the class is defined.
-     * @return The logger name.
-     */
-    String loggerName() default "" ;
-
-    /** Return the name of the ResourceBundle to use for I18N support for
-     * exceptions in this class.
-     *
-     * @return The bundle name.
-     */
-    String resourceBundle() default "" ;
-}

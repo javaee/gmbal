@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2008-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -54,18 +54,17 @@ import javax.management.ObjectName;
 import javax.management.openmbean.OpenType;
 import org.glassfish.gmbal.GmbalException;
 import org.glassfish.gmbal.impl.AttributeDescriptor.AttributeType;
-import org.glassfish.gmbal.logex.Chain;
-import org.glassfish.gmbal.logex.ExceptionWrapper;
-import org.glassfish.gmbal.logex.Log;
-import org.glassfish.gmbal.logex.LogLevel;
-import org.glassfish.gmbal.logex.Message;
-import org.glassfish.gmbal.logex.StackTrace;
-import org.glassfish.gmbal.logex.WrapperGenerator;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.pfl.basic.logex.Chain;
+import org.glassfish.pfl.basic.logex.ExceptionWrapper;
+import org.glassfish.pfl.basic.logex.Log;
+import org.glassfish.pfl.basic.logex.LogLevel;
+import org.glassfish.pfl.basic.logex.Message;
+import org.glassfish.pfl.basic.logex.WrapperGenerator;
 
 /** Exception wrapper class.  The logex WrapperGenerator uses this interface
  * to generate an implementation which returns the appropriate exception, and
@@ -219,12 +218,13 @@ public interface Exceptions {
     @Log( id = MBEAN_IMPL_START + 4 )
     void unregisterMBeanNotRegistered(ObjectName oname);
 
-    @StackTrace
+    // @StackTrace
     @Message( "registering MBean {0}")
     @Log( id = MBEAN_IMPL_START + 5, level=LogLevel.INFO )
     public void registeringMBean(ObjectName oname);
 
-    @StackTrace
+    // XXX Do we want to support StackTrace annotation?
+    // @StackTrace
     @Message( "unregistering MBean {0}")
     @Log( id = MBEAN_IMPL_START + 6, level=LogLevel.INFO )
     public void unregisteringMBean(ObjectName oname);
@@ -355,7 +355,7 @@ public interface Exceptions {
     IllegalArgumentException typeNullInRootParent() ;
 
     @Message( "A MalformedObjectNameException occured on {0}" )
-    @Log( id=MBEAN_TREE_START + 12 )
+    @Log( id=MBEAN_TREE_START + 13 )
     IllegalArgumentException malformedObjectName( @Chain Exception exc,
         String str ) ;
 
@@ -390,7 +390,7 @@ public interface Exceptions {
 
     @Message( "Field {0} must be final and have an immutable type "
         + "to be used as an attribute" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 4 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 5 )
     IllegalArgumentException illegalAttributeField(
         EvaluatedFieldDeclaration cls ) ;
 
@@ -398,44 +398,44 @@ public interface Exceptions {
     String noDescriptionAvailable() ;
 
     @Message( "Method {0} cannot be called before a successful createRoot call")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 5 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 6 )
     IllegalStateException createRootNotCalled( String methodName ) ;
 
     @Message( "Method {0} cannot be called after a successful createRoot call")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 6 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 7 )
     IllegalStateException createRootCalled( String methodName ) ;
 
     @Message( "Could not construct MBean {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 7 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 8 )
     public IllegalArgumentException errorInConstructingMBean(String objName,
         @Chain JMException exc);
 
     @Message( "Attempt made to register non-singleton object of type {1}"
         + " without a name as a child of {0}" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 8 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 9 )
     public IllegalArgumentException nonSingletonRequiresName(
         MBeanImpl parentEntity, String type);
 
     @Message( "Attempt made to register singleton object of type {1}"
         + " with name {2} as a child of {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 9 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 10 )
     public IllegalArgumentException singletonCannotSpecifyName(
         MBeanImpl parentEntity, String type, String name);
 
     @Message( "No {0} annotation found on {1}" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 10 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 11 )
     public IllegalArgumentException noAnnotationFound(String name, String cls );
 
     @Message( "Cannot add null annotation to {0}" )
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 11 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 12 )
     public IllegalArgumentException cannotAddNullAnnotation(AnnotatedElement element);
 
     @Message( "ManagedObject annotation not found on class {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 12 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 13 )
     public IllegalArgumentException managedObjectAnnotationNotFound(String cname);
 
     @Message( "Cannot call getAnnotations on {0}")
-    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 13 )
+    @Log( id=MANAGED_OBJECT_MANAGER_IMPL_START + 14 )
     public IllegalArgumentException annotationsNotSupported(AnnotatedElement elem);
 
 // TypeConverterImpl

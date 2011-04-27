@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -50,18 +50,16 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import javax.management.ReflectionException ;
 
-import org.glassfish.gmbal.generic.MethodMonitor;
-import org.glassfish.gmbal.generic.MethodMonitorFactory;
-import org.glassfish.gmbal.generic.DumpIgnore;
-import org.glassfish.gmbal.generic.DumpToString;
-import org.glassfish.gmbal.generic.FacetAccessor;
-import org.glassfish.gmbal.generic.Pair;
 import javax.management.MBeanException;
 import org.glassfish.gmbal.typelib.EvaluatedAccessibleDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.gmbal.impl.trace.TraceRuntime;
+import org.glassfish.pfl.basic.algorithm.DumpToString;
+import org.glassfish.pfl.basic.contain.Pair;
+import org.glassfish.pfl.basic.facet.FacetAccessor;
     
 public class AttributeDescriptor {
     public enum AttributeType { SETTER, GETTER } ;
@@ -74,9 +72,6 @@ public class AttributeDescriptor {
     @DumpToString
     private EvaluatedType _type ;
     private TypeConverter _tc ;
-
-    @DumpIgnore
-    private MethodMonitor mm = MethodMonitorFactory.makeStandard( getClass() ) ;
 
     private static final Permission accessControlPermission =
         new ReflectPermission( "suppressAccessChecks" ) ;
@@ -132,52 +127,42 @@ public class AttributeDescriptor {
         }
     }
 
-    public Object get( FacetAccessor fa,
-        boolean debug ) throws MBeanException, ReflectionException {
-        
-        mm.enter( debug, "get", fa ) ;
+    @TraceRuntime
+    public Object get( FacetAccessor fa )
+        throws MBeanException, ReflectionException {
         
         checkType( AttributeType.GETTER ) ;
                 
         Object result = null;
         
-        try {
-            if (_decl instanceof EvaluatedMethodDeclaration) {
-                EvaluatedMethodDeclaration em = (EvaluatedMethodDeclaration)_decl ;
-                result = _tc.toManagedEntity( fa.invoke( em.method(), debug ));
-            } else if (_decl instanceof EvaluatedFieldDeclaration) {
-                EvaluatedFieldDeclaration ef = (EvaluatedFieldDeclaration)_decl ;
-                result = _tc.toManagedEntity( fa.get( ef.field(), debug )) ;
-            } else {
-                Exceptions.self.unknownDeclarationType(_decl) ;
-            }
-        } finally {
-            mm.exit( debug, result ) ;
+        if (_decl instanceof EvaluatedMethodDeclaration) {
+            EvaluatedMethodDeclaration em = (EvaluatedMethodDeclaration)_decl ;
+            result = _tc.toManagedEntity( fa.invoke( em.method()));
+        } else if (_decl instanceof EvaluatedFieldDeclaration) {
+            EvaluatedFieldDeclaration ef = (EvaluatedFieldDeclaration)_decl ;
+            result = _tc.toManagedEntity( fa.get( ef.field())) ;
+        } else {
+            Exceptions.self.unknownDeclarationType(_decl) ;
         }
         
         return result ;
     }
 
-    public void set( FacetAccessor target, Object value, 
-        boolean debug ) throws MBeanException, ReflectionException {
+    @TraceRuntime
+    public void set( FacetAccessor target, Object value )
+        throws MBeanException, ReflectionException {
         
         checkType( AttributeType.SETTER ) ;
         
-        mm.enter( debug, "set", target, value ) ;
-        
-        try {
-            if (_decl instanceof EvaluatedMethodDeclaration) {
-                EvaluatedMethodDeclaration em =
-                    (EvaluatedMethodDeclaration)_decl ;
-                target.invoke( em.method(), debug, _tc.fromManagedEntity(value)) ;
-            } else if (_decl instanceof EvaluatedFieldDeclaration) {
-                EvaluatedFieldDeclaration ef = (EvaluatedFieldDeclaration)_decl ;
-                target.set( ef.field(), _tc.fromManagedEntity( value ), debug ) ;
-            } else {
-                Exceptions.self.unknownDeclarationType(_decl) ;
-            }
-        } finally {
-            mm.exit( debug ) ;
+        if (_decl instanceof EvaluatedMethodDeclaration) {
+            EvaluatedMethodDeclaration em =
+                (EvaluatedMethodDeclaration)_decl ;
+            target.invoke( em.method(), _tc.fromManagedEntity(value)) ;
+        } else if (_decl instanceof EvaluatedFieldDeclaration) {
+            EvaluatedFieldDeclaration ef = (EvaluatedFieldDeclaration)_decl ;
+            target.set( ef.field(), _tc.fromManagedEntity( value )) ;
+        } else {
+            Exceptions.self.unknownDeclarationType(_decl) ;
         }
     }
     

@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2008-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -55,8 +55,8 @@ import org.glassfish.gmbal.ManagedObjectManagerFactory ;
 import org.glassfish.gmbal.ManagedObjectManager ;
 import org.glassfish.gmbal.ManagedObject ;
 import org.glassfish.gmbal.NameValue;
-import org.glassfish.gmbal.generic.Pair;
 import org.glassfish.gmbal.AMXClient;
+import org.glassfish.pfl.basic.contain.Pair;
 
 /**
  *

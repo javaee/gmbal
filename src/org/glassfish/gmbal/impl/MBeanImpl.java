@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -41,8 +41,6 @@
 package org.glassfish.gmbal.impl ;
 
 import java.lang.reflect.Field;
-import org.glassfish.gmbal.generic.FacetAccessor;
-import org.glassfish.gmbal.generic.FacetAccessorImpl;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
@@ -72,7 +70,9 @@ import java.util.HashSet;
 import java.util.Set;
 import org.glassfish.external.amx.AMX;
 import org.glassfish.gmbal.GmbalMBean;
-import org.glassfish.gmbal.generic.OperationTracer;
+import org.glassfish.pfl.basic.facet.FacetAccessor;
+import org.glassfish.pfl.basic.facet.FacetAccessorImpl;
+import org.glassfish.pfl.basic.logex.OperationTracer;
 
 public class MBeanImpl extends NotificationBroadcasterSupport 
     implements FacetAccessor, GmbalMBean {
@@ -242,7 +242,7 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         Map<String,MBeanImpl> map = children.get( child.type() ) ;
         if (map != null) {
             map.remove( child.name() ) ;
-            if (map.size() == 0) {
+            if (map.isEmpty()) {
                 children.remove( child.type() ) ;
             }
         }
@@ -427,8 +427,8 @@ public class MBeanImpl extends NotificationBroadcasterSupport
     private FacetAccessor facetAccessorDelegate = 
         new FacetAccessorImpl( this ) ;
     
-    public <T> T facet(Class<T> cls, boolean debug ) {
-        return facetAccessorDelegate.facet( cls, debug ) ;
+    public <T> T facet(Class<T> cls ) {
+        return facetAccessorDelegate.facet( cls ) ;
     }
 
     public <T> void addFacet(T obj) {
@@ -439,19 +439,19 @@ public class MBeanImpl extends NotificationBroadcasterSupport
         facetAccessorDelegate.removeFacet( cls ) ;
     }
 
-    public Object invoke(Method method, boolean debug, Object... args) {
-        return facetAccessorDelegate.invoke( method, debug, args ) ;
+    public Object invoke(Method method, Object... args) {
+        return facetAccessorDelegate.invoke( method, args ) ;
     }
 
     public Collection<Object> facets() {
         return facetAccessorDelegate.facets() ;
     }
 
-    public Object get(Field field, boolean debug) {
-        return facetAccessorDelegate.get( field, debug ) ;
+    public Object get(Field field ) {
+        return facetAccessorDelegate.get( field ) ;
     }
 
-    public void set(Field field, Object value, boolean debug) {
-        facetAccessorDelegate.set( field, value, debug ) ;
+    public void set(Field field, Object value ) {
+        facetAccessorDelegate.set( field, value ) ;
     }
 }

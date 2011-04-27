@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -67,36 +67,40 @@ import javax.management.MBeanParameterInfo;
 import javax.management.NotificationBroadcasterSupport;
 import javax.management.AttributeChangeNotification;
 
-import org.glassfish.gmbal.generic.BinaryFunction;
 import org.glassfish.gmbal.NameValue;
 import org.glassfish.gmbal.ManagedOperation;
 import org.glassfish.gmbal.ParameterNames;
 
-import org.glassfish.gmbal.generic.DumpIgnore;
-import org.glassfish.gmbal.generic.Pair;
-import org.glassfish.gmbal.generic.DumpToString;
-
-import org.glassfish.gmbal.generic.FacetAccessor;
 import javax.management.Descriptor;
 import javax.management.JMException;
 import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
 import javax.management.openmbean.OpenMBeanParameterInfoSupport;
-import org.glassfish.gmbal.generic.Algorithms;
-import org.glassfish.gmbal.generic.MethodMonitor;
-import org.glassfish.gmbal.generic.MethodMonitorFactory;
+import org.glassfish.gmbal.impl.trace.TraceRegistration;
+import org.glassfish.gmbal.impl.trace.TraceRegistrationFine;
+import org.glassfish.gmbal.impl.trace.TraceRuntime;
 import org.glassfish.gmbal.typelib.EvaluatedClassAnalyzer;
 import org.glassfish.gmbal.typelib.EvaluatedClassDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedFieldDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedMethodDeclaration;
 import org.glassfish.gmbal.typelib.EvaluatedType;
+import org.glassfish.pfl.basic.algorithm.DumpIgnore;
+import org.glassfish.pfl.basic.algorithm.DumpToString;
+import org.glassfish.pfl.basic.contain.Pair;
+import org.glassfish.pfl.basic.facet.FacetAccessor;
+import org.glassfish.pfl.basic.func.BinaryFunction;
+import org.glassfish.pfl.tf.spi.annotation.InfoMethod;
 
+@TraceRegistrationFine
+@TraceRegistration
+@TraceRuntime
 public class MBeanSkeleton {
     private static Descriptor DEFAULT_AMX_DESCRIPTOR =
         DescriptorIntrospector.descriptorForElement( null,
             ManagedObjectManagerImpl.DefaultAMXMetadataHolder.class ) ;
 
+    @TraceRuntime
     public interface Operation
 	extends BinaryFunction<FacetAccessor, List<Object>, Object> {
     };
@@ -109,7 +113,6 @@ public class MBeanSkeleton {
     @DumpToString
     private final ManagedObjectManagerInternal mom;
     @DumpIgnore
-    private final MethodMonitor mm;
     private final Map<String, AttributeDescriptor> setters;
     private final Map<String, AttributeDescriptor> getters;
     private AttributeDescriptor nameAttributeDescriptor;
@@ -164,8 +167,6 @@ public class MBeanSkeleton {
 
 	this.mom = mom;
 
-	mm = MethodMonitorFactory.makeStandard(getClass());
-
 	setters = new HashMap<String, AttributeDescriptor>();
 	getters = new HashMap<String, AttributeDescriptor>();
 	operations = new HashMap<String, Map<List<String>, Operation>>();
@@ -191,8 +192,6 @@ public class MBeanSkeleton {
 	sequenceNumber = new AtomicLong();
 
 	mom = second.mom;
-
-	mm = MethodMonitorFactory.makeStandard(getClass());
 
 	setters = new HashMap<String, AttributeDescriptor>();
 	setters.putAll(first.setters);
@@ -274,143 +273,144 @@ public class MBeanSkeleton {
 	return "DynamicMBeanSkeleton[type" + type + "]";
     }
 
+    @InfoMethod
+    private void descriptorContents( String name, String description,
+        Descriptor desc ) {}
+
+    @InfoMethod
+    private void attributeInfoContents( ModelMBeanAttributeInfo info ) {}
+
     // This method should only be called when getter.id.equals( setter.id )
+    @TraceRegistrationFine
     private void processAttribute(AttributeDescriptor getter,
 	AttributeDescriptor setter) {
 
-	mm.enter(mom.registrationFineDebug(), "processAttribute", getter,
-	    setter);
+        if ((setter == null) && (getter == null)) {
+            throw Exceptions.self.notBothNull();
+        }
 
-	try {
-	    if ((setter == null) && (getter == null)) {
-		throw Exceptions.self.notBothNull();
-	    }
+        if ((setter != null) && (getter != null)
+            && !setter.type().equals(getter.type())) {
+            throw Exceptions.self.typesMustMatch();
+        }
 
-	    if ((setter != null) && (getter != null) 
-		&& !setter.type().equals(getter.type())) {
-		throw Exceptions.self.typesMustMatch();
-	    }
+        AttributeDescriptor nonNullDescriptor =
+            (getter != null) ? getter : setter;
 
-	    AttributeDescriptor nonNullDescriptor =
-		(getter != null) ? getter : setter;
+        String name = nonNullDescriptor.id();
+        String description = nonNullDescriptor.description();
+        Descriptor desc = DescriptorUtility.EMPTY_DESCRIPTOR;
+        if (getter != null) {
+            desc = DescriptorUtility.union(desc,
+                DescriptorIntrospector.descriptorForElement( mom,
+                getter.accessible()));
+        }
 
-	    String name = nonNullDescriptor.id();
-	    String description = nonNullDescriptor.description();
-	    Descriptor desc = DescriptorUtility.EMPTY_DESCRIPTOR;
-	    if (getter != null) {
-		desc = DescriptorUtility.union(desc,
-		    DescriptorIntrospector.descriptorForElement( mom,
-		    getter.accessible()));
-	    }
+        if (setter != null) {
+            desc = DescriptorUtility.union(desc,
+                DescriptorIntrospector.descriptorForElement( mom,
+                setter.accessible()));
+        }
 
-	    if (setter != null) {
-		desc = DescriptorUtility.union(desc,
-		    DescriptorIntrospector.descriptorForElement( mom,
-		    setter.accessible()));
-	    }
+        desc = makeValidDescriptor(desc, DescriptorType.attribute, name);
 
-	    desc = makeValidDescriptor(desc, DescriptorType.attribute, name);
+        descriptorContents( name, description, desc ) ;
 
-	    mm.info( mom.registrationFineDebug(), name, description, desc );
+        TypeConverter tc = mom.getTypeConverter(nonNullDescriptor.type());
 
-	    TypeConverter tc = mom.getTypeConverter(nonNullDescriptor.type());
+        ModelMBeanAttributeInfo ainfo = new ModelMBeanAttributeInfo(name,
+            tc.getManagedType().getClassName(), description,
+            getter != null, setter != null, false, desc);
 
-	    ModelMBeanAttributeInfo ainfo = new ModelMBeanAttributeInfo(name,
-		tc.getManagedType().getClassName(), description,
-		getter != null, setter != null, false, desc);
+        attributeInfoContents(ainfo);
 
-	    mm.info( mom.registrationFineDebug(), ainfo);
-
-	    mbeanAttributeInfoList.add(ainfo);
-	} finally {
-	    mm.exit( mom.registrationFineDebug() );
-	}
+        mbeanAttributeInfoList.add(ainfo);
     }
 
+    @InfoMethod
+    private void attributes( 
+        Pair<Map<String, AttributeDescriptor>,
+             Map<String, AttributeDescriptor>> amap ) {}
+
+    @InfoMethod
+    private void setterNames( String msg, Set<String> names ) {}
+
+    @TraceRegistrationFine
     private void analyzeAttributes(EvaluatedClassAnalyzer ca) {
-	mm.enter( mom.registrationFineDebug(), "analyzeAttributes", ca);
+        Pair<Map<String, AttributeDescriptor>, Map<String, AttributeDescriptor>> amap =
+            mom.getAttributes(ca,
+            ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR);
 
-	try {
-	    Pair<Map<String, AttributeDescriptor>, Map<String, AttributeDescriptor>> amap =
-		mom.getAttributes(ca,
-		ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR);
+        getters.putAll(amap.first());
+        setters.putAll(amap.second());
 
-	    getters.putAll(amap.first());
-	    setters.putAll(amap.second());
+        attributes( amap ) ;
 
-	    mm.info( mom.registrationFineDebug(), "attributes", amap);
+        final Set<String> setterNames = new HashSet<String>(setters.keySet());
+        setterNames( "before removing getters", setterNames ) ;
 
-	    final Set<String> setterNames = new HashSet<String>(setters.keySet());
-	    mm.info( mom.registrationFineDebug(),
-		"(Before removing getters):setterNames=", setterNames);
+        for (String str : getters.keySet()) {
+            processAttribute(getters.get(str), setters.get(str));
+            setterNames.remove(str);
+        }
 
-	    for (String str : getters.keySet()) {
-		processAttribute(getters.get(str), setters.get(str));
-		setterNames.remove(str);
-	    }
+        setterNames( "after removing getters", setterNames ) ;
 
-	    mm.info( mom.registrationFineDebug(),
-		"(After removing getters):setterNames=", setterNames);
-
-	    // Handle setters without getters
-	    for (String str : setterNames) {
-		processAttribute(null, setters.get(str));
-	    }
-	} finally {
-	    mm.exit( mom.registrationFineDebug() );
-	}
+        // Handle setters without getters
+        for (String str : setterNames) {
+            processAttribute(null, setters.get(str));
+        }
     }
 
+    @InfoMethod
+    private void annotatedMethod( EvaluatedMethodDeclaration annotatedMethod ) {}
+
+    @TraceRegistrationFine
     private void analyzeObjectNameKeys(EvaluatedClassAnalyzer ca) {
-	mm.enter( mom.registrationFineDebug(), "analyzeObjectNameKeys", ca);
+        final List<EvaluatedFieldDeclaration> annotatedFields =
+            ca.findFields(mom.forAnnotation(NameValue.class,
+            EvaluatedFieldDeclaration.class));
 
-	try {
-	    final List<EvaluatedFieldDeclaration> annotatedFields =
-		ca.findFields(mom.forAnnotation(NameValue.class,
-		EvaluatedFieldDeclaration.class));
+        final List<EvaluatedMethodDeclaration> annotatedMethods =
+            ca.findMethods(mom.forAnnotation(NameValue.class,
+            EvaluatedMethodDeclaration.class));
 
-	    final List<EvaluatedMethodDeclaration> annotatedMethods =
-		ca.findMethods(mom.forAnnotation(NameValue.class,
-		EvaluatedMethodDeclaration.class));
+        if ((annotatedMethods.size() == 0) && (annotatedFields.size() == 0)) {
+            return;
+        }
 
-	    if ((annotatedMethods.size() == 0) && (annotatedFields.size() == 0)) {
-		return;
-	    }
+        // If there are two methods with @NameValue in the same
+        // class, we have an error.
+        EvaluatedMethodDeclaration annotatedMethod = annotatedMethods.get(0);
+        if (annotatedMethods.size() > 1) {
+            EvaluatedMethodDeclaration second = annotatedMethods.get(1);
 
-	    // If there are two methods with @NameValue in the same
-	    // class, we have an error.
-	    EvaluatedMethodDeclaration annotatedMethod = annotatedMethods.get(0);
-	    if (annotatedMethods.size() > 1) {
-		EvaluatedMethodDeclaration second = annotatedMethods.get(1);
+            if (annotatedMethod.containingClass().equals(
+                second.containingClass())) {
 
-		if (annotatedMethod.containingClass().equals(
-		    second.containingClass())) {
+            throw Exceptions.self.duplicateObjectNameKeyAttributes(
+                annotatedMethod, second,
+                annotatedMethod.containingClass().name());
+            }
+        }
 
-		throw Exceptions.self.duplicateObjectNameKeyAttributes(
-		    annotatedMethod, second,
-		    annotatedMethod.containingClass().name());
-		}
-	    }
+        annotatedMethod(annotatedMethod);
 
-	    mm.info( mom.registrationFineDebug(), "annotatedMethod",
-		annotatedMethod);
-
-	    nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
-		mom, annotatedMethod, "NameValue",
-		Exceptions.self.nameOfManagedObject(),
-		ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR);
-	    } finally {
-		mm.exit( mom.registrationFineDebug() );
-	}
+        nameAttributeDescriptor = AttributeDescriptor.makeFromAnnotated(
+            mom, annotatedMethod, "NameValue",
+            Exceptions.self.nameOfManagedObject(),
+            ManagedObjectManagerInternal.AttributeDescriptorType.MBEAN_ATTR);
     }
 
     private static final Permission accessControlPermission =
 	new ReflectPermission("suppressAccessChecks");
 
+    @InfoMethod
+    private void describe( String msg, Object data ) { }
+
+    @TraceRegistrationFine
     private Pair<Operation, ModelMBeanOperationInfo> makeOperation(
 	    final EvaluatedMethodDeclaration m) {
-
-	mm.enter( mom.registrationFineDebug(), "makeOperation", m);
 
 	AccessController.doPrivileged(
 	    new PrivilegedAction<Method>() {
@@ -419,134 +419,120 @@ public class MBeanSkeleton {
 		    return m.method();
 		} } ) ;
 
-	try {
-	    final String desc = mom.getDescription(m);
-	    final EvaluatedType rtype = m.returnType();
-	    final TypeConverter rtc = rtype == null ? null : mom.getTypeConverter(
-		rtype);
-	    final List<EvaluatedType> atypes = m.parameterTypes();
-	    final List<TypeConverter> atcs = new ArrayList<TypeConverter>();
-	    final ManagedOperation mo = mom.getAnnotation(m.element(),
-		ManagedOperation.class);
+        final String desc = mom.getDescription(m);
+        final EvaluatedType rtype = m.returnType();
+        final TypeConverter rtc = rtype == null ? null : mom.getTypeConverter(
+            rtype);
+        final List<EvaluatedType> atypes = m.parameterTypes();
+        final List<TypeConverter> atcs = new ArrayList<TypeConverter>();
+        final ManagedOperation mo = mom.getAnnotation(m.element(),
+            ManagedOperation.class);
 
-	    Descriptor modelDescriptor = makeValidDescriptor(
-		DescriptorIntrospector.descriptorForElement(mom, m.element()),
-		DescriptorType.operation, m.name());
+        Descriptor modelDescriptor = makeValidDescriptor(
+            DescriptorIntrospector.descriptorForElement(mom, m.element()),
+            DescriptorType.operation, m.name());
 
-	    for (EvaluatedType ltype : atypes) {
-		atcs.add(mom.getTypeConverter(ltype));
-	    }
+        for (EvaluatedType ltype : atypes) {
+            atcs.add(mom.getTypeConverter(ltype));
+        }
 
-	    if (mom.registrationFineDebug()) {
-		mm.info( true, "desc", desc);
-		mm.info( true, "rtype", rtype);
-		mm.info( true, "rtc", rtc);
-		mm.info( true, "atcs", atcs);
-		mm.info( true, "atypes", atypes);
-		mm.info( true, "descriptor", modelDescriptor);
-	    }
+        describe( "desc", desc ) ;
+        describe( "rtype", rtype );
+        describe( "rtc", rtc );
+        describe( "atcs", atcs );
+        describe( "atypes", atypes );
+        describe( "descriptor", descriptor );
 
-	    final Operation oper = new Operation() {
-		public Object evaluate(FacetAccessor target, List<Object> args) {
-		    mm.enter( mom.runtimeDebug(), "Operation:evaluate", target,
-			args);
+        final Operation oper = new Operation() {
+            @TraceRuntime
+            public Object evaluate(FacetAccessor target, List<Object> args) {
+                Object[] margs = new Object[args.size()];
+                Iterator<Object> argsIterator = args.iterator();
+                Iterator<TypeConverter> tcIterator = atcs.iterator();
+                int ctr = 0;
+                while (argsIterator.hasNext() && tcIterator.hasNext()) {
+                    final Object arg = argsIterator.next();
+                    final TypeConverter tc = tcIterator.next();
+                    margs[ctr++] = tc.fromManagedEntity(arg);
+                }
 
-		    Object[] margs = new Object[args.size()];
-		    Iterator<Object> argsIterator = args.iterator();
-		    Iterator<TypeConverter> tcIterator = atcs.iterator();
-		    int ctr = 0;
-		    while (argsIterator.hasNext() && tcIterator.hasNext()) {
-			final Object arg = argsIterator.next();
-			final TypeConverter tc = tcIterator.next();
-			margs[ctr++] = tc.fromManagedEntity(arg);
-		    }
+                describe( "margs before invoke", margs ) ;
 
-		    mm.info( mom.runtimeDebug(), "Before invoke: margs=", margs);
+                Object result = target.invoke(m.method(), margs);
 
-		    Object result = target.invoke(m.method(), mom.runtimeDebug(),
-			margs);
+                describe( "result after invoke", result ) ;
 
-		    mm.info( mom.runtimeDebug(), "After invoke: result=", result);
+                if (rtc == null) {
+                    return null;
+                } else {
+                    return rtc.toManagedEntity(result);
+                }
+            }
+        };
 
-		    if (rtc == null) {
-			return null;
-		    } else {
-			return rtc.toManagedEntity(result);
-		    }
-		}
-	    };
+        final ParameterNames pna = mom.getAnnotation( m.element(),
+            ParameterNames.class);
+        describe( "pna", pna ) ;
 
-	    final ParameterNames pna = mom.getAnnotation( m.element(),
-                ParameterNames.class);
-	    mm.info( mom.registrationFineDebug(), "pna", pna);
+        if (pna != null && pna.value().length != atcs.size()) {
+                throw Exceptions.self.parameterNamesLengthBad();
+        }
 
-	    if (pna != null && pna.value().length != atcs.size()) {
-		    throw Exceptions.self.parameterNamesLengthBad();
-	    }
+        final MBeanParameterInfo[] paramInfo =
+                new OpenMBeanParameterInfoSupport[atcs.size()];
+        int ctr = 0;
+        for (TypeConverter tc : atcs) {
+                String name = "";
+                try {
+                        name = (pna == null) ? "arg" + ctr : pna.value()[ctr];
+                        paramInfo[ctr] = new OpenMBeanParameterInfoSupport(
+                                name, Exceptions.self.noDescriptionAvailable(),
+                                tc.getManagedType());
+                        ctr++;
+                } catch (IllegalArgumentException ex) {
+                        Exceptions.self.excInOpenParameterInfo(ex, name, m);
+                }
+        }
 
-	    final MBeanParameterInfo[] paramInfo =
-		    new OpenMBeanParameterInfoSupport[atcs.size()];
-	    int ctr = 0;
-	    for (TypeConverter tc : atcs) {
-		    String name = "";
-		    try {
-			    name = (pna == null) ? "arg" + ctr : pna.value()[ctr];
-			    paramInfo[ctr] = new OpenMBeanParameterInfoSupport(
-				    name, Exceptions.self.noDescriptionAvailable(),
-				    tc.getManagedType());
-			    ctr++;
-		    } catch (IllegalArgumentException ex) {
-			    Exceptions.self.excInOpenParameterInfo(ex, name, m);
-		    }
-	    }
+        final ModelMBeanOperationInfo operInfo =
+            new ModelMBeanOperationInfo(m.name(),
+            desc, paramInfo, rtc.getManagedType().getClassName(),
+            mo.impact().ordinal(), modelDescriptor);
 
-	    final ModelMBeanOperationInfo operInfo =
-		new ModelMBeanOperationInfo(m.name(),
-		desc, paramInfo, rtc.getManagedType().getClassName(),
-		mo.impact().ordinal(), modelDescriptor);
+        describe( "operInfo", operInfo ) ;
 
-	    mm.info(mom.registrationFineDebug(), "operInfo", operInfo);
-
-	    return new Pair<Operation, ModelMBeanOperationInfo>(oper, operInfo);
-	} finally {
-	    mm.exit( mom.registrationFineDebug() );
-	}
+        return new Pair<Operation, ModelMBeanOperationInfo>(oper, operInfo);
     }
 
+    @TraceRegistrationFine
     private void analyzeOperations(EvaluatedClassAnalyzer ca) {
-	mm.enter( mom.registrationFineDebug(), "analyzeOperations", ca );
+        // Scan for all methods annotation with @ManagedOperation,
+        // including inherited methods.
+        final List<EvaluatedMethodDeclaration> ops = ca.findMethods(mom.forAnnotation(
+            ManagedOperation.class, EvaluatedMethodDeclaration.class));
+        for (EvaluatedMethodDeclaration m : ops) {
+            final Pair<Operation, ModelMBeanOperationInfo> data =
+                makeOperation(m);
+            final ModelMBeanOperationInfo info = data.second();
 
-	try {
-	    // Scan for all methods annotation with @ManagedOperation,
-	    // including inherited methods.
-	    final List<EvaluatedMethodDeclaration> ops = ca.findMethods(mom.forAnnotation(
-		ManagedOperation.class, EvaluatedMethodDeclaration.class));
-	    for (EvaluatedMethodDeclaration m : ops) {
-		final Pair<Operation, ModelMBeanOperationInfo> data =
-		    makeOperation(m);
-		final ModelMBeanOperationInfo info = data.second();
+            final List<String> dataTypes = new ArrayList<String>();
+            for (MBeanParameterInfo pi : info.getSignature()) {
+                // Replace recursion marker with the constructed implementation
+                dataTypes.add(pi.getType());
+            }
 
-		final List<String> dataTypes = new ArrayList<String>();
-		for (MBeanParameterInfo pi : info.getSignature()) {
-		    // Replace recursion marker with the constructed implementation
-		    dataTypes.add(pi.getType());
-		}
+            Map<List<String>, Operation> map = operations.get(m.name());
+            if (map == null) {
+                map = new HashMap<List<String>, Operation>();
+                operations.put(m.name(), map);
+            }
 
-		Map<List<String>, Operation> map = operations.get(m.name());
-		if (map == null) {
-		    map = new HashMap<List<String>, Operation>();
-		    operations.put(m.name(), map);
-		}
+            // Note that the first occurrence of any method will be the most
+            // derived, so if there is already an entry, don't overwrite it.
+            mom.putIfNotPresent(map, dataTypes, data.first());
 
-		// Note that the first occurrence of any method will be the most
-		// derived, so if there is already an entry, don't overwrite it.
-		mom.putIfNotPresent(map, dataTypes, data.first());
-
-		mbeanOperationInfoList.add(info);
-	    }
-	} finally {
-	    mm.exit( mom.registrationFineDebug() );
-	}
+            mbeanOperationInfoList.add(info);
+        }
     }
 
     // The rest of the methods are used in the DynamicMBeanImpl code.
@@ -558,168 +544,137 @@ public class MBeanSkeleton {
 	return mbeanType;
     }
 
+    @TraceRuntime
     public Object getAttribute(FacetAccessor fa, String name)
 	throws AttributeNotFoundException, MBeanException, ReflectionException {
 
-	mm.enter( mom.runtimeDebug(), "getAttribute", fa, name);
-
-	Object result = null;
-	try {
-	    AttributeDescriptor getter = getters.get(name);
-	    if (getter == null) {
-		throw Exceptions.self.couldNotFindAttribute(name);
-	    }
-	    result = getter.get(fa, mom.runtimeDebug());
-	} finally {
-	    mm.exit(mom.runtimeDebug(), result);
-	}
+        AttributeDescriptor getter = getters.get(name);
+        if (getter == null) {
+            throw Exceptions.self.couldNotFindAttribute(name);
+        }
+        Object result = getter.get(fa);
 
 	return result;
     }
 
+    @TraceRuntime
     public void setAttribute(final NotificationBroadcasterSupport emitter,
 	final FacetAccessor fa, final Attribute attribute)
 	throws AttributeNotFoundException, InvalidAttributeValueException,
 	MBeanException, ReflectionException {
 
-	mm.enter( mom.runtimeDebug(), "setAttribute", emitter, fa, attribute);
+        final String name = attribute.getName();
+        final Object value = attribute.getValue();
+        final AttributeDescriptor getter = getters.get(name);
+        final Object oldValue = (getter == null)
+            ? null : getter.get(fa);
 
-	try {
-	    final String name = attribute.getName();
-	    final Object value = attribute.getValue();
-	    final AttributeDescriptor getter = getters.get(name);
-	    final Object oldValue = (getter == null) 
-		? null : getter.get(fa, mom.runtimeDebug());
+        describe( "oldValue", oldValue ) ;
 
-	    mm.info( mom.runtimeDebug(), "oldValue", oldValue);
+        final AttributeDescriptor setter = setters.get(name);
+        if (setter == null) {
+            throw Exceptions.self.couldNotFindWritableAttribute(name);
+        }
 
-	    final AttributeDescriptor setter = setters.get(name);
-	    if (setter == null) {
-		throw Exceptions.self.couldNotFindWritableAttribute(name);
-	    }
+        setter.set(fa, value ) ;
 
-	    setter.set(fa, value, mom.runtimeDebug());
+        AttributeChangeNotification notification =
+            new AttributeChangeNotification(emitter,
+                sequenceNumber.incrementAndGet(),
+                System.currentTimeMillis(),
+                "Changed attribute " + name, name,
+                setter.tc().getManagedType().getClassName(),
+                oldValue, value);
 
-	    AttributeChangeNotification notification =
-		new AttributeChangeNotification(emitter,
-		    sequenceNumber.incrementAndGet(),
-		    System.currentTimeMillis(),
-		    "Changed attribute " + name, name,
-		    setter.tc().getManagedType().getClassName(),
-		    oldValue, value);
+        describe( "sending notification", notification ) ;
 
-	    mm.info( mom.runtimeDebug(), "sending notification ", notification);
-
-            emitter.sendNotification(notification);
-	} finally {
-	    mm.exit( mom.runtimeDebug());
-	}
+        emitter.sendNotification(notification);
     }
 
+    @TraceRuntime
     public AttributeList getAttributes(FacetAccessor fa, String[] attributes) {
-	mm.enter( mom.runtimeDebug(), "getAttributes", (Object)attributes);
+        AttributeList result = new AttributeList();
+        for (String str : attributes) {
+            Object value = null;
 
-	try {
-	    AttributeList result = new AttributeList();
-	    for (String str : attributes) {
-		Object value = null;
+            try {
+                value = getAttribute(fa, str);
+            } catch (JMException ex) {
+                Exceptions.self.attributeGettingError(ex, str);
+            }
 
-		try {
-		    value = getAttribute(fa, str);
-		} catch (JMException ex) {
-		    Exceptions.self.attributeGettingError(ex, str);
-		}
+            // If value == null, we had a problem in trying to fetch it,
+            // so just ignore that attribute.  Returning null simply leads to
+            // a blank entry in jconsole.  Do not let an error in fetching
+            // one attribute prevent fetching the others.
 
-		// If value == null, we had a problem in trying to fetch it,
-		// so just ignore that attribute.  Returning null simply leads to
-		// a blank entry in jconsole.  Do not let an error in fetching
-		// one attribute prevent fetching the others.
+            if (value != null) {
+                Attribute attr = new Attribute(str, value);
+                result.add(attr);
+            }
+        }
 
-                if (value != null) {
-                    Attribute attr = new Attribute(str, value);
-                    result.add(attr);
-                }
-	    }
-
-	    return result;
-	} finally {
-	    mm.exit( mom.runtimeDebug());
-	}
+        return result;
     }
 
+    @TraceRuntime
     public AttributeList setAttributes(
 	final NotificationBroadcasterSupport emitter,
 	final FacetAccessor fa, final AttributeList attributes) {
 
-	mm.enter( mom.runtimeDebug(), "setAttributes", emitter, fa, attributes);
-
 	AttributeList result = new AttributeList();
 
-	try {
-	    for (Object elem : attributes) {
-		Attribute attr = (Attribute) elem;
+        for (Object elem : attributes) {
+            Attribute attr = (Attribute) elem;
 
-		try {
-		    setAttribute(emitter, fa, attr);
-		    result.add(attr);
-		} catch (JMException ex) {
-		    Exceptions.self.attributeSettingError(ex, attr.getName());
-		}
-	    }
+            try {
+                setAttribute(emitter, fa, attr);
+                result.add(attr);
+            } catch (JMException ex) {
+                Exceptions.self.attributeSettingError(ex, attr.getName());
+            }
+        }
 
-	    return result;
-	} finally {
-	    mm.exit( mom.runtimeDebug(), result);
-	}
+        return result;
     }
 
+    @TraceRuntime
     public Object invoke(FacetAccessor fa, String actionName, Object params[],
 	String sig[]) throws MBeanException, ReflectionException {
 
 	final List<String> signature = Arrays.asList(sig);
 	final List<Object> parameters = Arrays.asList(params);
-	Object result = null;
 
-	mm.enter( mom.runtimeDebug(), "invoke", fa, actionName,
-	    parameters, signature);
+        final Map<List<String>, Operation> opMap = operations.get(
+            actionName);
+        if (opMap == null) {
+            throw Exceptions.self.couldNotFindOperation(actionName);
+        }
 
-	try {
-	    final Map<List<String>, Operation> opMap = operations.get(
-		actionName);
-	    if (opMap == null) {
-		throw Exceptions.self.couldNotFindOperation(actionName);
-	    }
+        final Operation op = opMap.get(signature);
+        if (op == null) {
+            throw Exceptions.self.couldNotFindOperationAndSignature(
+                actionName, signature);
+        }
 
-	    final Operation op = opMap.get(signature);
-	    if (op == null) {
-		throw Exceptions.self.couldNotFindOperationAndSignature(
-		    actionName, signature);
-	    }
-
-	    result = op.evaluate(fa, parameters);
-	} finally {
-	    mm.exit( mom.runtimeDebug(), result);
-	}
+        Object result = op.evaluate(fa, parameters);
 
 	return result;
     }
 
+    @InfoMethod
+    private void nameAttributeDescriptorIsNull() {}
+
+    @TraceRuntime
     public String getNameValue(final FacetAccessor fa) throws
 	MBeanException, ReflectionException {
 
-	mm.enter( mom.runtimeDebug(), "getNameValue", fa);
-
 	String value = null;
-	try {
-	    if (nameAttributeDescriptor == null) {
-		mm.info( mom.runtimeDebug(), "nameAttributeDescriptor is null");
-	    } else {
-		value = nameAttributeDescriptor.get(fa,
-		    mom.runtimeDebug()).toString();
-	    }
-	} finally {
-	    mm.exit( mom.runtimeDebug(), value);
-	}
+        if (nameAttributeDescriptor == null) {
+            nameAttributeDescriptorIsNull() ;
+        } else {
+            value = nameAttributeDescriptor.get(fa).toString();
+        }
 
 	return value;
     }

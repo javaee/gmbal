@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2008-2010 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2008-2011 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -54,7 +54,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import org.glassfish.external.amx.MBeanListener;
 import org.glassfish.gmbal.GmbalException;
-import org.glassfish.gmbal.generic.UnaryVoidFunction;
+import org.glassfish.pfl.basic.func.UnaryVoidFunction;
 
 /** A simple class that implements deferred registration.
  * When registration is suspended, mbean registrations are
