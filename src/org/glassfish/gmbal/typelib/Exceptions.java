@@ -44,6 +44,7 @@ import java.lang.reflect.ParameterizedType;
 import org.glassfish.pfl.basic.logex.Chain;
 import org.glassfish.pfl.basic.logex.ExceptionWrapper;
 import org.glassfish.pfl.basic.logex.Log;
+import org.glassfish.pfl.basic.logex.LogLevel;
 import org.glassfish.pfl.basic.logex.Message;
 import org.glassfish.pfl.basic.logex.WrapperGenerator;
 

@@ -40,6 +40,7 @@
 
 package org.glassfish.gmbal.impl ;
 
+import org.glassfish.pfl.tf.timer.spi.ObjectRegistrationManager;
 import org.glassfish.gmbal.impl.trace.TraceRegistrationFine;
 import org.glassfish.pfl.tf.spi.annotation.InfoMethod;
 import org.glassfish.gmbal.impl.trace.TraceRegistration;
@@ -160,6 +161,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     private final Map<AnnotatedElement, Map<Class, Annotation>> addedAnnotations ;
     private final MBeanSkeleton amxSkeleton ;
     private final Set<String> amxAttributeNames ;
+    private final ObjectRegistrationManager orm ;
 
     // All non-finals should be initialized in this order in the init() method.
     private boolean rootCreated ;
@@ -194,6 +196,7 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
         for (MBeanAttributeInfo mbi : amxSkeleton.getMBeanInfo().getAttributes()) {
             amxAttributeNames.add( mbi.getName() ) ;
         }
+	orm = new ObjectRegistrationManagerImpl( this ) ;
     }
 
     @ManagedData
@@ -1282,5 +1285,9 @@ public class ManagedObjectManagerImpl implements ManagedObjectManagerInternal {
     public void suppressDuplicateRootReport(boolean suppressReport) {
         checkRootNotCreated("suppressDuplicateRootReport");
         tree.setSuppressDuplicateSetRootReport( suppressReport ) ;
+    }
+
+    public ObjectRegistrationManager getObjectRegistrationManager() {
+	return orm ;
     }
 }

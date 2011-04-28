@@ -50,6 +50,8 @@ import java.lang.annotation.Annotation ;
 import javax.management.ObjectName ;
 import javax.management.MBeanServer ;
 
+import org.glassfish.pfl.tf.timer.spi.ObjectRegistrationManager ;
+
 /** An interface used to managed Open MBeans created from annotated
  * objects.  This is mostly a facade over MBeanServer.
  * Note that certain methods must be called in the correct order:
@@ -392,4 +394,10 @@ public interface ManagedObjectManager extends Closeable {
      * Must be called before a successful call to a createRoot method.
      */
     void suppressDuplicateRootReport( boolean suppressReport ) ;
+
+    /** Return an ObjectRegistrationManager as required in the pfl timer services.
+     * <p>
+     * Can be called at any time.
+     */
+    ObjectRegistrationManager getObjectRegistrationManager() ;
 }
