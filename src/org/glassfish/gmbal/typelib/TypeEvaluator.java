@@ -44,7 +44,6 @@ import java.lang.reflect.Field;
 import java.security.PrivilegedActionException;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -65,6 +64,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.WeakHashMap;
 import javax.management.ObjectName;
 import org.glassfish.gmbal.impl.trace.TraceTypelib;
@@ -74,6 +74,7 @@ import org.glassfish.pfl.basic.contain.Display;
 import org.glassfish.pfl.basic.contain.Pair;
 import org.glassfish.pfl.basic.func.UnaryFunction;
 import org.glassfish.pfl.basic.logex.Chain;
+import org.glassfish.pfl.basic.logex.OperationTracer;
 import org.glassfish.pfl.tf.spi.annotation.InfoMethod;
 
 /**
@@ -452,34 +453,35 @@ public class TypeEvaluator {
             EvaluatedType result = null ;
 
             try {
-            if (decl.isArray()) {
-                message( "decl is an array" ) ;
+                if (decl.isArray()) {
+                    message( "decl is an array" ) ;
 
-                return DeclarationFactory.egat( evaluateType(
-                    decl.getComponentType() ) ) ;
-            } else {
-                result = partialDefinitions.get( decl ) ;
-                if (result == null) {
-                    // Create the classdecl as early as possible, because it
-                    // may be needed on methods or type bounds.
-                    EvaluatedClassDeclaration newDecl = DeclarationFactory.ecdecl(
-                        decl.getModifiers(), decl.getName(), decl ) ;
+                    return DeclarationFactory.egat( evaluateType(
+                        decl.getComponentType() ) ) ;
+                } else {
+                    result = partialDefinitions.get( decl ) ;
+                    if (result == null) {
+                        // Create the classdecl as early as possible, because it
+                        // may be needed on methods or type bounds.
+                        EvaluatedClassDeclaration newDecl = DeclarationFactory.ecdecl(
+                            decl.getModifiers(), decl.getName(), decl ) ;
 
-                    partialDefinitions.put( decl, newDecl ) ;
+                        partialDefinitions.put( decl, newDecl ) ;
 
-                    try {
-                        OrderedResult<String,EvaluatedType> bindings =
-                            getBindings( decl ) ;
+                        try {
+                            OrderedResult<String,EvaluatedType> bindings =
+                                getBindings( decl ) ;
 
-                        result = getCorrectDeclaration( bindings, decl, newDecl ) ;
-                    } finally {
-                        partialDefinitions.remove( decl ) ;
+                            result = getCorrectDeclaration( bindings, decl, newDecl ) ;
+                        } finally {
+                            partialDefinitions.remove( decl ) ;
+                        }
                     }
-                }
 
-                if (decl.isAnnotationPresent(ForceTypelibError.class )) {
-                    throw new StackOverflowError(
-                        "Simulating stack overflow in test") ;
+                    if (decl.isAnnotationPresent(ForceTypelibError.class )) {
+                        throw new StackOverflowError(
+                            "Simulating stack overflow in test") ;
+                    }
                 }
             } catch (Error err) {
                 OperationTracer.freeze() ;
@@ -574,10 +576,13 @@ public class TypeEvaluator {
                 message( "processing getThing method from test" ) ;
             }
 
-            EvaluatedMethodDeclaration result = DeclarationFactory.emdecl(
-                cdecl, mdecl.getModifiers(),
-                evaluateType( mdecl.getGenericReturnType() ),
-                mdecl.getName(), eptypes, mdecl ) ;
+            EvaluatedMethodDeclaration result  = null ;
+
+            try {
+                result = DeclarationFactory.emdecl(
+                    cdecl, mdecl.getModifiers(),
+                    evaluateType( mdecl.getGenericReturnType() ),
+                    mdecl.getName(), eptypes, mdecl ) ;
 
 
                 if (mdecl.isAnnotationPresent(ForceTypelibError.class )) {
@@ -587,26 +592,32 @@ public class TypeEvaluator {
             } catch (Error err) {
                 OperationTracer.freeze() ;
                 throw err ;
+            }
             return result ;
         }
 
         @TraceTypelib
         private EvaluatedType visitTypeVariable( TypeVariable tvar ) {
-            EvaluatedType result = lookup( tvar ) ;
+            EvaluatedType result = null ;
+            try {
+                result = lookup( tvar ) ;
             } catch (Error err) {
                 OperationTracer.freeze() ;
                 throw err ;
+            }
             return result ;
         }
 
         @TraceTypelib
         private EvaluatedType visitGenericArrayType( GenericArrayType at ) {
-            EvaluatedType result = DeclarationFactory.egat(
-                evaluateType( at.getGenericComponentType() ) ) ;
-
+            EvaluatedType result = null ;
+            try {
+                result = DeclarationFactory.egat(
+                    evaluateType( at.getGenericComponentType() ) ) ;
             } catch (Error err) {
                 OperationTracer.freeze() ;
                 throw err ;
+            }
             return result ;
         }
 
@@ -614,18 +625,20 @@ public class TypeEvaluator {
         private EvaluatedType visitWildcardType( WildcardType wt ) {
             EvaluatedType result = null ;
 
-            // ignore lower bounds
-            // Only support 1 upper bound
-            List<Type> ub = Arrays.asList( wt.getUpperBounds() ) ;
-            if (ub.size() > 0) {
-                if (ub.size() > 1) {
-                    throw Exceptions.self.multipleUpperBoundsNotSupported(
-                        wt) ;
-                }
+            try {
+                // ignore lower bounds
+                // Only support 1 upper bound
+                List<Type> ub = Arrays.asList( wt.getUpperBounds() ) ;
+                if (ub.size() > 0) {
+                    if (ub.size() > 1) {
+                        throw Exceptions.self.multipleUpperBoundsNotSupported(
+                            wt) ;
+                    }
 
-                result = evaluateType( ub.get(0) ) ;
-            } else {
-                result = EvaluatedType.EOBJECT ;
+                    result = evaluateType( ub.get(0) ) ;
+                } else {
+                    result = EvaluatedType.EOBJECT ;
+                }
             } catch (Error err) {
                 OperationTracer.freeze() ;
                 throw err ;
@@ -638,19 +651,21 @@ public class TypeEvaluator {
         private EvaluatedType lookup( TypeVariable tvar ) {
             EvaluatedType result = null ;
 
-            result = display.lookup( tvar.getName() ) ;
+            try {
+                result = display.lookup( tvar.getName() ) ;
 
-            if (result == null) {
-                Type[] bounds = tvar.getBounds() ;
-                if (bounds.length > 0) {
-                    if (bounds.length > 1) {
-                        throw Exceptions.self
-                            .multipleUpperBoundsNotSupported( tvar ) ;
+                if (result == null) {
+                    Type[] bounds = tvar.getBounds() ;
+                    if (bounds.length > 0) {
+                        if (bounds.length > 1) {
+                            throw Exceptions.self
+                                .multipleUpperBoundsNotSupported( tvar ) ;
+                        }
+
+                        result = evaluateType( bounds[0] ) ;
+                    } else {
+                        result = EvaluatedType.EOBJECT ;
                     }
-
-                    result = evaluateType( bounds[0] ) ;
-                } else {
-                    result = EvaluatedType.EOBJECT ;
                 }
             } catch (Error err) {
                 OperationTracer.freeze() ;
@@ -667,23 +682,25 @@ public class TypeEvaluator {
 
             EvaluatedType result = null ;
 
-            List<EvaluatedType> blist = bindings.getList() ;
-            EvalMapKey key = new EvalMapKey( decl, blist ) ;
-            if (blist.size() > 0) {
-                newDecl.instantiations( blist ) ;
-            }
+            try {
+                List<EvaluatedType> blist = bindings.getList() ;
+                EvalMapKey key = new EvalMapKey( decl, blist ) ;
+                if (blist.size() > 0) {
+                    newDecl.instantiations( blist ) ;
+                }
 
-            result = evalClassMap.get( key ) ;
-            if (result == null) {
-                message( "No result in evalClassMap" ) ;
+                result = evalClassMap.get( key ) ;
+                if (result == null) {
+                    message( "No result in evalClassMap" ) ;
 
-                evalClassMap.put( key, newDecl ) ;
+                    evalClassMap.put( key, newDecl ) ;
 
-                processClass( newDecl, bindings.getMap(), decl ) ;
+                    processClass( newDecl, bindings.getMap(), decl ) ;
 
-                result = newDecl ;
-            } else {
-                message( "Found result in evalClassMap" ) ;
+                    result = newDecl ;
+                } else {
+                    message( "Found result in evalClassMap" ) ;
+                }
             } catch (Error err) {
                 OperationTracer.freeze() ;
                 throw err ;
@@ -744,12 +761,13 @@ public class TypeEvaluator {
         @TraceTypelib
         private List<Type> getInheritance( Class cls ) {
             List<Type> result = new ArrayList<Type>(0) ;
-            result.add( cls.getGenericSuperclass() ) ;
-            result.addAll( Arrays.asList( cls.getGenericInterfaces() ) ) ;
-
+            try {
+                result.add( cls.getGenericSuperclass() ) ;
+                result.addAll( Arrays.asList( cls.getGenericInterfaces() ) ) ;
             } catch (Error err) {
                 OperationTracer.freeze() ;
                 throw err ;
+            }
             return result ;
         }
 
