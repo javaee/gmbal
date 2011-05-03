@@ -137,7 +137,9 @@
         <remoteRepository refid="gf.repo"/>
         <dependency groupId="${management-api.groupid}" artifactId="${management-api.artifactid}" version="${management-api.version}" scope="runtime"/>
         <dependency groupId="org.glassfish.pfl" artifactId="pfl-basic" version="1.0.0-b001" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-basic-tools" version="1.0.0-b001" scope="runtime"/>
         <dependency groupId="org.glassfish.pfl" artifactId="pfl-tf" version="1.0.0-b001" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-tf-tools" version="1.0.0-b001" scope="runtime"/>
     </artifact:dependencies>
 
     <artifact:dependencies pathId="bnd.classpath">
@@ -174,18 +176,20 @@
 
     <target name="-pre-compile" depends="get-dependencies"/>
 
+    <target name="finish" depends="project-init,jar,gen-resource-bundle,make-bundles,release-local"/>
+
     <target name="all" depends="project-init,clean,get-dependencies,jar,gen-resource-bundle,emma-instr,test,test-report,emma-report,make-bundles"/>
 
     <target name="gen-resource-bundle">
         <!-- generate LogStrings.properties ResourceBundle -->
         <java classname="org.glassfish.pfl.basic.tools.logex.ExceptionResourceGenerator"
-            classpath="build/classes:${libcache.dir}/management-api.jar:lib/pfl-basic.jar:lib/pfl-basic-tools.jar:lib/pfl-tf.jar" fork="true" dir=".">
+            classpath="build/classes:${libcache.dir}/management-api.jar:libcache/pfl-basic.jar:libcache/pfl-basic-tools.jar:libcache/pfl-tf.jar" fork="true" dir=".">
             <arg value="-verbose"/>
-            <arg value="1"/>
+            <arg value="2"/>
             <arg value="-source"/>
             <arg value="build/classes"/>
             <arg value="-destination"/>
-            <arg value="build/classes/org/glassfish/gmbal/LogStrings.properties"/>
+            <arg value="build/classes"/>
         </java>
    </target>
 
