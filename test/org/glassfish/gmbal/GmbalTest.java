@@ -116,7 +116,7 @@ public class GmbalTest extends TestCase {
     @Override
     protected void setUp() throws Exception {
         if (firstTime) {
-            System.out.println( "****************** JmxaTest **********************" ) ;
+            System.out.println( "****************** GmbalTest **********************" ) ;
             firstTime = false ;
         }
         super.setUp();
