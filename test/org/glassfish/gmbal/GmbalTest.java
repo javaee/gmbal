@@ -1408,7 +1408,7 @@ public class GmbalTest extends TestCase {
 
     @ManagedObject
     @Description( "" )
-    private static class TestClass {
+    public static class TestClass {
         private final String name ;
         public TestClass( String name ) {
             this.name = name ;
