@@ -107,7 +107,8 @@
     nbproject/build-impl.xml file. 
     -->
     <property file="build.properties"/>
-    <property name="repo.url"                       value="java-net:/maven2-repository/trunk/repository"/>
+    <property name="repo.url"                       value="svn:https://svn.java.net/svn/maven2-repository~svn/trunk/repository"/>
+
     <property environment="env"/>
     <property name="maven.local.repository"         value="${env.HOME}/.m2/repository"/>
     <property name="emma.dir"                       value="build/coverage"/>
@@ -120,7 +121,7 @@
         value="src,test,make"/>
     <property name="copyright.skip"
         value=".hg,ARCHIVE,build,copyright-information,dist,javadoc,lib,libcache,nbproject"/>
-
+    <property name="pfl.version"  value="3.2.0-b001"/>
     <path id="maven.class.path"  path="${local.maven.ant.tasks.jar}"/>
 
     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
@@ -136,10 +137,10 @@
         <localRepository refid="local.repo"/>
         <remoteRepository refid="gf.repo"/>
         <dependency groupId="${management-api.groupid}" artifactId="${management-api.artifactid}" version="${management-api.version}" scope="runtime"/>
-        <dependency groupId="org.glassfish.pfl" artifactId="pfl-basic" version="1.0.0-b001" scope="runtime"/>
-        <dependency groupId="org.glassfish.pfl" artifactId="pfl-basic-tools" version="1.0.0-b001" scope="runtime"/>
-        <dependency groupId="org.glassfish.pfl" artifactId="pfl-tf" version="1.0.0-b001" scope="runtime"/>
-        <dependency groupId="org.glassfish.pfl" artifactId="pfl-tf-tools" version="1.0.0-b001" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-basic" version="${pfl.version}" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-basic-tools" version="${pfl.version}" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-tf" version="${pfl.version}" scope="runtime"/>
+        <dependency groupId="org.glassfish.pfl" artifactId="pfl-tf-tools" version="${pfl.version}" scope="runtime"/>
     </artifact:dependencies>
 
     <artifact:dependencies pathId="bnd.classpath">
