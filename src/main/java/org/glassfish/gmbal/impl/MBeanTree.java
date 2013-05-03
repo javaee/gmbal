@@ -1,7 +1,7 @@
 /* 
  *  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *  
- *  Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2007-2013 Oracle and/or its affiliates. All rights reserved.
  *  
  *  The contents of this file are subject to the terms of either the GNU
  *  General Public License Version 2 only ("GPL") or the Common Development
@@ -49,6 +49,9 @@ import javax.management.MBeanRegistrationException;
 import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
+import java.security.PrivilegedExceptionAction;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
 import org.glassfish.external.amx.AMX;
 import org.glassfish.gmbal.GmbalMBean;
 import org.glassfish.gmbal.impl.trace.TraceRegistration;
@@ -110,8 +113,30 @@ public class MBeanTree {
         rootEntity = rootMB ;
         boolean success = false ;
 
-        try {
-            jrm.setRoot( rootMB )  ;
+        try {            
+            // Fix bug#16680733
+            if (System.getSecurityManager() == null) {
+                jrm.setRoot( rootMB )  ;
+            } else {  
+                try {
+                    final MBeanImpl _rootMB = rootMB ;
+                    AccessController.doPrivileged(new PrivilegedExceptionAction() {                    
+                        public Object run() throws InstanceAlreadyExistsException, MBeanRegistrationException, NotCompliantMBeanException  {
+                            jrm.setRoot( _rootMB ) ;
+                            return null ;
+                        }
+                    });
+                } catch (Exception e) {
+                    if (e instanceof InstanceAlreadyExistsException) {
+                        throw (InstanceAlreadyExistsException) e ;
+                    } else if (e instanceof MBeanRegistrationException) {
+                        throw (MBeanRegistrationException) e ;
+                    } 
+                    else {
+                        throw (Exception) e ;
+                    }
+                }
+            }
             success = true ;
         } catch (InstanceAlreadyExistsException ex) {
             if (suppressReport) {
