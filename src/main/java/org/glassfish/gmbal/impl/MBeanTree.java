@@ -52,6 +52,7 @@ import javax.management.ObjectName;
 import java.security.PrivilegedExceptionAction;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
+import java.security.PrivilegedAction;
 import org.glassfish.external.amx.AMX;
 import org.glassfish.gmbal.GmbalMBean;
 import org.glassfish.gmbal.impl.trace.TraceRegistration;
@@ -95,11 +96,11 @@ public class MBeanTree {
         
         objectNameMap.remove( oname ) ;
     }
-    
+
     public synchronized GmbalMBean setRoot( Object root, String rootName ) {
         // Now register the root MBean.
         MBeanImpl rootMB = mom.constructMBean( null, root, rootName ) ;
-        
+
         ObjectName oname ;
         try {
             oname = objectName(null, rootMB.type(), rootMB.name());
@@ -113,29 +114,18 @@ public class MBeanTree {
         rootEntity = rootMB ;
         boolean success = false ;
 
-        try {            
+        try {
             // Fix bug#16680733
             if (System.getSecurityManager() == null) {
                 jrm.setRoot( rootMB )  ;
-            } else {  
-                try {
-                    final MBeanImpl _rootMB = rootMB ;
-                    AccessController.doPrivileged(new PrivilegedExceptionAction() {                    
-                        public Object run() throws InstanceAlreadyExistsException, MBeanRegistrationException, NotCompliantMBeanException  {
-                            jrm.setRoot( _rootMB ) ;
-                            return null ;
-                        }
-                    });
-                } catch (Exception e) {
-                    if (e instanceof InstanceAlreadyExistsException) {
-                        throw (InstanceAlreadyExistsException) e ;
-                    } else if (e instanceof MBeanRegistrationException) {
-                        throw (MBeanRegistrationException) e ;
-                    } 
-                    else {
-                        throw (Exception) e ;
+            } else {
+                final MBeanImpl _rootMB = rootMB ;
+                AccessController.doPrivileged(new PrivilegedExceptionAction() {
+                    public Object run() throws InstanceAlreadyExistsException, MBeanRegistrationException, NotCompliantMBeanException  {
+                        jrm.setRoot( _rootMB ) ;
+                        return null ;
                     }
-                }
+                });
             }
             success = true ;
         } catch (InstanceAlreadyExistsException ex) {
@@ -156,7 +146,6 @@ public class MBeanTree {
 
         return rootMB ;
     }
-    
     public synchronized Object getRoot() {
         return root ;
     }

@@ -29,3 +29,5 @@ make/bnd.properties
 gmbal/**
 libcache/**
 target/**
+.idea/**
+*.iml
