@@ -49,12 +49,13 @@
         <connection>scm:hg:https://hg.java.net/hg/gmbal~master</connection>
         <developerConnection>scm:hg:https://hg.java.net/hg/gmbal~master</developerConnection>
         <url>http://java.net/projects/gmbal/sources/master/show</url>
-    </scm>
+      <tag>HEAD</tag>
+  </scm>
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.glassfish.gmbal</groupId>
     <artifactId>gmbal</artifactId>
     <packaging>bundle</packaging>
-    <version>4.0.0-b001</version>
+    <version>4.0.0-b002-SNAPSHOT</version>
     <description>GlassFish MBean Annotation Library</description>
     <url>http://java.net/projects/gmbal</url>
     <developers>
