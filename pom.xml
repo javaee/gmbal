@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <!--
   DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
   
-  Copyright (c) 2011-2013 Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2011-2017 Oracle and/or its affiliates. All rights reserved.
   
   The contents of this file are subject to the terms of either the GNU
   General Public License Version 2 only ("GPL") or the Common Development
@@ -39,44 +40,70 @@
   only if the new code is made subject to such option by the copyright
   holder.
 -->
+    <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>net.java</groupId>
         <artifactId>jvnet-parent</artifactId>
-        <version>3</version>
+        <version>5</version>
     </parent>
 
-    <scm>
-        <connection>scm:hg:https://hg.java.net/hg/gmbal~master</connection>
-        <developerConnection>scm:hg:https://hg.java.net/hg/gmbal~master</developerConnection>
-        <url>http://java.net/projects/gmbal/sources/master/show</url>
-      <tag>HEAD</tag>
-  </scm>
-    <modelVersion>4.0.0</modelVersion>
     <groupId>org.glassfish.gmbal</groupId>
     <artifactId>gmbal</artifactId>
-    <packaging>bundle</packaging>
     <version>4.0.0-b002-SNAPSHOT</version>
+    <packaging>bundle</packaging>
+
     <description>GlassFish MBean Annotation Library</description>
-    <url>http://java.net/projects/gmbal</url>
+    <url>https://javaee.github.io/gmbal</url>
+    
     <developers>
+        <developer>
+            <name>Russell Gold</name>
+            <email>russell.gold@oracle.com</email>
+            <roles>
+                <role>Maintainer</role>
+            </roles>
+        </developer>
     </developers>
+    
     <organization>
         <name>Oracle</name>
         <url>http://www.oracle.com</url>
     </organization>
+
+    <scm>
+        <connection>scm:git:https://github.com/javaee/gmbal.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/javaee/gmbal.git</developerConnection>
+        <url>https://github.com/javaee/gmbal</url>
+        <tag>HEAD</tag>
+    </scm>
+    
     <licenses>
         <license>
             <name>CDDL+GPL</name>
             <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
         </license>
     </licenses>
+    
     <issueManagement>
+        <system>github</system>
+        <url>https://github.com/javaee/gmbal/issues/</url>
     </issueManagement>
+
+    <distributionManagement>
+        <site>
+            <id>github</id>
+            <url>scm:git:https://github.com/javaee/gmbal.git</url>
+        </site>
+    </distributionManagement>
+
     <mailingLists>
     </mailingLists>
+    
     <properties>
+        <jdkVersion>1.7</jdkVersion>
         <pfl.version>4.0.0-b003</pfl.version>
     </properties>
+    
     <dependencies>
         <dependency>
             <groupId>org.glassfish.external</groupId>
@@ -110,44 +137,61 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    
     <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-project-info-reports-plugin</artifactId>
+                    <version>2.9</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>2.5.2</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.maven.scm</groupId>
+                            <artifactId>maven-scm-provider-gitexe</artifactId>
+                            <version>1.8.1</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <artifactId>maven-toolchains-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>toolchain</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <toolchains>
+                        <jdk>
+                            <version>${jdkVersion}</version>
+                            <vendor>oracle</vendor>
+                        </jdk>
+                    </toolchains>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
+                <configuration>
+                    <source>${jdkVersion}</source>
+                    <target>${jdkVersion}</target>
                 </configuration>
             </plugin>
 
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>2.0.4</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.8.1</version>
-                <configuration>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
@@ -158,10 +202,10 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-			<Export-Package>org.glassfish.gmbal, org.glassfish.gmbal.impl.trace</Export-Package>
-			<Private-Package>
-			    org.glassfish.gmbal.util, org.glassfish.gmbal.impl, org.glassfish.gmbal.typelib
-			</Private-Package>
+                        <Export-Package>org.glassfish.gmbal, org.glassfish.gmbal.impl.trace</Export-Package>
+                        <Private-Package>
+                            org.glassfish.gmbal.util, org.glassfish.gmbal.impl, org.glassfish.gmbal.typelib
+                        </Private-Package>
                         <!-- Include-Resource>
 				TODO: Use PFL ExceptionResourceGenerator to automatically generate resource files 
 				under src/main/resources.  See build.xml for sample usage. 
@@ -169,30 +213,91 @@
                     </instructions>
                 </configuration>
             </plugin>
+            
+
+            <!-- override default "built-by" entry, which points to a developer's user id -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-release-plugin</artifactId>
-        	<version>2.4.1</version>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.2</version>
                 <configuration>
-                    <mavenExecutorId>forked-path</mavenExecutorId>
-                    <useReleaseProfile>false</useReleaseProfile>
-                    <arguments>${release.arguments}</arguments>
+                    <archive>
+                        <manifestEntries>
+                            <Built-By>Oracle</Built-By>
+                        </manifestEntries>
+                    </archive>
                 </configuration>
             </plugin>
+
+            <!-- prevent the site plugin from deploying to the scm url -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.4</version>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.3</version>
                 <executions>
                     <execution>
-                        <id>sign-artifacts</id>
-                        <phase>deploy</phase>
+                        <id>stage-for-scm-publish</id>
+                        <phase>post-site</phase>
                         <goals>
-                            <goal>sign</goal>
+                            <goal>stage</goal>
                         </goals>
+                    </execution>
+                    <execution>
+                        <id>default-deploy</id>
+                        <phase>none</phase>
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- use the scm publish plugin to deploy to GitHub -->
+            <plugin>
+                <artifactId>maven-scm-publish-plugin</artifactId>
+                <version>1.1</version>
+                <configuration>
+                    <scmBranch>gh-pages</scmBranch>
+                    <pubScmUrl>scm:git:https://github.com/javaee/gmbal.git</pubScmUrl>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <version>2.6</version>
+                <reportSets>
+                    <reportSet>
+                        <id>aggregate-project-info</id>
+                        <inherited>false</inherited>
+                        <reports>
+                            <report>index</report>
+                            <report>license</report>
+                            <report>issue-tracking</report>
+                            <report>dependency-info</report>
+                            <report>scm</report>
+                            <report>distribution-management</report>
+                            <report>project-team</report>
+                            <report>summary</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
+                <reportSets>
+                    <reportSet>
+                        <id>javadoc-only</id>
+                        <reports>
+                            <report>javadoc</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+
+        </plugins>
+    </reporting>
 </project>
