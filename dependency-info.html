@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>gmbal - About</title>
+    <title>gmbal - Dependency Information</title>
     <style type="text/css" media="all">
       @import url("./css/maven-base.css");
       @import url("./css/maven-theme.css");
@@ -48,8 +48,8 @@
                           <a href="project-info.html" title="Project Information">Project Information</a>
                     <ul>
                       <li class="none">
-            <strong>About</strong>
-          </li>
+                          <a href="index.html" title="About">About</a>
+            </li>
                       <li class="none">
                           <a href="license.html" title="Project License">Project License</a>
             </li>
@@ -57,8 +57,8 @@
                           <a href="issue-tracking.html" title="Issue Tracking">Issue Tracking</a>
             </li>
                       <li class="none">
-                          <a href="dependency-info.html" title="Dependency Information">Dependency Information</a>
-            </li>
+            <strong>Dependency Information</strong>
+          </li>
                       <li class="none">
                           <a href="source-repository.html" title="Source Repository">Source Repository</a>
             </li>
@@ -87,8 +87,44 @@
     <div id="bodyColumn">
       <div id="contentBox">
         <div class="section">
-<h2>About gmbal<a name="About_gmbal"></a></h2><a name="About_gmbal"></a>
-<p>GlassFish MBean Annotation Library</p></div>
+<h2>Dependency Information<a name="Dependency_Information"></a></h2><a name="Dependency_Information"></a>
+<div class="section">
+<h3>Apache Maven<a name="Apache_Maven"></a></h3><a name="Apache_Maven"></a>
+<div class="source">
+<pre>&lt;dependency&gt;
+  &lt;groupId&gt;org.glassfish.gmbal&lt;/groupId&gt;
+  &lt;artifactId&gt;gmbal&lt;/artifactId&gt;
+  &lt;version&gt;4.0.0-b001&lt;/version&gt;
+  &lt;type&gt;bundle&lt;/type&gt;
+&lt;/dependency&gt;</pre></div></div>
+<div class="section">
+<h3>Apache Buildr<a name="Apache_Buildr"></a></h3><a name="Apache_Buildr"></a>
+<div class="source">
+<pre>'org.glassfish.gmbal:gmbal:bundle:4.0.0-b001'</pre></div></div>
+<div class="section">
+<h3>Apache Ant<a name="Apache_Ant"></a></h3><a name="Apache_Ant"></a>
+<div class="source">
+<pre>&lt;dependency org=&quot;org.glassfish.gmbal&quot; name=&quot;gmbal&quot; rev=&quot;4.0.0-b001&quot;&gt;
+  &lt;artifact name=&quot;gmbal&quot; type=&quot;bundle&quot; /&gt;
+&lt;/dependency&gt;</pre></div></div>
+<div class="section">
+<h3>Groovy Grape<a name="Groovy_Grape"></a></h3><a name="Groovy_Grape"></a>
+<div class="source">
+<pre>@Grapes(
+@Grab(group='org.glassfish.gmbal', module='gmbal', version='4.0.0-b001')
+)</pre></div></div>
+<div class="section">
+<h3>Grails<a name="Grails"></a></h3><a name="Grails"></a>
+<div class="source">
+<pre>compile 'org.glassfish.gmbal:gmbal:4.0.0-b001'</pre></div></div>
+<div class="section">
+<h3>Leiningen<a name="Leiningen"></a></h3><a name="Leiningen"></a>
+<div class="source">
+<pre>[org.glassfish.gmbal/gmbal &quot;4.0.0-b001&quot;]</pre></div></div>
+<div class="section">
+<h3>SBT<a name="SBT"></a></h3><a name="SBT"></a>
+<div class="source">
+<pre>libraryDependencies += &quot;org.glassfish.gmbal&quot; %% &quot;gmbal&quot; % &quot;4.0.0-b001&quot;</pre></div></div></div>
       </div>
     </div>
     <div class="clear">
