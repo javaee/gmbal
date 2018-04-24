@@ -159,8 +159,8 @@ public class MoreTypeEvalTests extends TestCase {
             System.out.println( "testComplexType1") ;
             EvaluatedType etype = TypeEvaluator.getEvaluatedType( ComplexType1.CT21.class) ;
             fail( "Expected an exception" ) ;
-        } catch (StackOverflowError thr) {
-            // expected exception
+        } catch (StackOverflowError ignored) {
+        } catch (IllegalStateException ignored) {
         }
     }
 }
