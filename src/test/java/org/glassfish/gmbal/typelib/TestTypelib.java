@@ -47,15 +47,15 @@
 
 package org.glassfish.gmbal.typelib ;
 
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 public class TestTypelib extends TestCase {
     private static final boolean VERBOSE = false ;
@@ -119,7 +119,7 @@ public class TestTypelib extends TestCase {
                     System.out.println( "result = " + rtype + ", as expected");
                 }
             } else {
-                fail( "rtype = " + rtype + " BUT SHOULD BE " + expect );
+                fail( "for class " + cls + ", rtype = " + rtype + " BUT SHOULD BE " + expect );
             }
         }
     }
@@ -152,6 +152,7 @@ public class TestTypelib extends TestCase {
         static final EvaluatedType expect = EvaluatedType.EINTW ;
     }
 
+/*
     public static class IntOverride extends Int {
         static final EvaluatedType expect = EvaluatedType.EINTW ;
 
@@ -160,6 +161,7 @@ public class TestTypelib extends TestCase {
             return null;
         }
     }
+*/
 
     public static class Mid<X> extends Super<X> {
         static final EvaluatedType expect = EvaluatedType.EOBJECT ;
@@ -173,6 +175,7 @@ public class TestTypelib extends TestCase {
         static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
 
+/*
     public static class ListIntSub extends ListInt {
         static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
 
@@ -181,6 +184,7 @@ public class TestTypelib extends TestCase {
             return null;
         }
     }
+*/
 
     public static class ListU<U> extends Super<List<U>> {
         static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
@@ -190,6 +194,7 @@ public class TestTypelib extends TestCase {
         static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
 
+/*
     public static class ListUSub<V> extends ListU<V> {
         static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_OBJECT ;
 
@@ -201,6 +206,7 @@ public class TestTypelib extends TestCase {
     public static class ListUSubInt extends ListUSub<Integer> {
         static final EvaluatedType expect = TestTypelibDecls.Prototypes.LIST_INTEGER ;
     }
+*/
 
     public static class TwoParams<S, T> extends Super<S> {
         static final EvaluatedType expect = EvaluatedType.EOBJECT ;

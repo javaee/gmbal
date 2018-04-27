@@ -39,22 +39,24 @@
  */ 
 package org.glassfish.gmbal.impl;
 
-import org.glassfish.gmbal.AMXMBeanInterface;
-import org.glassfish.gmbal.AMXClient;
+import junit.framework.TestCase;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.Descriptor;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfo;
-import junit.framework.TestCase;
+
+import org.glassfish.gmbal.AMXClient;
+import org.glassfish.gmbal.AMXMBeanInterface;
 import org.glassfish.gmbal.AMXMetadata;
 import org.glassfish.gmbal.Description;
 import org.glassfish.gmbal.GmbalMBean;
@@ -66,6 +68,9 @@ import org.glassfish.gmbal.ManagedOperation;
 import org.glassfish.gmbal.NameValue;
 import org.glassfish.pfl.basic.algorithm.Algorithms;
 import org.glassfish.pfl.basic.contain.Pair;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 
 /**
  *
@@ -372,13 +377,10 @@ public class AMXClientTest extends TestCase {
     private void testGetChildren( MomType mtype ) {
         System.out.println("getChildren");
         AMXClient child = getAMX( mtype, 1) ;
-        AMXClient gc1 = getAMX( mtype, 2) ;
-        AMXClient gc2 = getAMX( mtype, 3) ;
+        AMXMBeanInterface gc1 = getAMX( mtype, 2) ;
+        AMXMBeanInterface gc2 = getAMX( mtype, 3) ;
 
-        AMXMBeanInterface[] expResult = new AMXMBeanInterface[] { gc1, gc2 } ;
-        AMXMBeanInterface[] result = child.getChildren();
-
-        assertEquals( Arrays.asList(expResult), Arrays.asList(result) );
+        assertThat(child.getChildren(), arrayContainingInAnyOrder( gc1, gc2));
     }
 
     /**
