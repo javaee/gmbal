@@ -1,5 +1,0 @@
--include bnd.properties
-Include-Resource: org/glassfish/gmbal/impl/LogStrings.properties=../build/classes/org/glassfish/gmbal/impl/Exceptions.properties 
-Include-Resource: org/glassfish/gmbal/typelib/LogStrings.properties=../build/classes/org/glassfish/gmbal/typelib/Exceptions.properties 
-Export-Package: org.glassfish.gmbal, org.glassfish.gmbal.impl.trace
-Private-Package: org.glassfish.gmbal.util, org.glassfish.gmbal.impl, org.glassfish.gmbal.typelib
