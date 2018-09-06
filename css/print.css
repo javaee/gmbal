@@ -1,4 +1,4 @@
-#banner, #footer, #leftcol, #breadcrumbs, .docs #toc, .docs .courtesylinks, #leftColumn, #navColumn {
+#banner, #footer, #archive-footer, #leftcol, #breadcrumbs, .docs #toc, .docs .courtesylinks, #leftColumn, #navColumn {
 	display: none !important;
 }
 #bodyColumn, body.docs div.docs {
